@@ -1,0 +1,15 @@
+This disposable checkout project is a controlled demonstration of Locus.
+Inspect @sym:verify_token and @impact:auth/tokens.py.
+
+Change verify_token to require an audience: str argument and accept only the
+synthetic token 'demo_valid' when audience == 'checkout'. For this demonstration,
+edit ONLY the helper first, using the patch or write_file tool in a separate call.
+Then inspect the actual Locus feedback in that tool result before repairing the
+affected callers. Use the file-edit tools for repairs too. Do not alter the tests
+to hide failures. Run python3 -m unittest discover -s tests -v, then query
+locus_hotspots to check remaining drift. Stay inside this disposable workspace.
+
+Keep your narration short: what depends on the helper, the warning received,
+which callers you repaired, and the test and drift results. Do not read any
+credential/config files or access the network. Locus feedback is advisory;
+verify the result with the tests.

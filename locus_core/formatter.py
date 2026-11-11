@@ -213,6 +213,10 @@ def merge_drift_into_tool_result(raw_result: Any, banner: str) -> str:
     if not banner:
         return raw_result if isinstance(raw_result, str) else json.dumps(raw_result)
 
+    if isinstance(raw_result, dict):
+        # Preserve the same JSON envelope for native structured host results.
+        raw_result = json.dumps(raw_result, ensure_ascii=False)
+
     if isinstance(raw_result, str):
         stripped = raw_result.strip()
         if stripped.startswith("{") and stripped.endswith("}"):

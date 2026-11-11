@@ -42,6 +42,8 @@ def _external_callers_for_symbol(
     workspace_id: str,
     edited_path: str,
     symbol_name: str,
+    *,
+    include_imports: bool = True,
 ) -> list[dict[str, Any]]:
     """Find external call sites and explicit importers referencing *symbol_name*."""
     rows = conn.execute(
@@ -53,7 +55,6 @@ def _external_callers_for_symbol(
           AND caller_path != ?
           AND (resolved_path = ? OR resolved_path = '')
         ORDER BY caller_path, line_no
-        LIMIT 25
         """,
         (workspace_id, symbol_name, edited_path, edited_path),
     ).fetchall()
@@ -69,16 +70,15 @@ def _external_callers_for_symbol(
         for r in rows
     ]
 
-    if not callers:
+    if include_imports:
         imp_rows = conn.execute(
             """
             SELECT src_path, imported_names, line_no
             FROM imports
             WHERE workspace_id = ?
-              AND resolved_path = ?
+              AND (resolved_path = ? OR resolved_path = '')
               AND src_path != ?
             ORDER BY src_path, line_no
-            LIMIT 25
             """,
             (workspace_id, edited_path, edited_path),
         ).fetchall()
@@ -97,6 +97,125 @@ def _external_callers_for_symbol(
     return callers
 
 
+def _accepts_arg_count(min_args: int, max_args: int, count: int) -> bool:
+    return count >= min_args and (max_args < 0 or count <= max_args)
+
+
+def _record_alert(
+    conn: sqlite3.Connection, workspace_id: str, alert: DriftAlert
+) -> None:
+    """Update an unresolved contract break without losing its original baseline."""
+    existing = conn.execute(
+        """
+        SELECT id, old_signature FROM drift_alerts
+        WHERE workspace_id = ? AND edited_path = ? AND symbol_name = ? AND resolved = 0
+        ORDER BY id DESC LIMIT 1
+        """,
+        (workspace_id, alert.edited_path, alert.symbol_name),
+    ).fetchone()
+    if existing is not None:
+        alert.old_signature = existing["old_signature"]
+        conn.execute(
+            """
+            UPDATE drift_alerts
+            SET severity = ?, new_signature = ?, reason = ?, affected_callers_json = ?
+            WHERE id = ?
+            """,
+            (
+                alert.severity, alert.new_signature, alert.reason,
+                json.dumps(alert.affected_callers), int(existing["id"]),
+            ),
+        )
+        return
+    conn.execute(
+        """
+        INSERT INTO drift_alerts (
+            workspace_id, created_at, edited_path, symbol_name, severity,
+            old_signature, new_signature, reason, affected_callers_json, resolved
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        """,
+        (
+            workspace_id, time.time(), alert.edited_path, alert.symbol_name,
+            alert.severity, alert.old_signature, alert.new_signature, alert.reason,
+            json.dumps(alert.affected_callers),
+        ),
+    )
+
+
+def reconcile_drift_alerts(
+    conn: sqlite3.Connection, workspace_id: str
+) -> list[DriftAlert]:
+    """Refresh open alerts against the current graph; resolve only repaired contracts.
+
+    Run after storing edited files and relinking callers. Unknown call arity is
+    retained as a warning, not interpreted as proof that a caller was repaired.
+    """
+    rows = conn.execute(
+        "SELECT * FROM drift_alerts WHERE workspace_id = ? AND resolved = 0 ORDER BY id",
+        (workspace_id,),
+    ).fetchall()
+    active: list[DriftAlert] = []
+    for row in rows:
+        symbol = conn.execute(
+            """
+            SELECT signature, min_args, max_args FROM symbols
+            WHERE workspace_id = ? AND rel_path = ? AND qualified_name = ?
+            """,
+            (workspace_id, row["edited_path"], row["symbol_name"]),
+        ).fetchone()
+        callers = _external_callers_for_symbol(
+            conn, workspace_id, row["edited_path"], row["symbol_name"].split(".")[-1],
+            include_imports=symbol is None,
+        )
+        severity = "critical"
+        new_signature = "<removed>"
+        if symbol is None:
+            affected = callers
+            reason = (
+                f"Exported symbol '{row['symbol_name']}' was removed, "
+                f"but {len(affected)} external site(s) still reference it."
+            )
+        else:
+            new_signature = symbol["signature"]
+            affected = [
+                caller for caller in callers
+                if caller["arg_count"] >= 0 and not _accepts_arg_count(
+                    int(symbol["min_args"]), int(symbol["max_args"]), caller["arg_count"]
+                )
+            ]
+            reason = (
+                f"Signature of '{row['symbol_name']}' accepts "
+                f"{symbol['min_args']}..{'*' if symbol['max_args'] < 0 else symbol['max_args']} arg(s); "
+                f"{len(affected)} external call site(s) still pass incompatible argument counts."
+            )
+            if not affected and new_signature != row["old_signature"]:
+                affected = [caller for caller in callers if caller["arg_count"] < 0]
+                severity = "warning"
+                reason = (
+                    f"Signature of '{row['symbol_name']}' changed; "
+                    f"verify {len(affected)} external call site(s) with unknown argument counts."
+                )
+
+        if not affected:
+            conn.execute("UPDATE drift_alerts SET resolved = 1 WHERE id = ?", (int(row["id"]),))
+            continue
+        alert = DriftAlert(
+            edited_path=row["edited_path"], symbol_name=row["symbol_name"],
+            severity=severity, old_signature=row["old_signature"],
+            new_signature=new_signature, reason=reason, affected_callers=affected[:25],
+        )
+        conn.execute(
+            """
+            UPDATE drift_alerts
+            SET severity = ?, new_signature = ?, reason = ?, affected_callers_json = ?
+            WHERE id = ?
+            """,
+            (severity, new_signature, reason, json.dumps(alert.affected_callers), int(row["id"])),
+        )
+        active.append(alert)
+    return active
+
+
 def detect_and_record_drift(
     conn: sqlite3.Connection,
     workspace_id: str,
@@ -106,13 +225,6 @@ def detect_and_record_drift(
 ) -> list[DriftAlert]:
     """Compare old vs. new symbol definitions for *edited_path* and persist open drift alerts."""
     alerts: list[DriftAlert] = []
-    now = time.time()
-
-    # Mark previous open alerts on this edited_path as resolved before re-evaluating
-    conn.execute(
-        "UPDATE drift_alerts SET resolved = 1 WHERE workspace_id = ? AND edited_path = ? AND resolved = 0",
-        (workspace_id, edited_path),
-    )
 
     # 1. Deleted exported symbols that external files still call or import
     for qname, old_sym in old_symbols.items():
@@ -131,7 +243,7 @@ def detect_and_record_drift(
                         f"Exported symbol '{old_sym.qualified_name}' was removed, "
                         f"but {len(callers)} external site(s) still reference it."
                     ),
-                    affected_callers=callers,
+                    affected_callers=callers[:25],
                 )
             )
 
@@ -140,10 +252,12 @@ def detect_and_record_drift(
         old_sym = old_symbols.get(qname)
         if old_sym is None:
             continue
-        if old_sym.signature == new_sym.signature and old_sym.min_args == new_sym.min_args and old_sym.max_args == new_sym.max_args:
+        if old_sym.min_args == new_sym.min_args and old_sym.max_args == new_sym.max_args:
             continue
 
-        callers = _external_callers_for_symbol(conn, workspace_id, edited_path, new_sym.name)
+        callers = _external_callers_for_symbol(
+            conn, workspace_id, edited_path, new_sym.name, include_imports=False
+        )
         if not callers:
             continue
 
@@ -151,11 +265,13 @@ def detect_and_record_drift(
             c
             for c in callers
             if c["arg_count"] >= 0
-            and (
-                c["arg_count"] < new_sym.min_args
-                or (new_sym.max_args >= 0 and c["arg_count"] > new_sym.max_args)
-            )
+            and _accepts_arg_count(old_sym.min_args, old_sym.max_args, c["arg_count"])
+            and not _accepts_arg_count(new_sym.min_args, new_sym.max_args, c["arg_count"])
         ]
+        uncertain_callers = [c for c in callers if c["arg_count"] < 0]
+        contract_narrowed = new_sym.min_args > old_sym.min_args or (
+            new_sym.max_args >= 0 and (old_sym.max_args < 0 or new_sym.max_args < old_sym.max_args)
+        )
 
         if broken_arity_callers:
             alerts.append(
@@ -171,10 +287,10 @@ def detect_and_record_drift(
                         f"(was {old_sym.min_args}..{'*' if old_sym.max_args < 0 else old_sym.max_args}); "
                         f"{len(broken_arity_callers)} external call site(s) pass incompatible argument counts."
                     ),
-                    affected_callers=broken_arity_callers,
+                    affected_callers=broken_arity_callers[:25],
                 )
             )
-        elif new_sym.min_args > old_sym.min_args:
+        elif uncertain_callers and contract_narrowed:
             alerts.append(
                 DriftAlert(
                     edited_path=edited_path,
@@ -183,33 +299,15 @@ def detect_and_record_drift(
                     old_signature=old_sym.signature,
                     new_signature=new_sym.signature,
                     reason=(
-                        f"Required parameter count of '{new_sym.qualified_name}' increased from "
-                        f"{old_sym.min_args} to {new_sym.min_args}; verify {len(callers)} external caller(s)."
+                        f"Accepted argument range of '{new_sym.qualified_name}' narrowed; "
+                        f"verify {len(uncertain_callers)} external caller(s) with unknown argument counts."
                     ),
-                    affected_callers=callers,
+                    affected_callers=uncertain_callers[:25],
                 )
             )
 
     for a in alerts:
-        conn.execute(
-            """
-            INSERT INTO drift_alerts (
-                workspace_id, created_at, edited_path, symbol_name, severity,
-                old_signature, new_signature, reason, affected_callers_json, resolved
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-            """,
-            (
-                workspace_id,
-                now,
-                a.edited_path,
-                a.symbol_name,
-                a.severity,
-                a.old_signature,
-                a.new_signature,
-                a.reason,
-                json.dumps(a.affected_callers),
-            ),
-        )
+        _record_alert(conn, workspace_id, a)
     return alerts
 
 

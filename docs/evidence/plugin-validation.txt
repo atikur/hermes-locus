@@ -1,0 +1,54 @@
+Preparing the isolated Hermes runtime…
+  → Installing Python dependencies…
+  ✗ Installing Python dependencies failed; last 21 lines of output:
+      Resolved 5 packages in 11ms
+      WARN Retry attempt #0. Sleeping 1.590295448s before the next attempt
+      WARN Retry attempt #0. Sleeping 1.747590629s before the next attempt
+      WARN Retry attempt #0. Sleeping 1.843570391s before the next attempt
+      WARN Retry attempt #0. Sleeping 1.40061059s before the next attempt
+      WARN Retry attempt #1. Sleeping 3.531786451s before the next attempt
+      WARN Retry attempt #1. Sleeping 3.717341207s before the next attempt
+      WARN Retry attempt #1. Sleeping 3.333494956s before the next attempt
+      WARN Retry attempt #1. Sleeping 2.920399057s before the next attempt
+      WARN Retry attempt #2. Sleeping 5.978625153s before the next attempt
+      WARN Retry attempt #2. Sleeping 2.443498333s before the next attempt
+      WARN Retry attempt #2. Sleeping 5.538828359s before the next attempt
+      WARN Retry attempt #2. Sleeping 5.787549804s before the next attempt
+      error: Failed to download `ruamel-yaml==0.18.16`
+        cause: Request failed after 3 retries in 7.4s
+        cause: Failed to fetch: https://files.pythonhosted.org/packages/0f/73/bb1bc2529f852e7bf64a2dec885e89ff9f5cc7bbf6c9340eed30ff2c69c5/ruamel.yaml-0.18.16-py3-none-any.whl
+        cause: error sending request for url (https://files.pythonhosted.org/packages/0f/73/bb1bc2529f852e7bf64a2dec885e89ff9f5cc7bbf6c9340eed30ff2c69c5/ruamel.yaml-0.18.16-py3-none-any.whl)
+        cause: client error (Connect)
+        cause: dns error
+        cause: failed to lookup address information: nodename nor servname provided, or not known
+      hint: `ruamel-yaml` (v0.18.16) was included because `hermes-pm-runtime` (v0.0.0) depends on `ruamel-yaml`
+dependency preparation failed: venv: uv sync exited 2: use: Failed to fetch: https://files.pythonhosted.org/packages/0f/73/bb1bc2529f852e7bf64a2dec885e89ff9f5cc7bbf6c9340eed30ff2c69c5/ruamel.yaml-0.18.16-py3-none-any.whl
+  cause: error sending request for url (https://files.pythonhosted.org/packages/0f/73/bb1bc2529f852e7bf64a2dec885e89ff9f5cc7bbf6c9340eed30ff2c69c5/ruamel.yaml-0.18.16-py3-none-any.whl)
+  cause: client error (Connect)
+  cause: dns error
+  cause: failed to lookup address information: nodename nor servname provided, or not known
+
+hint: `ruamel-yaml` (v0.18.16) was included because `hermes-pm-runtime` (v0.0.0) depends on `ruamel-yaml` — retry, or run `hermes pm doctor`
+
+✓ manifest — plugin.yaml parses
+✓ manifest fields — name, version, description present
+✓ requires_hermes — spec '>=0.22.0' parses
+✓ config schema — shape valid
+✓ requires_env — all entries UPPER_SNAKE
+✓ oauth — not declared
+✓ loadable — entry: __init__.py, desktop/plugin.js
+✓ python dependencies — none declared
+✓ capability probe — register() ran in isolation
+✓ declared tools — matches registrations
+✓ declared hooks — matches registrations
+✓ declared middleware — matches registrations
+✓ built-in tool collisions — no collisions
+✓ security scan — safe
+✓ no core override — no runtime rebinds of Hermes core
+✓ desktop surface — stays inside the plugin SDK surface
+◆ Isolation — runs in the plugin host (plugins.isolation: host)
+  · dashboard backend API is served through the plugin host (buffered responses)
+  · ctx.register_cli_command() is skipped in the host (`hermes <command>` 
+subcommands are wired into the local CLI parser)
+
+Validation passed.

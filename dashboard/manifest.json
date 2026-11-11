@@ -3,7 +3,7 @@
   "label": "Locus Graph",
   "description": "Live AST codebase dependency graph, transitive blast-radius visualizer & signature drift guard",
   "icon": "Code",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "tab": {
     "path": "/locus",
     "position": "after:skills"

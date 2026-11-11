@@ -104,7 +104,7 @@ def _notify_desktop(root: Path, reason: str) -> None:
         from hermes_cli.plugin_events import broadcast_plugin_event
 
         broadcast_plugin_event("locus", "graph.updated", {"workspace": str(root), "reason": reason})
-    except Exception:
+    except (Exception, SystemExit):
         pass
 
 

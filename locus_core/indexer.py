@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-from .drift import DriftAlert, detect_and_record_drift
+from .drift import detect_and_record_drift, reconcile_drift_alerts
 from .parsers import (
     LANGUAGE_BY_EXT,
     ParsedFile,
@@ -615,6 +615,7 @@ def index_workspace(
         need_relink = force or updated_files > 0 or bool(removed_paths) or not existing_by_path
         if need_relink:
             edge_count = _relink_and_rank(conn, ws_id)
+            reconcile_drift_alerts(conn, ws_id)
         else:
             ws_row = conn.execute(
                 "SELECT edge_count FROM workspaces WHERE workspace_id = ?", (ws_id,)
@@ -743,7 +744,7 @@ def reindex_edited_file(
 
         if not target.exists():
             new_symbols: dict[str, ParsedSymbol] = {}
-            alerts: list[DriftAlert] = detect_and_record_drift(
+            detect_and_record_drift(
                 conn, ws_id, rel_posix, old_symbols, new_symbols
             )
             conn.execute("DELETE FROM files WHERE workspace_id = ? AND rel_path = ?", (ws_id, rel_posix))
@@ -755,7 +756,7 @@ def reindex_edited_file(
                 st = target.stat()
             except OSError:
                 return {"ok": True, "skipped": True, "reason": "stat_failed"}
-            if st.st_size == 0 or st.st_size > DEFAULT_MAX_FILE_BYTES:
+            if st.st_size > DEFAULT_MAX_FILE_BYTES:
                 return {"ok": True, "skipped": True, "reason": "size_out_of_bounds"}
             try:
                 raw_bytes = target.read_bytes()
@@ -768,10 +769,14 @@ def reindex_edited_file(
             if parsed is None:
                 return {"ok": True, "skipped": True}
             new_symbols = {s.qualified_name: s for s in parsed.symbols}
-            alerts = detect_and_record_drift(conn, ws_id, rel_posix, old_symbols, new_symbols)
+            detect_and_record_drift(conn, ws_id, rel_posix, old_symbols, new_symbols)
             _store_parsed_file(conn, ws_id, parsed, st.st_mtime, st.st_size, digest)
 
         edge_count = _relink_and_rank(conn, ws_id)
+        alerts = [
+            alert for alert in reconcile_drift_alerts(conn, ws_id)
+            if alert.edited_path == rel_posix
+        ]
         file_count = int(
             conn.execute("SELECT COUNT(*) AS c FROM files WHERE workspace_id = ?", (ws_id,)).fetchone()["c"]
         )
@@ -788,76 +793,6 @@ def reindex_edited_file(
             """,
             (time.time(), file_count, sym_count, edge_count, ws_id),
         )
-
-        # Auto-resolve open drift alerts whose broken callers or signature mismatch were fixed
-        newly_drifted_symbols = {a.symbol_name for a in alerts}
-        open_alerts = conn.execute(
-            "SELECT id, edited_path, symbol_name FROM drift_alerts WHERE workspace_id = ? AND resolved = 0",
-            (ws_id,),
-        ).fetchall()
-        for oa in open_alerts:
-            if oa["edited_path"] == rel_posix and oa["symbol_name"] in newly_drifted_symbols:
-                continue
-            short_name = oa["symbol_name"].split(".")[-1]
-            sym_row = conn.execute(
-                "SELECT min_args, max_args FROM symbols WHERE workspace_id = ? AND rel_path = ? AND qualified_name = ?",
-                (ws_id, oa["edited_path"], oa["symbol_name"]),
-            ).fetchone()
-            if sym_row is None:
-                # Symbol was deleted: auto-resolve once zero external calls and imports of it remain
-                rem_calls = int(
-                    conn.execute(
-                        """
-                        SELECT COUNT(*) AS c FROM calls
-                        WHERE workspace_id = ?
-                          AND callee_name = ?
-                          AND caller_path != ?
-                          AND (resolved_path = ? OR resolved_path = '')
-                        """,
-                        (ws_id, short_name, oa["edited_path"], oa["edited_path"]),
-                    ).fetchone()["c"]
-                )
-                rem_imp_rows = conn.execute(
-                    """
-                    SELECT imported_names, resolved_path FROM imports
-                    WHERE workspace_id = ?
-                      AND src_path != ?
-                      AND (resolved_path = ? OR resolved_path = '')
-                    """,
-                    (ws_id, oa["edited_path"], oa["edited_path"]),
-                ).fetchall()
-                rem_imports = 0
-                for imp_row in rem_imp_rows:
-                    imp_syms = [n.strip() for n in (imp_row["imported_names"] or "").split(",") if n.strip()]
-                    if short_name in imp_syms or (imp_row["resolved_path"] == oa["edited_path"] and "*" in imp_syms):
-                        rem_imports += 1
-                if rem_calls == 0 and rem_imports == 0:
-                    conn.execute("UPDATE drift_alerts SET resolved = 1 WHERE id = ?", (int(oa["id"]),))
-                continue
-
-            # Symbol exists: check if any broken arity calls remain across the workspace
-            bad_calls = conn.execute(
-                """
-                SELECT COUNT(*) AS c FROM calls
-                WHERE workspace_id = ?
-                  AND callee_name = ?
-                  AND caller_path != ?
-                  AND (resolved_path = ? OR resolved_path = '')
-                  AND arg_count >= 0
-                  AND (arg_count < ? OR (? >= 0 AND arg_count > ?))
-                """,
-                (
-                    ws_id,
-                    short_name,
-                    oa["edited_path"],
-                    oa["edited_path"],
-                    int(sym_row["min_args"]),
-                    int(sym_row["max_args"]),
-                    int(sym_row["max_args"]),
-                ),
-            ).fetchone()["c"]
-            if int(bad_calls) == 0:
-                conn.execute("UPDATE drift_alerts SET resolved = 1 WHERE id = ?", (int(oa["id"]),))
 
         summary = f"{tool_name} updated {rel_posix}"
         if alerts:

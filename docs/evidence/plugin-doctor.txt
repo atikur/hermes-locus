@@ -1,0 +1,4 @@
+Plugin Doctor: <plugin>
+  manifest: locus 0.1.1 (standalone)
+  OK: runtime discovery, manifest parsing, import, and registration passed
+  registrations: 4 tool(s), 3 hook(s)

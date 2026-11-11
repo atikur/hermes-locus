@@ -1,38 +1,56 @@
 ---
 name: locus-navigation
-description: Navigate unfamiliar repositories, compute pre-refactor transitive blast radius, verify covering tests, and resolve signature drift using Locus graph tools and @sym:/@impact:/@hotspots: context references.
+description: Navigate repositories, inspect dependencies before refactoring, select relevant tests, and respond to signature drift using Locus tools and context references.
 ---
 
-# Locus Architectural Navigation & Safe Refactoring Workflow
+# Locus navigation and refactoring
 
-Locus maintains a live, incremental AST & structural dependency graph of the active workspace (Python, TypeScript/JavaScript, Go, and Rust) stored in Hermes's profile-scoped SQLite store.
+Locus maintains a local structural dependency graph of the selected workspace.
+Python has AST definitions, signatures, and call argument counts. TypeScript and
+JavaScript have lighter structural and call extraction; Go and Rust have
+definitions and imports. The graph is useful evidence, not a complete type checker
+or execution-coverage report.
 
-## When to Use Each Capability
+## Choose the relevant tool
 
-1. **Orientation on an Unfamiliar Codebase (`locus_map`)**
-   - Before grepping blindly across dozens of files, call `locus_map` (optionally scoped to a subdirectory with `scope_prefix`).
-   - Locus ranks modules by **PageRank architectural centrality**, surfacing core hub modules, exported class/function signatures, and any circular import chains first.
+1. **Orient with `locus_map`.** Inspect ranked modules, exported signatures, and
+   dependency cycles. Use `scope_prefix` when the task concerns a known directory.
+2. **Inspect a symbol with `locus_symbol` or `@sym:<name>`.** Read its definition,
+   indexed callers and callees, and source excerpt. Check ambiguous names against
+   the source before relying on a caller link.
+3. **Check a change with `locus_impact` or `@impact:<file-or-symbol>`.** Before
+   changing a shared signature, removing an exported symbol, or moving a module,
+   review direct and transitive dependents, known call sites, and suggested tests.
+   The impact score is a prioritization heuristic, not a probability of failure.
+4. **Inspect health with `locus_hotspots` or `@hotspots:all`.** Use `cycles`, `drift`,
+   or `untested` to focus the report. An inferred test gap does not prove there is
+   no runtime test coverage.
 
-2. **Tracing Definitions, Callers & Callees (`locus_symbol` or `@sym:<name>`)**
-   - Call `locus_symbol` with a function, class, or method name to inspect its exact file/line span, signature, incoming workspace call sites (with argument counts), outgoing calls, and bounded source excerpt.
-   - Users can also inline symbol neighborhoods directly in chat prompts via `@sym:SymbolName`.
+## Respond to a drift alert
 
-3. **Pre-Refactor Blast-Radius Check (`locus_impact` or `@impact:<file-or-symbol>`)**
-   - **Always** run `locus_impact` before changing an exported function signature, renaming a public symbol, or restructuring a shared module.
-   - Review:
-     - **Direct Dependents (Hop 1)** and **Transitive Blast Radius (Hops 2-3)**
-     - **External Call Sites** with passed argument counts
-     - **Covering Test Files** to execute immediately after editing
-     - **Risk Level** (`LOW` / `MEDIUM` / `HIGH` / `CRITICAL`)
+After supported editing-tool calls, Locus can append a
+`[Locus Signature Drift Alert]` naming known external references affected by an
+argument-count change or symbol removal.
 
-4. **Architectural Health & Tech-Debt Triage (`locus_hotspots` or `@hotspots:all`)**
-   - Call `locus_hotspots` when asked to audit code quality, break import cycles, identify tightly coupled god-modules, find untested core files, or list unresolved signature drift alerts.
+When an alert appears:
 
-## Reacting to `[Locus Signature Drift Alert]`
+1. Inspect the listed caller locations and the changed contract.
+2. Update callers or restore a compatible contract, according to the user's task.
+3. Run the relevant tests. “Covering tests” in a Locus report are suggestions
+   inferred from dependencies and naming; select additional tests when needed.
+4. Query `locus_hotspots` or `/locus drift` to inspect remaining alerts. A cleared
+   alert means the tracked structural mismatch was resolved, not that behavior
+   has been proven correct.
 
-Whenever `write_file` or `patch` modifies an exported symbol's required/maximum parameter count or deletes an exported symbol that external files still call, Locus automatically appends a `[Locus Signature Drift Alert]` block to the tool result naming every broken caller (`file:line` and argument count).
+The plugin does not edit source or run tests itself. Do not claim an automatic
+repair unless the agent actually changed and verified the code. Do not dismiss a
+warning merely to report a clean result.
 
-When you see `[Locus Signature Drift Alert]`:
-1. Inspect each listed external call site immediately.
-2. Update the callers to match the new contract (or restore backward-compatible defaults) in the same turn.
-3. Run the covering test files identified by `locus_impact`.
+## Keep the index relevant
+
+- Work in the intended repository, or pass `workspace` explicitly.
+- After external editor or shell changes, run `/locus reindex` before relying on
+  the graph. Locus is not a filesystem watcher.
+- Account for incomplete static resolution, dynamic dispatch, aliases, and
+  unknown argument counts. Investigate the source when the report is uncertain.
+- Use existing repository tests and checks to verify the final change.

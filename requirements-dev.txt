@@ -1,0 +1,7 @@
+# Test-only dependencies. Hermes supplies these for the installed dashboard.
+fastapi==0.133.1
+httpx==0.28.1
+
+# Keep the standalone test client on the Starlette 0.x HTTPX integration.
+# Hermes integration is tested separately against its installed dependency set.
+starlette==0.52.1

@@ -172,7 +172,7 @@ def run_showcase(cinematic: bool = False) -> int:
             f"    • Hop-2 Transitive Dependents: {BOLD}{', '.join(d['rel_path'] for d in impact['transitive_dependents'])}{RESET}"
         )
         print(
-            f"    • Covering Tests to Run:       {GREEN}{', '.join(t['rel_path'] for t in impact['covering_tests'])}{RESET}"
+            f"    • Suggested Tests to Run:      {GREEN}{', '.join(t['rel_path'] for t in impact['covering_tests'])}{RESET}"
         )
         _pause(2.6, cinematic)
 
@@ -213,7 +213,7 @@ def run_showcase(cinematic: bool = False) -> int:
         _pause(2.4, cinematic)
 
         print(
-            f"\n  {CYAN}⚙ Agent self-heals broken caller in services/checkout.py:5:{RESET}\n"
+            f"\n  {CYAN}⚙ Fixture script repairs caller in services/checkout.py:6:{RESET}\n"
             f"    {GREEN}+ if not verify_token(token, 'checkout'):{RESET}"
         )
         (ws / "services" / "checkout.py").write_text(

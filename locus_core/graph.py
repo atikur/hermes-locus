@@ -14,6 +14,45 @@ from .drift import list_open_drift_alerts
 from .indexer import index_workspace, validate_safe_workspace_root
 from .storage import open_locus_db, workspace_id_for
 
+DEFAULT_IMPACT_DEPTH = 3
+
+
+def _reverse_neighborhood(
+    target: str, reverse_deps: dict[str, set[str]], max_depth: int
+) -> tuple[dict[str, int], dict[str, str]]:
+    """Return shortest reverse-dependency depths and their discovery parents."""
+    depths = {target: 0}
+    via_parent: dict[str, str] = {}
+    queue: deque[str] = deque([target])
+    while queue:
+        current = queue.popleft()
+        depth = depths[current]
+        if depth >= max_depth:
+            continue
+        for dependent in sorted(reverse_deps.get(current, ())):
+            if dependent not in depths:
+                depths[dependent] = depth + 1
+                via_parent[dependent] = current
+                queue.append(dependent)
+    return depths, via_parent
+
+
+def _suggest_tests(
+    target: str, depths: dict[str, int], meta: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Suggest tests from bounded dependencies or filenames, not measured coverage."""
+    tests = [
+        {**meta[path], "depth": depth}
+        for path, depth in sorted(depths.items(), key=lambda item: (item[1], item[0]))
+        if depth >= 1 and meta[path]["is_test"]
+    ]
+    stem = posixpath.splitext(posixpath.basename(target))[0]
+    seen = {test["rel_path"] for test in tests}
+    for path, info in meta.items():
+        if info["is_test"] and path not in seen and stem in posixpath.basename(path):
+            tests.append({**info, "depth": 2})
+    return tests
+
 
 def _ensure_indexed(root_path: str | Path, db_path: Optional[str | Path] = None) -> tuple[Path, str]:
     root = Path(root_path).expanduser().resolve()
@@ -393,10 +432,10 @@ def analyze_impact(
     root_path: str | Path,
     target: str,
     *,
-    max_depth: int = 3,
+    max_depth: int = DEFAULT_IMPACT_DEPTH,
     db_path: Optional[str | Path] = None,
 ) -> dict[str, Any]:
-    """Compute transitive blast radius, call sites, covering tests, and risk score for *target*."""
+    """Compute blast radius, call sites, suggested tests, and heuristic risk for *target*."""
     is_safe, reason = validate_safe_workspace_root(root_path)
     if not is_safe:
         return {"ok": False, "error": reason}
@@ -434,20 +473,7 @@ def analyze_impact(
                 "error": f"Target '{target}' matched neither an indexed file nor a symbol.",
             }
 
-        # Reverse BFS up to max_depth
-        depths: dict[str, int] = {resolved_file: 0}
-        via_parent: dict[str, str] = {}
-        queue: deque[str] = deque([resolved_file])
-        while queue:
-            cur = queue.popleft()
-            d = depths[cur]
-            if d >= max_depth:
-                continue
-            for dep in sorted(rev_deps.get(cur, ())):
-                if dep not in depths:
-                    depths[dep] = d + 1
-                    via_parent[dep] = cur
-                    queue.append(dep)
+        depths, via_parent = _reverse_neighborhood(resolved_file, rev_deps, max_depth)
 
         direct_dependents = [
             {**meta[p], "depth": 1, "via": resolved_file}
@@ -459,18 +485,7 @@ def analyze_impact(
             for p, d in sorted(depths.items(), key=lambda kv: (kv[1], kv[0]))
             if d >= 2 and not meta[p]["is_test"]
         ]
-        covering_tests = [
-            {**meta[p], "depth": d}
-            for p, d in sorted(depths.items(), key=lambda kv: (kv[1], kv[0]))
-            if d >= 1 and meta[p]["is_test"]
-        ]
-
-        # Also catch conventional test files by stem naming even if dynamic/fixture-loaded
-        stem = posixpath.splitext(posixpath.basename(resolved_file))[0]
-        seen_tests = {t["rel_path"] for t in covering_tests}
-        for p, m in meta.items():
-            if m["is_test"] and p not in seen_tests and stem in posixpath.basename(p):
-                covering_tests.append({**m, "depth": 2})
+        covering_tests = _suggest_tests(resolved_file, depths, meta)
 
         # Direct external call sites
         if matched_symbol is not None:
@@ -559,18 +574,15 @@ def get_hotspots_report(
             reverse=True,
         )[:10]
 
-        # Untested high-centrality modules: fan_in >= 1 and no test in 2-hop reverse neighborhood
+        # Use the default impact query's bounded graph and filename suggestions.
+        # Absence of a suggestion is not proof that a module lacks runtime coverage.
         untested_core: list[dict[str, Any]] = []
         for m in sorted(non_tests, key=lambda x: (x["pagerank"], x["fan_in"]), reverse=True):
             if m["fan_in"] == 0 and len(non_tests) > 3:
                 continue
             p = m["rel_path"]
-            r1 = rev_deps.get(p, set())
-            r2 = set(r1)
-            for d1 in r1:
-                r2.update(rev_deps.get(d1, set()))
-            has_test = any(meta[cand]["is_test"] for cand in r2 if cand in meta)
-            if not has_test:
+            depths, _ = _reverse_neighborhood(p, rev_deps, DEFAULT_IMPACT_DEPTH)
+            if not _suggest_tests(p, depths, meta):
                 untested_core.append(m)
             if len(untested_core) >= 8:
                 break
@@ -643,7 +655,7 @@ def build_visual_graph(
     impact_data: Optional[dict[str, Any]] = None
     blast_depth: dict[str, int] = {}
     if focus_target.strip():
-        impact_res = analyze_impact(root, focus_target.strip(), max_depth=3, db_path=db_path)
+        impact_res = analyze_impact(root, focus_target.strip(), db_path=db_path)
         if impact_res.get("ok"):
             impact_data = impact_res
             rf = impact_res["resolved_file"]

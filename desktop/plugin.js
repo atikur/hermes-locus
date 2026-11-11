@@ -12,9 +12,10 @@ import {
   haptic,
   host,
   queryClient,
-  useQuery
+  useQuery,
+  useValue
 } from '@hermes/plugin-sdk'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
 function roleStroke(role, hasDrift) {
@@ -101,19 +102,23 @@ function MiniBlastSvg({ graph, onPick }) {
 }
 
 function LocusDesktopPane({ ctx }) {
+  const workspace = useValue(host.state.cwd)
   const [focus, setFocus] = useState('')
   const [filter, setFilter] = useState('')
+  useEffect(() => { setFocus(''); setFilter('') }, [workspace])
+  const wsQuery = workspace ? '?workspace=' + encodeURIComponent(workspace) : ''
 
   const summaryQuery = useQuery({
-    queryKey: [ctx.source, 'summary'],
-    queryFn: () => ctx.rest('/summary'),
+    queryKey: [ctx.source, 'summary', workspace],
+    queryFn: () => ctx.rest('/summary' + wsQuery),
     refetchInterval: 15000
   })
 
   const graphQuery = useQuery({
-    queryKey: [ctx.source, 'graph', focus],
+    queryKey: [ctx.source, 'graph', workspace, focus],
     queryFn: () =>
-      ctx.rest('/graph?max_nodes=24' + (focus ? '&focus=' + encodeURIComponent(focus) : '')),
+      ctx.rest('/graph?max_nodes=24' + (workspace ? '&workspace=' + encodeURIComponent(workspace) : '') +
+        (focus ? '&focus=' + encodeURIComponent(focus) : '')),
     refetchInterval: 15000
   })
 
@@ -137,7 +142,7 @@ function LocusDesktopPane({ ctx }) {
   async function triggerReindex() {
     haptic('tap')
     try {
-      await ctx.rest('/reindex', { method: 'POST', body: { force: true } })
+      await ctx.rest('/reindex', { method: 'POST', body: { force: true, workspace } })
       queryClient.invalidateQueries({ queryKey: [ctx.source] })
       host.notify({ kind: 'info', message: 'Locus workspace graph re-indexed' })
     } catch (err) {
@@ -297,9 +302,10 @@ function LocusDesktopPane({ ctx }) {
 }
 
 function LocusStatusChip({ ctx }) {
+  const workspace = useValue(host.state.cwd)
   const { data } = useQuery({
-    queryKey: [ctx.source, 'summary'],
-    queryFn: () => ctx.rest('/summary'),
+    queryKey: [ctx.source, 'summary', workspace],
+    queryFn: () => ctx.rest('/summary' + (workspace ? '?workspace=' + encodeURIComponent(workspace) : '')),
     refetchInterval: 20000
   })
 
@@ -357,7 +363,7 @@ export default {
           label: 'Locus: Re-index Workspace Codebase Graph',
           keywords: ['locus', 'ast', 'graph', 'blast', 'reindex'],
           run: async () => {
-            await ctx.rest('/reindex', { method: 'POST', body: { force: true } })
+            await ctx.rest('/reindex', { method: 'POST', body: { force: true, workspace: host.state.cwd.get() } })
             queryClient.invalidateQueries({ queryKey: [ctx.source] })
             host.notify({ kind: 'info', message: 'Locus graph re-indexed' })
           }

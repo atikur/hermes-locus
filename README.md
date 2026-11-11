@@ -1,81 +1,75 @@
-# Locus — Architectural GPS, Blast-Radius Engine & Signature Drift Guard for Hermes Agent
+# Locus — Catch cross-file breakage while Hermes edits
 
-![Locus Banner](assets/locus-banner.svg)
+![Locus banner](assets/locus-banner.svg)
 
-**Locus** gives Hermes Agent live structural awareness of your codebase across **4 unified surfaces** — **Agent Tools & Lifecycle Hooks**, **Inline `@` Context References**, the **Hermes Web Dashboard (`/locus`)**, and **Hermes Desktop (`@hermes/plugin-sdk`)** — powered by a pure Python standard-library AST & SQLite WAL graph engine with **zero third-party runtime dependencies**.
+**Locus shows Hermes what a change could break, then flags incompatible callers while it works.** It builds a local structural graph of your repository and connects it to agent tools, `@` context references, the Web Dashboard, and Hermes Desktop.
 
-Instead of burning context tokens grepping blindly or silently breaking callers in another module during a multi-file refactor, Hermes can map PageRank architectural hubs in milliseconds, compute transitive blast radius + covering test files *before* editing, and self-heal broken caller signatures *automatically* mid-turn.
+The analysis engine uses Python's standard library (`ast`, `sqlite3`, and structural parsers). It needs no API key, hosted index, or extra model call. Hermes supplies the web and desktop integration libraries.
 
----
+## One refactor, a complete feedback loop
 
-## Key Capabilities
+Suppose `verify_token(token)` is called by checkout code, which is used by an API route:
 
-- **Inline `@` Context References (`@sym:`, `@impact:`, `@hotspots:`)** — Type `@sym:verify_token`, `@impact:auth/tokens.py`, or `@hotspots:cycles` directly in the Hermes CLI, TUI, Web, or Desktop composer with live fuzzy autocomplete and bounded Markdown expansion.
-- **Pre-Refactor Transitive Blast Radius (`locus_impact`)** — Reverse-BFS traversal across cross-file imports and call sites reveals **Hop-1 direct dependents**, **Hop-2/3 transitive dependents**, **covering test files** to run, and a `0–100` risk score (`LOW` / `MEDIUM` / `HIGH` / `CRITICAL`).
-- **Real-Time Signature Drift Guard (`post_tool_call` + `transform_tool_result`)** — Whenever Hermes edits a file via `patch`, `write_file`, or `edit_file`, Locus re-parses the file in `<5 ms`. If an exported function/method changes required arity or is removed while external callers still invoke the old contract, Locus appends a `[Locus Signature Drift Alert]` directly into the tool result so the agent fixes every caller before finishing its turn — then **auto-resolves** the alert once callers are updated.
-- **PageRank Repo Map & Cycle Detector (`locus_map`, `locus_hotspots`)** — 25-iteration PageRank ranks central hub modules first, while Tarjan Strongly Connected Components (`SCC`) pinpoints circular import chains and high-centrality modules lacking test coverage.
-- **Multi-Language Zero-Dependency Indexer** — Deep `ast` symbol/signature/arity/call extraction for **Python**, plus fast structural lexers for **TypeScript / JavaScript**, **Go**, and **Rust**, backed by incremental `mtime` + `SHA-256` caching in SQLite WAL.
-- **Interactive Web Dashboard & Native Desktop Pane** — Explore dependency and blast-radius rings visually at `/locus` in the Web Dashboard or inside the native `Locus Graph` right-side pane in Hermes Desktop, with one-click `@impact:<file>` composer insertion.
+1. **See the impact.** `@impact:auth/tokens.py` identifies direct and indirect dependents and suggests related tests.
+2. **Make the change.** Hermes adds a required `audience` argument.
+3. **Catch a missed caller.** Locus appends an actionable warning to the editing tool's result:
 
----
+   ```text
+   [Locus Signature Drift Alert]
+   Your edit changed or removed exported symbol contract(s) with existing external callers:
+   - CRITICAL: verify_token now requires 2 arguments
+     -> Update caller services/checkout.py:6 (passes 1 argument)
+   ```
 
-## Installation
+4. **Repair and verify.** Hermes updates the caller and runs the relevant tests. Locus re-evaluates the tracked mismatch as files are indexed and clears it when the incompatible references are gone.
 
-### From the Hermes Plugin Catalog
+Locus supplies the evidence; the agent performs the repair. It never edits your workspace source files itself. The warning above is abbreviated for illustration.
 
-```bash
-hermes plugins install locus
-```
+## Install
 
-### Direct from GitHub
+Requires **Hermes Agent >=0.22.0** and **Python >=3.10**. Python 3.11 is a convenient choice for standalone development.
 
 ```bash
 hermes plugins install https://github.com/atikur/hermes-locus
 ```
 
-### In Hermes Desktop
-
-Open Command Palette or launch via deep link:
+After catalog acceptance, the short form is `hermes plugins install locus`. In Hermes Desktop, use the plugin installer or this deep link:
 
 ```text
 hermes://plugin/install?repo=atikur/hermes-locus&enable=1
 ```
 
----
+Start Hermes in the repository you want to analyze. Session startup indexes that workspace by default; `/locus reindex` refreshes it explicitly.
 
-## Quickstart
+## Try it
 
-### 1. Inline `@` Context References in Chat
-
-Reference symbols, blast radius, or architectural health directly in any prompt — Locus expands the exact AST neighborhood inline without wasting tool turns:
+In chat:
 
 ```text
-Refactor @sym:verify_token to require a tenant audience — check @impact:auth/tokens.py first.
+Inspect @sym:verify_token and @impact:auth/tokens.py before adding a required audience argument.
 ```
 
 ```text
-Audit circular dependencies in @hotspots:cycles and propose the cleanest seam to break them.
+Review @hotspots:cycles and explain the smallest change that would break a dependency cycle.
 ```
 
-| Prefix | Autocomplete Source | Injected Prompt Context |
-| :--- | :--- | :--- |
-| `@sym:<name>` | Live fuzzy search over workspace classes, functions, methods & interfaces | Exact `file:line`, full signature, incoming call sites with arg counts, outgoing callees, and bounded source snippet |
-| `@impact:<target>` | Ranked workspace module paths and exported symbol names | Risk score (`0–100`), Hop-1 direct callers, Hop-2/3 transitive dependents, open drift alerts, and covering test files |
-| `@hotspots:<scope>` | `all`, `cycles`, `drift`, `untested` | Tarjan circular import chains, high-coupling hub modules, untested core modules, and unresolved signature drift alerts |
+| Reference | What it adds to the prompt |
+| --- | --- |
+| `@sym:<name>` | Definition and signature, indexed callers/callees, and a bounded source excerpt |
+| `@impact:<file-or-symbol>` | Direct and transitive dependents, suggested tests, risk score, and open drift alerts |
+| `@hotspots:all` | Dependency cycles, highly connected modules, modules without inferred test links, and open drift |
+| `@hotspots:cycles`, `@hotspots:drift`, `@hotspots:untested` | A focused subset of the health report |
 
-### 2. Slash Command (`/locus`) & CLI (`hermes locus`)
-
-Inside any Hermes chat session:
+The same analysis is available through commands:
 
 ```text
-/locus                  # Interactive menu (Status, Repo Map, Hotspots, Force Re-Index)
-/locus map src/auth     # PageRank architectural map scoped to src/auth
-/locus impact tokens.py # Pre-refactor blast radius & covering tests
-/locus symbol settle    # Definition, callers, callees & snippet
-/locus hotspots         # Cycles, god-modules, untested hubs & open drift
+/locus
+/locus map src/auth
+/locus impact auth/tokens.py
+/locus symbol verify_token
+/locus hotspots
+/locus reindex
 ```
-
-From your terminal:
 
 ```bash
 hermes locus scan
@@ -83,117 +77,135 @@ hermes locus map
 hermes locus impact auth/tokens.py
 hermes locus symbol verify_token
 hermes locus hotspots --json
+# Analyze a specific project:
+hermes locus map --workspace /path/to/project
 ```
 
----
+## Agent tools
 
-## Agent Tools (`toolset: locus`)
+The `locus` toolset exposes four tools, plus a bundled `locus-navigation` skill. Tools read source and maintain the local index; they do not modify source files.
 
-Locus registers four deterministic, read-only tools for autonomous planning and safe refactoring (plus the bundled `locus-navigation` skill):
+| Tool | Parameters | Result |
+| --- | --- | --- |
+| `locus_map` | `scope_prefix?`, `max_files?`, `workspace?` | PageRank-ranked modules, exported signatures, languages, cycles, and drift counts |
+| `locus_symbol` | `name`, `workspace?` | Definition, signature, indexed call sites, outgoing calls, and source excerpt |
+| `locus_impact` | `target`, `max_depth?`, `workspace?` | Reverse dependency traversal, related test files, and a heuristic 0–100 impact score |
+| `locus_hotspots` | `workspace?` | Dependency cycles, high-coupling modules, inferred test gaps, and unresolved drift |
 
-| Tool | Parameters | Purpose |
-| :--- | :--- | :--- |
-| `locus_map` | `scope_prefix?`, `max_files?`, `workspace?` | PageRank-ranked repository map with exported class/function signatures, language breakdown, cycle count, and drift count. |
-| `locus_symbol` | `name` *(required)*, `workspace?` | Exact AST symbol definition (`path:line`), parameter arity, incoming workspace callers, outgoing callees, and bounded code excerpt. |
-| `locus_impact` | `target` *(required)*, `max_depth?`, `workspace?` | Reverse dependency BFS returning Hop-1 direct dependents, Hop-2+ transitive dependents, covering test files, and `0–100` risk level. |
-| `locus_hotspots` | `workspace?` | Codebase health audit surfacing Tarjan circular import cycles, high-coupling hub modules, untested central files, and open drift alerts. |
+## Web and desktop
 
----
+![Locus running in the Hermes Web Dashboard](assets/locus-live-dashboard.jpg)
 
-## Real-Time Signature Drift Guard
+*Captured from the real Hermes Web Dashboard using the disposable checkout fixture.*
 
-When an AI agent adds a required parameter or deletes a helper function, callers in other files often break silently. Locus closes this loop automatically using `post_tool_call` and `transform_tool_result`:
+- **Web Dashboard:** `/locus` provides a selectable dependency graph, impact rings, symbol search, workspace selection, and drift inspection. The page and `sessions:top` drift banner refresh every five seconds.
+- **Hermes Desktop:** the **Locus Graph** pane shares the analysis API, provides status and command-palette actions, refreshes through polling and plugin events, and can insert `@impact:<file>` into the composer.
 
-1. **Edit Detected**: Hermes runs `patch` on `auth/tokens.py`, changing `def verify_token(token: str)` to `def verify_token(token: str, audience: str)`.
-2. **Sub-5ms Incremental Diff**: `post_tool_call` re-indexes `auth/tokens.py` and compares exported symbol contracts against existing external call edges in SQLite.
-3. **Inline Feedback Injection**: `transform_tool_result` preserves the original JSON/text tool payload and appends an actionable alert before the model takes its next step:
-   ```text
-   [Locus Signature Drift Alert]
-   Your edit changed or removed exported symbol contract(s) with existing external callers:
-   - CRITICAL: `verify_token` in `auth/tokens.py` (`def verify_token(token: str) -> bool` -> `def verify_token(token: str, audience: str) -> bool`)
-     -> Update caller `services/checkout.py:6` (`settle_order`, passes 1 arg(s))
-   Inspect and update the affected call sites above before concluding your task.
-   ```
-4. **Self-Healing Auto-Resolution**: Once Hermes updates `services/checkout.py` to pass both arguments, Locus re-indexes the caller file and automatically marks the drift alert resolved (`0` open alerts).
+Check the selected workspace when switching between repositories. Dismissing a warning in the UI acknowledges it; dismissal does not repair code or establish that tests pass.
 
----
+## Analysis depth and limits
 
-## Visual Web Dashboard & Hermes Desktop UI
+| Language | Analysis |
+| --- | --- |
+| Python (`.py`, `.pyi`) | AST definitions, signatures, imports, call sites, and argument-count checks |
+| TypeScript / JavaScript | Structural definitions and imports, plus approximate call extraction; call argument counts are not available |
+| Go / Rust | Structural definitions and imports; no call-site extraction |
 
-![Locus Dashboard Preview](assets/locus-dashboard-preview.svg)
+Locus is a navigation and refactoring aid. Its results have these boundaries:
 
-### Web Dashboard (`/locus` + `sessions:top` Slot)
-- **Interactive Radial Dependency & Blast-Radius SVG Graph**: Click any module node to focus it at the center of concentric **Hop-1 Direct** and **Hop-2+ Transitive** blast rings, with covering test files highlighted in green and drifted callers in red.
-- **Live Session Drift Banner (`sessions:top`)**: Surfaces unresolved signature drift alerts directly at the top of active Hermes Dashboard sessions with one-click trace and resolution.
-
-### Native Hermes Desktop (`desktop/plugin.js`)
-- Built purely against `@hermes/plugin-sdk` and `react/jsx-runtime` (zero external npm bundles, 100% theme-variable adaptive).
-- Registers the right-side **Locus Graph** panel, a live bottom status-bar indicator (`Locus: <N> files` / `Locus: <N> drift!`), Command Palette actions, real-time push refresh via `plugin.locus.graph.updated`, and one-click **`@impact:<file>`** / **`@hotspots:all`** insertion directly into the chat composer (`host.composer.insertText`).
-
----
+- **Static resolution:** Python calls are linked using names and imports. Dynamic dispatch, runtime imports, aliases, and ambiguous names can produce missing or approximate links. Argument-count checks do not prove keyword binding, type compatibility, or behavioral correctness.
+- **Suggested tests:** the reports' “covering tests” are inferred from dependencies and filename conventions. Locus does not measure execution coverage or run those tests.
+- **Risk scores:** the 0–100 score combines dependency counts, inferred test gaps, and drift alerts. It is a prioritization heuristic, not a failure probability.
+- **Edit feedback:** hooks respond to supported Hermes editing tools and recognized paths. Locus is not a filesystem watcher; after external editor or shell changes, use `/locus reindex` to refresh the graph.
+- **Indexing:** supported source files are bounded by size and file count. Root-level `.gitignore` patterns are supported on a best-effort basis; nested ignore files and negation are not implemented.
+- **Performance:** unchanged files are cached using modification time, size, and SHA-256. An edited file is reparsed, then dependency links and rankings are refreshed. Timings depend on workspace size and hardware; the demo prints measurements for its own small fixture.
 
 ## Configuration
 
-Configure via Hermes Settings UI or under `plugins.config.locus` in `~/.hermes/config.yaml`:
+Use Hermes Settings or `plugins.config.locus` in your Hermes configuration:
 
-| Setting | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `auto_index_on_start` | `boolean` | `true` | Incrementally index the active workspace when a Hermes session starts (`mtime` + `SHA-256` cached). |
-| `drift_guard` | `boolean` | `true` | Append `[Locus Signature Drift Alert]` warnings to file-editing tool results when external callers break. |
-| `max_files` | `integer` | `2500` | Maximum workspace source files scanned per indexing pass (`50–20000`). |
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `auto_index_on_start` | `true` | Incrementally index the active workspace when a session starts |
+| `drift_guard` | `true` | Append signature-drift notices to recognized editing-tool results |
+| `max_files` | `2500` | Maximum files for session-start scans and `/locus reindex`; set a positive integer |
 
----
+## Development and verification
 
-## Run the `<60s` Live Showcase & Test Suite
+The standalone engine demo needs only Python >=3.10:
 
 ```bash
-# Instant end-to-end terminal showcase (<0.2s)
-python3 scripts/run_demo.py
+python3.11 scripts/run_demo.py
+python3.11 scripts/run_demo.py --cinematic
+```
 
-# Paced showcase for screen recording (<60s)
-python3 scripts/run_demo.py --cinematic
+This fixture exercises indexing, impact, drift detection, and clearance. It simulates edits directly; it is not a recording of an LLM-driven Hermes session.
 
-# Full unit & integration test suite
-python3 -m unittest discover -s tests -v
+For a real Hermes session, create a persistent disposable project in an empty directory:
 
-# Official Hermes admission & doctor checks
-hermes plugins validate .
+```bash
+python3.11 scripts/create_demo_workspace.py ../locus-demo
+cd ../locus-demo
+python3.11 -m unittest discover -s tests -v
+hermes
+```
+
+The fixture contains synthetic authentication logic, two direct callers, an API layer, and three baseline tests. Use the prompt in [the submission runbook](docs/submission.md) to demonstrate the edit-feedback-repair loop. A configured Hermes model is needed for the agent session; creating and testing the fixture needs no API key.
+
+Install the test-only dependencies in an isolated environment:
+
+```bash
+python3.11 -m venv .venv
+.venv/bin/python -m pip install -r requirements-dev.txt
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+FastAPI and HTTPX are needed to test the dashboard API outside Hermes. The core itself has no third-party runtime dependencies. Tests that require Hermes's own modules are skipped in standalone mode; run the suite in a configured Hermes environment as well to exercise those integrations.
+
+Before publishing, use the actual Hermes environment to run:
+
+```bash
+hermes plugins validate . --install-deps
 hermes plugins doctor . --ci
 ```
 
----
+See [the submission runbook](docs/submission.md) for the real-session demonstration and evidence checklist.
+
+## Verified behavior
+
+Version 0.1.1 passed 41 tests in the Hermes environment. A real GPT-5.4 mini session received the drift warning, repaired both callers, and passed the fixture tests. See [verification evidence and the full transcript](docs/verification.md) for commands, results, and limits.
 
 ## Architecture
 
 ```text
-hermes-locus/
-├── plugin.yaml                      # Manifest v2 (tools, hooks, config_schema, requires_hermes)
-├── __init__.py                      # Tools, @sym/@impact/@hotspots, drift hooks, /locus & CLI
-├── locus_core/                      # Pure-stdlib graph engine (zero external dependencies)
-│   ├── storage.py                   # Profile-scoped SQLite WAL via plugins.plugin_storage.plugin_db
-│   ├── parsers.py                   # Python AST + TypeScript/JS, Go, and Rust structural lexers
-│   ├── indexer.py                   # Incremental mtime+SHA256 scanner (.gitignore & symlink safe)
-│   ├── graph.py                     # PageRank, reverse-BFS blast radius, Tarjan SCC, SVG layout
-│   ├── drift.py                     # Pre/post edit signature arity & symbol removal comparator
-│   └── formatter.py                 # Token-budgeted Markdown & JSON-preserving drift injection
-├── skills/locus-navigation/SKILL.md # Bundled read-only architectural refactoring workflow skill
-├── dashboard/                       # Hermes Web Dashboard tab (/locus) + FastAPI plugin_api.py
-├── desktop/plugin.js                # Native Hermes Desktop @hermes/plugin-sdk pane & status chip
-├── scripts/run_demo.py              # Self-contained <60s live terminal showcase
-└── tests/                           # Comprehensive unit, FastAPI, hook, and @-reference tests
+Workspace source
+  → Python AST / structural parsers
+  → incremental index + SQLite WAL
+  → resolved dependencies + PageRank + cycle detection
+  → agent tools / context references / web API / desktop pane
+
+Hermes editing tool
+  → editing hooks: reindex and compare contracts
+  → tool result: append actionable drift feedback
+  → agent repairs callers and runs tests
 ```
 
----
+| Path | Responsibility |
+| --- | --- |
+| `plugin.yaml`, `__init__.py` | Hermes manifest, registration, commands, tools, context providers, and hooks |
+| `locus_core/parsers.py`, `indexer.py` | Source extraction, incremental scanning, and dependency linking |
+| `locus_core/storage.py` | Profile-scoped SQLite storage |
+| `locus_core/graph.py` | Repository maps, symbols, impact, cycles, and visualization data |
+| `locus_core/drift.py`, `formatter.py` | Contract comparison and bounded reports |
+| `dashboard/`, `desktop/` | Web and native Hermes interfaces |
+| `tests/`, `scripts/run_demo.py` | Automated checks and deterministic engine showcase |
 
-## Security, Privacy & Behavior Disclosure (Catalog Rule 13)
+## Privacy and behavior disclosure
 
-- **Local Workspace Source Reads**: Locus reads source code files (`.py`, `.pyi`, `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.go`, `.rs`) inside the active session workspace (or a user-specified `--workspace` directory) to extract AST symbols, imports, and call edges.
-- **Strict Path, Symlink & Credential Guards**: The scanner honors `.gitignore`, refuses home-directory root or hidden dot-directory roots, skips all hidden dot-files and dot-directories (`.env`, `.git`, `.ssh`, `.aws`, `.gnupg`, `.hermes`, etc.), skips build/vendor trees (`node_modules`, `.venv`, `target`, `dist`), enforces `realpath` containment so symlinks resolving outside the workspace root are never followed, skips binary files (`NUL`-byte check), and caps individual file reads at `512 KiB`.
-- **Local Profile-Scoped Storage Only**: Structural metadata (file hashes, symbol signatures, import/call edges, and drift records — never raw full file contents) is stored locally in `<HERMES_HOME>/plugin-data/locus/locus.db` via `plugins.plugin_storage.plugin_db("locus", "locus.db")`.
-- **Tool Result Augmentation**: When `drift_guard` is enabled (default `true`), `transform_tool_result` appends a `[Locus Signature Drift Alert]` notice to the output of file-mutating tools (`write_file`, `patch`, `edit_file`, etc.) only when an edit breaks known external workspace callers.
-- **Zero Network, Zero Credentials, Zero Shell Execution**: Locus makes **no external network requests**, collects **no telemetry**, reads **no API keys or `.env` secrets**, spawns **no shell subprocesses**, runs **no background daemons**, and installs **zero third-party Python or npm runtime packages**.
-
----
+- **Reads:** supported source files inside the selected workspace. The scanner rejects filesystem/home/system roots and sensitive credential directories, skips hidden files and build/vendor directories, rejects symlink escapes, skips detected binary content, and limits each source file to 512 KiB. Supported extensions are `.py`, `.pyi`, `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.go`, and `.rs`.
+- **Stores locally:** file metadata, signatures, short docstring summaries, imports, calls, drift records, and activity metadata in `<HERMES_HOME>/plugin-data/locus/locus.db`. Full source files are not stored in the database. Source excerpts are read when requested.
+- **Changes context:** explicit `@sym:`, `@impact:`, and `@hotspots:` references expand into reports. With `drift_guard` enabled, recognized editing-tool results may include a drift notice. Those reports and source excerpts become visible to the model configured in Hermes.
+- **No external service calls:** Locus's analysis makes no outbound network requests, reads no API credentials, collects no telemetry, and spawns no shell commands or background daemons. Web/Desktop clients communicate with Hermes's API. Locus never modifies workspace source files.
 
 ## License
 

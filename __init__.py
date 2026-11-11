@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
+import re
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
@@ -21,10 +23,13 @@ from .locus_core import (
     get_repo_map,
     index_workspace,
     lookup_symbol_details,
+    list_open_drift_alerts,
     merge_drift_into_tool_result,
+    open_locus_db,
     reindex_edited_file,
     search_symbols,
     validate_safe_workspace_root,
+    workspace_id_for,
 )
 
 if TYPE_CHECKING:
@@ -60,8 +65,6 @@ _FILE_MUTATION_TOOLS = frozenset(
 )
 _PATH_ARG_KEYS = ("path", "file_path", "filepath", "target_file", "filename")
 
-_PENDING_DRIFT_LOCK = threading.Lock()
-_PENDING_DRIFT_BY_CALL: dict[str, str] = {}
 _MAX_PENDING_DRIFT = 64
 
 
@@ -218,28 +221,72 @@ def _broadcast_desktop_update(event_name: str, payload: dict[str, Any]) -> None:
         from hermes_cli.plugin_events import broadcast_plugin_event
 
         broadcast_plugin_event("locus", event_name, payload)
-    except Exception:
+    except (Exception, SystemExit):
         pass
 
 
-def _call_drift_key(tool_name: str, edited_path: str, task_id: Optional[str], kwargs: dict[str, Any]) -> str:
-    tcid = kwargs.get("tool_call_id")
-    if isinstance(tcid, str) and tcid:
-        return f"tc:{tcid}"
-    return f"fallback:{task_id or ''}:{tool_name}:{edited_path}"
+def _call_drift_key(root: Path, tool_name: str, args: dict[str, Any], task_id: Optional[str], kwargs: dict[str, Any]) -> str:
+    # Some providers reuse call IDs. Scope them to their owner and turn as well.
+    identity = [str(root.resolve()), task_id, kwargs.get("session_id"), kwargs.get("turn_id"),
+                kwargs.get("api_request_id"), kwargs.get("tool_call_id"), tool_name, args]
+    return hashlib.sha256(json.dumps(identity, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def _result_object(result: Any) -> dict[str, Any]:
+    if isinstance(result, dict):
+        return result
+    if isinstance(result, str):
+        try:
+            parsed = json.loads(result)
+            return parsed if isinstance(parsed, dict) else {}
+        except ValueError:
+            pass
+    return {}
+
+
+def _edited_paths(args: dict[str, Any], result: Any, *, result_only: bool = False) -> list[str]:
+    """Read actual Hermes write/patch paths, including V4A multi-file operations."""
+    paths: list[str] = []
+
+    def add(value: Any) -> None:
+        if isinstance(value, str) and value.strip() and value.strip() not in paths:
+            paths.append(value.strip())
+
+    payload = _result_object(result)
+    add(payload.get("resolved_path"))
+    for field in ("files_modified", "files_created", "files_deleted"):
+        for value in payload.get(field, []) if isinstance(payload.get(field), list) else []:
+            # A partially applied Hermes Move operation reports "old -> new".
+            if isinstance(value, str) and " -> " in value:
+                for endpoint in value.split(" -> ", 1):
+                    add(endpoint)
+            else:
+                add(value)
+    if paths or result_only:
+        return paths
+
+    for field in _PATH_ARG_KEYS:
+        add(args.get(field))
+    patch = args.get("patch")
+    if isinstance(patch, str):
+        for line in patch.splitlines():
+            match = re.match(r"^\*\*\*\s*(?:Update|Add|Delete)\s+File:\s*(.+)$", line)
+            if match:
+                add(match.group(1))
+            move = re.match(r"^\*\*\*\s*Move\s+File:\s*(.+?)\s*->\s*(.+)$", line)
+            if move:
+                add(move.group(1))
+                add(move.group(2))
+            elif line.startswith("*** Move to:"):
+                add(line.partition(":")[2])
+    return paths
 
 
 def _tool_result_failed(result: Any, kwargs: dict[str, Any]) -> bool:
-    if kwargs.get("status") in {"blocked", "error"}:
+    if kwargs.get("status") in {"blocked", "error", "cancelled", "timeout"}:
         return True
-    if isinstance(result, str) and result.lstrip().startswith("{"):
-        try:
-            parsed = json.loads(result)
-            if isinstance(parsed, dict) and parsed.get("error"):
-                return True
-        except ValueError:
-            pass
-    return False
+    parsed = _result_object(result)
+    return bool(parsed.get("error")) or parsed.get("success") is False or parsed.get("ok") is False
 
 
 # ─── @ContextReferenceProviders (@sym:, @impact:, @hotspots:) ────────────────
@@ -486,6 +533,10 @@ def _handle_cli_command(args: Any) -> int:
 
 def register(ctx: PluginContext) -> None:
     """Register Locus tools, @-context references, drift hooks, commands, and skill."""
+    drift_lock = threading.Lock()
+    # Both hook orders occur in Hermes. Retain bounded, per-registration receipts
+    # so inspection happens once and only transform_tool_result delivers the alert.
+    inspected_calls: dict[str, tuple[str, bool]] = {}
 
     # 1. Model Tools (return JSON strings per Hermes tool contract)
     def handle_locus_map(args: dict[str, Any], **kwargs: Any) -> str:
@@ -625,48 +676,70 @@ def register(ctx: PluginContext) -> None:
         except Exception as exc:
             logger.debug("Locus auto-index skipped on session start: %s", exc)
 
-    def on_post_tool_call(
+    def inspect_tool_edit(
         tool_name: str = "",
         args: Optional[dict[str, Any]] = None,
         result: Any = None,
         task_id: Optional[str] = None,
+        *,
+        deliver: bool = False,
         **kwargs: Any,
-    ) -> None:
+    ) -> Optional[str]:
         if tool_name not in _FILE_MUTATION_TOOLS or not isinstance(args, dict):
-            return
-        if _tool_result_failed(result, kwargs):
-            return
-        edited_path = next(
-            (str(args[k]).strip() for k in _PATH_ARG_KEYS if isinstance(args.get(k), str) and str(args[k]).strip()),
-            "",
-        )
-        if not edited_path:
-            return
+            return None
+        failed = _tool_result_failed(result, kwargs)
+        if kwargs.get("status") in {"blocked", "cancelled", "timeout"}:
+            return None
+        # V4A can partially apply before an error. Only inspect paths the result
+        # confirms were changed in that case, never merely intended arguments.
+        edited_paths = _edited_paths(args, result, result_only=failed)
+        if not edited_paths:
+            return None
         try:
             root = _resolve_workspace_root(ctx)
-            _record_active_workspace(ctx, root)
-            outcome = reindex_edited_file(root, edited_path, tool_name=tool_name)
-            if not outcome.get("ok") or outcome.get("skipped"):
-                return
-
-            alerts = outcome.get("drift_alerts") or []
-            _broadcast_desktop_update(
-                "graph.updated",
-                {
-                    "workspace": str(root),
-                    "edited_path": outcome.get("rel_path", edited_path),
-                    "drift_count": len(alerts),
-                },
-            )
-            if alerts and bool(ctx.get_config("drift_guard", True)):
-                banner = format_drift_banner(alerts)
-                key = _call_drift_key(tool_name, edited_path, task_id, kwargs)
-                with _PENDING_DRIFT_LOCK:
-                    if len(_PENDING_DRIFT_BY_CALL) >= _MAX_PENDING_DRIFT:
-                        _PENDING_DRIFT_BY_CALL.pop(next(iter(_PENDING_DRIFT_BY_CALL)))
-                    _PENDING_DRIFT_BY_CALL[key] = banner
+            key = _call_drift_key(root, tool_name, args, task_id, kwargs)
+            with drift_lock:
+                if key not in inspected_calls:
+                    _record_active_workspace(ctx, root)
+                    candidates: set[tuple[str, str]] = set()
+                    changed: list[str] = []
+                    for edited_path in edited_paths:
+                        outcome = reindex_edited_file(root, edited_path, tool_name=tool_name)
+                        if outcome.get("ok") and not outcome.get("skipped"):
+                            changed.append(outcome.get("rel_path", edited_path))
+                            candidates.update((a["edited_path"], a["symbol_name"])
+                                              for a in outcome.get("drift_alerts") or [])
+                    # A single patch may change both a definition and its callers.
+                    # Report only alerts still open after every changed file is indexed.
+                    alerts: list[dict[str, Any]] = []
+                    if candidates:
+                        with open_locus_db() as conn:
+                            alerts = [a for a in list_open_drift_alerts(conn, workspace_id_for(root), limit=-1)
+                                      if (a["edited_path"], a["symbol_name"]) in candidates]
+                    banner = format_drift_banner(alerts) if bool(ctx.get_config("drift_guard", True)) else ""
+                    if len(inspected_calls) >= _MAX_PENDING_DRIFT:
+                        inspected_calls.pop(next(iter(inspected_calls)))
+                    inspected_calls[key] = (banner, False)
+                    if changed:
+                        _broadcast_desktop_update("graph.updated", {
+                            "workspace": str(root), "edited_paths": changed, "drift_count": len(alerts),
+                        })
+                banner, delivered = inspected_calls[key]
+                if not deliver or delivered:
+                    return None
+                if kwargs.get("tool_call_id"):
+                    inspected_calls[key] = (banner, True)
+                else:
+                    # execute_code calls can omit IDs; don't suppress a later edit
+                    # just because it reuses the same arguments.
+                    inspected_calls.pop(key, None)
+                return merge_drift_into_tool_result(result, banner) if banner else None
         except Exception as exc:
-            logger.debug("Locus post_tool_call reindex skipped: %s", exc)
+            logger.debug("Locus edit inspection skipped: %s", exc)
+            return None
+
+    def on_post_tool_call(**kwargs: Any) -> None:
+        inspect_tool_edit(**kwargs)
 
     def on_transform_tool_result(
         tool_name: str = "",
@@ -675,20 +748,7 @@ def register(ctx: PluginContext) -> None:
         task_id: Optional[str] = None,
         **kwargs: Any,
     ) -> Optional[str]:
-        if tool_name not in _FILE_MUTATION_TOOLS or not isinstance(args, dict):
-            return None
-        edited_path = next(
-            (str(args[k]).strip() for k in _PATH_ARG_KEYS if isinstance(args.get(k), str) and str(args[k]).strip()),
-            "",
-        )
-        if not edited_path:
-            return None
-        key = _call_drift_key(tool_name, edited_path, task_id, kwargs)
-        with _PENDING_DRIFT_LOCK:
-            banner = _PENDING_DRIFT_BY_CALL.pop(key, "")
-        if not banner:
-            return None
-        return merge_drift_into_tool_result(result, banner)
+        return inspect_tool_edit(tool_name, args, result, task_id, deliver=True, **kwargs)
 
     ctx.register_hook("on_session_start", on_session_start)
     ctx.register_hook("post_tool_call", on_post_tool_call)

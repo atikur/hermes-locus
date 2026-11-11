@@ -7,7 +7,7 @@
 
   const React = SDK.React;
   const h = React.createElement;
-  const { useState, useEffect, useCallback } = SDK.hooks;
+  const { useState, useEffect, useCallback, useRef } = SDK.hooks;
   const { Card, CardHeader, CardTitle, CardContent, Badge, Button, Input } = SDK.components;
 
   function roleColor(role, hasDrift, inCycle) {
@@ -42,13 +42,20 @@
     const [summary, setSummary] = useState(null);
     useEffect(function () {
       let alive = true;
-      SDK.fetchJSON("/api/plugins/locus/summary")
-        .then(function (d) {
-          if (alive) setSummary(d);
-        })
-        .catch(function () {});
+      let inFlight = false;
+      function refresh() {
+        if (inFlight) return;
+        inFlight = true;
+        SDK.fetchJSON("/api/plugins/locus/summary")
+          .then(function (d) { if (alive) setSummary(d); })
+          .catch(function () {})
+          .finally(function () { inFlight = false; });
+      }
+      refresh();
+      const timer = setInterval(refresh, 5000);
       return function () {
         alive = false;
+        clearInterval(timer);
       };
     }, []);
 
@@ -367,11 +374,20 @@
     const [busyScan, setBusyScan] = useState(false);
     const [copied, setCopied] = useState("");
     const [errMsg, setErrMsg] = useState("");
+    const loadSequence = useRef(0);
+    const loadInFlight = useRef(false);
+    const symbolSearchSequence = useRef(0);
+    const symbolDetailSequence = useRef(0);
 
     const loadAll = useCallback(
-      function (ws, foc) {
-        setLoading(true);
-        setErrMsg("");
+      function (ws, foc, background) {
+        if (background && loadInFlight.current) return;
+        const sequence = ++loadSequence.current;
+        loadInFlight.current = true;
+        if (!background) {
+          setLoading(true);
+          setErrMsg("");
+        }
         const qsWs = ws ? "?workspace=" + encodeURIComponent(ws) : "";
         const qsGraph =
           "?max_nodes=36" +
@@ -381,20 +397,26 @@
         Promise.all([
           SDK.fetchJSON("/api/plugins/locus/summary" + qsWs),
           SDK.fetchJSON("/api/plugins/locus/graph" + qsGraph),
-          SDK.fetchJSON("/api/plugins/locus/symbols?limit=20" + (ws ? "&workspace=" + encodeURIComponent(ws) : "")),
+          background ? Promise.resolve(null) : SDK.fetchJSON("/api/plugins/locus/symbols?limit=20" + (ws ? "&workspace=" + encodeURIComponent(ws) : "")),
         ])
           .then(function (res) {
+            if (sequence !== loadSequence.current) return;
             setSummary(res[0]);
             setGraph(res[1]);
-            setSymList((res[2] && res[2].symbols) || []);
+            if (!background) setSymList((res[2] && res[2].symbols) || []);
             if (!ws && res[0] && res[0].workspace) {
               setWsInput(res[0].workspace);
+              setWorkspace(res[0].workspace);
             }
             setLoading(false);
           })
           .catch(function (err) {
+            if (sequence !== loadSequence.current) return;
             setErrMsg(String((err && err.message) || err || "Failed to load Locus API"));
             setLoading(false);
+          })
+          .finally(function () {
+            if (sequence === loadSequence.current) loadInFlight.current = false;
           });
       },
       []
@@ -403,11 +425,30 @@
     useEffect(
       function () {
         loadAll(workspace, focus);
+        const timer = setInterval(function () { loadAll(workspace, focus, true); }, 5000);
+        return function () {
+          clearInterval(timer);
+          loadSequence.current++;
+          loadInFlight.current = false;
+        };
       },
       [workspace, focus, loadAll]
     );
 
+    useEffect(function () {
+      setFocus("");
+      setSymDetail(null);
+      setSymQuery("");
+      symbolSearchSequence.current++;
+      symbolDetailSequence.current++;
+      return function () {
+        symbolSearchSequence.current++;
+        symbolDetailSequence.current++;
+      };
+    }, [workspace]);
+
     function handleSearchSymbols(q) {
+      const sequence = ++symbolSearchSequence.current;
       setSymQuery(q);
       const qs =
         "?limit=25&q=" +
@@ -415,12 +456,14 @@
         (workspace ? "&workspace=" + encodeURIComponent(workspace) : "");
       SDK.fetchJSON("/api/plugins/locus/symbols" + qs)
         .then(function (d) {
+          if (sequence !== symbolSearchSequence.current) return;
           setSymList((d && d.symbols) || []);
         })
         .catch(function () {});
     }
 
     function handleInspectSymbol(name) {
+      const sequence = ++symbolDetailSequence.current;
       setActivePanel("symbols");
       const qs =
         "?name=" +
@@ -428,6 +471,7 @@
         (workspace ? "&workspace=" + encodeURIComponent(workspace) : "");
       SDK.fetchJSON("/api/plugins/locus/symbol" + qs)
         .then(function (d) {
+          if (sequence !== symbolDetailSequence.current) return;
           if (d && d.ok) setSymDetail(d);
         })
         .catch(function () {});
