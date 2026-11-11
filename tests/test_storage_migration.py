@@ -7,6 +7,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from locus_core import index_workspace
@@ -55,7 +56,8 @@ class TestStorageMigration(unittest.TestCase):
                 "library.py": "def verify(token, *, audience):\n    return True\n",
                 "caller.py": "from library import verify\nverify(token='test')\n",
             }
-            with sqlite3.connect(db) as conn:
+            # Close the handle explicitly: an open connection keeps the file locked on Windows.
+            with closing(sqlite3.connect(db)) as conn, conn:
                 conn.executescript(_LEGACY_TABLES)
                 for rel_path, source in sources.items():
                     path = root / rel_path

@@ -121,6 +121,8 @@ jobs:
             --plugin-ref HEAD --check-cross-file --output "$RUNNER_TEMP/locus-resolution-corpus.json"
       - name: Upload Hermes integration evidence
         if: always()
+        # Evidence upload is a convenience; storage limits must not fail the checks above.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: locus-hermes-integration

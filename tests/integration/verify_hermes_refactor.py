@@ -206,7 +206,7 @@ def main() -> None:
             plugins.discover_plugins()
             active = next(p for p in plugins.get_plugin_manager().list_plugins() if p["name"] == PLUGIN_NAME)
             assert active["enabled"] and not active["error"], active
-            assert active["tools"] == 4 and active["hooks"] == 3, active
+            assert active["tools"] == 5 and active["hooks"] == 3, active
             evidence["plugin_discovery"] = active
             index_started = time.perf_counter()
             lifecycle.invoke_hook("on_session_start", session_id="locus-refactor-proof")
