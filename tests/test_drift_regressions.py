@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -138,6 +139,109 @@ class TestDriftRegressions(unittest.TestCase):
         index_workspace(self.root, force=True, db_path=self.db)
         alert = self.break_contract()
         self.assertEqual([c["path"] for c in alert["affected_callers"]], ["z_broken.py"])
+
+    def test_same_arity_keyword_rename_tracks_only_newly_broken_calls(self) -> None:
+        self.edit(
+            "app.py",
+            "from lib import calculate\n"
+            "keyword = calculate(value=3)\n"
+            "positional = calculate(3)\n"
+            "already_invalid = calculate(wrong=3)\n",
+        )
+        self.edit("lib.py", "def calculate(amount, factor=1):\n    return amount * factor\n")
+        alert, = self.alerts()
+        self.assertEqual(alert["severity"], "critical")
+        caller, = alert["affected_callers"]
+        self.assertEqual((caller["path"], caller["line"], caller["arg_count"], caller["kind"]),
+                         ("app.py", 2, 1, "call"))
+        self.assertIn("unexpected keyword argument 'value'", caller["incompatibility"])
+        self.assertIn("Unexpected keyword argument 'value'", alert["reason"])
+        self.assertEqual(caller["suggestion"], "Review replacing value= with amount=.")
+
+        self.edit("lib.py", "def calculate(total, factor=1):\n    return total * factor + 1\n")
+        current, = self.alerts()
+        self.assertEqual(current["id"], alert["id"])
+        self.assertEqual(current["old_signature"], alert["old_signature"])
+        self.assertEqual([c["line"] for c in current["affected_callers"]], [2])
+        self.assertEqual(current["affected_callers"][0]["suggestion"], "Review replacing value= with total=.")
+
+        self.edit("app.py", "from lib import calculate\nresult = calculate(total=3)\n")
+        self.assertEqual(self.alerts(), [])
+
+    def test_same_arity_keyword_only_change_flags_excess_positionals(self) -> None:
+        self.edit(
+            "app.py",
+            "from lib import calculate\n"
+            "broken = calculate(3, 2)\n"
+            "compatible = calculate(3, factor=2)\n",
+        )
+        self.edit("lib.py", "def calculate(value, *, factor=1):\n    return value * factor\n")
+        alert, = self.alerts()
+        caller, = alert["affected_callers"]
+        self.assertEqual((alert["severity"], caller["line"]), ("critical", 2))
+        self.assertIn("positional", caller["incompatibility"])
+
+    def test_invalid_attempted_caller_repair_keeps_and_returns_the_warning(self) -> None:
+        self.edit("app.py", "from lib import calculate\nresult = calculate(value=3)\n")
+        self.edit("lib.py", "def calculate(amount, factor=1):\n    return amount * factor\n")
+        previous, = self.alerts()
+
+        result = self.edit("app.py", "from lib import calculate\nresult = calculate(total=3)\n")
+        returned, = result["drift_alerts"]
+        active, = self.alerts()
+        self.assertEqual(active["id"], previous["id"])
+        self.assertIn("unexpected keyword argument 'total'", returned["affected_callers"][0]["incompatibility"])
+
+        self.edit("app.py", "from lib import calculate\nresult = calculate(amount=3)\n")
+        self.assertEqual(self.alerts(), [])
+
+    def test_same_arity_positional_only_change_flags_explicit_keyword(self) -> None:
+        self.edit("app.py", "from lib import calculate\nresult = calculate(value=3)\n")
+        self.edit("lib.py", "def calculate(value, /, factor=1):\n    return value * factor\n")
+        alert, = self.alerts()
+        caller, = alert["affected_callers"]
+        self.assertEqual(alert["severity"], "critical")
+        self.assertIn("positional-only", caller["incompatibility"])
+        self.assertIn("/", alert["new_signature"])
+        self.assertNotIn("suggestion", caller)
+
+    def test_unpacked_keyword_rename_warns_until_original_contract_restored(self) -> None:
+        self.edit("app.py", "from lib import calculate\nargs = {'value': 3}\nresult = calculate(**args)\n")
+        self.edit("lib.py", "def calculate(amount, factor=1):\n    return amount * factor\n")
+        alert, = self.alerts()
+        self.assertEqual(alert["severity"], "warning")
+        self.assertIn("unpacked", alert["reason"])
+        self.assertNotIn("incompatibility", alert["affected_callers"][0])
+
+        self.edit("lib.py", "def calculate(value: int, factor=2):\n    return value * factor\n")
+        self.assertEqual(self.alerts(), [])
+
+    def test_unpacking_does_not_warn_for_optional_keyword_addition(self) -> None:
+        self.edit("app.py", "from lib import calculate\nargs = (3,)\nresult = calculate(*args)\n")
+        self.edit("lib.py", "def calculate(value, factor=1, *, offset=0):\n    return value * factor + offset\n")
+        self.assertEqual(self.alerts(), [])
+
+    def test_exact_binding_excludes_shadowed_and_attribute_call_targets(self) -> None:
+        self.edit(
+            "app.py",
+            "from lib import calculate\n"
+            "def use(calculate, service):\n"
+            "    calculate(value=3)\n"
+            "    service.calculate(value=4)\n",
+        )
+        self.edit("lib.py", "def calculate(amount, factor=1):\n    return amount * factor\n")
+        self.assertEqual(self.alerts(), [])
+
+    def test_legacy_open_alert_without_shape_still_reconciles_by_arity(self) -> None:
+        original = self.break_contract()
+        with sqlite3.connect(self.db) as conn:
+            conn.execute("UPDATE drift_alerts SET baseline_signature_json = NULL")
+            conn.execute("UPDATE calls SET python_call_json = NULL")
+            conn.execute("UPDATE symbols SET python_signature_json = NULL")
+        self.edit("other.py", "def unrelated():\n    return 2\n")
+        self.assertEqual(self.alerts()[0]["id"], original["id"])
+        self.edit("app.py", "from lib import calculate\nresult = calculate(3, 2)\n")
+        self.assertEqual(self.alerts(), [])
 
 
 if __name__ == "__main__":

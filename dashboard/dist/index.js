@@ -1018,8 +1018,21 @@
                         h("div", { className: "mt-1 opacity-85" }, d.reason),
                         h(
                           "div",
-                          { className: "mt-1 font-mono opacity-70" },
+                          { className: "mt-1 font-mono break-words opacity-70" },
                           d.old_signature + " → " + d.new_signature
+                        ),
+                        d.affected_callers && d.affected_callers.length > 0 && h(
+                          "ul",
+                          { className: "mt-2 space-y-1" },
+                          d.affected_callers.slice(0, 6).map(function (caller, idx) {
+                            return h(
+                              "li",
+                              { key: caller.path + ":" + caller.line + ":" + idx, className: "break-words" },
+                              h("code", { className: "font-mono" }, caller.path + ":" + caller.line),
+                              caller.incompatibility ? " — " + caller.incompatibility : "",
+                              caller.suggestion && h("div", { className: "opacity-80" }, caller.suggestion)
+                            );
+                          })
                         )
                       );
                     })

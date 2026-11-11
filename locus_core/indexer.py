@@ -42,6 +42,7 @@ SKIP_DIR_NAMES = frozenset(
 DEFAULT_MAX_FILES = 2500
 DEFAULT_MAX_FILE_BYTES = 512 * 1024  # 512 KiB
 MAX_ACTIVITY_LOG_ROWS = 200
+_PYTHON_PARSER_REVISION = 1
 
 _BLOCKED_SYSTEM_ROOTS: tuple[str, ...] = (
     "/etc",
@@ -359,15 +360,16 @@ def _store_parsed_file(
         """
         INSERT INTO files (
             workspace_id, rel_path, lang, mtime, size_bytes, sha256,
-            line_count, is_test
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            line_count, is_test, parser_revision
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(workspace_id, rel_path) DO UPDATE SET
             lang = excluded.lang,
             mtime = excluded.mtime,
             size_bytes = excluded.size_bytes,
             sha256 = excluded.sha256,
             line_count = excluded.line_count,
-            is_test = excluded.is_test
+            is_test = excluded.is_test,
+            parser_revision = excluded.parser_revision
         """,
         (
             workspace_id,
@@ -378,6 +380,7 @@ def _store_parsed_file(
             sha256,
             parsed.line_count,
             1 if parsed.is_test else 0,
+            _PYTHON_PARSER_REVISION if parsed.lang == "python" else 0,
         ),
     )
 
@@ -386,8 +389,9 @@ def _store_parsed_file(
             """
             INSERT OR REPLACE INTO symbols (
                 workspace_id, symbol_id, name, qualified_name, kind, rel_path,
-                line_start, line_end, signature, min_args, max_args, is_exported, docstring
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                line_start, line_end, signature, min_args, max_args, is_exported, docstring,
+                python_signature_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 (
@@ -404,6 +408,7 @@ def _store_parsed_file(
                     s.max_args,
                     1 if s.is_exported else 0,
                     s.docstring,
+                    json.dumps(s.python_signature) if s.python_signature is not None else None,
                 )
                 for s in parsed.symbols
             ],
@@ -430,8 +435,10 @@ def _store_parsed_file(
     if parsed.calls:
         conn.executemany(
             """
-            INSERT INTO calls (workspace_id, caller_path, caller_symbol, callee_name, resolved_path, line_no, arg_count)
-            VALUES (?, ?, ?, ?, '', ?, ?)
+            INSERT INTO calls (
+                workspace_id, caller_path, caller_symbol, callee_name, resolved_path,
+                line_no, arg_count, python_call_json
+            ) VALUES (?, ?, ?, ?, '', ?, ?, ?)
             """,
             [
                 (
@@ -441,6 +448,7 @@ def _store_parsed_file(
                     c.callee_name,
                     c.line_no,
                     c.arg_count,
+                    json.dumps(c.python_call) if c.python_call is not None else None,
                 )
                 for c in parsed.calls
             ],
@@ -591,12 +599,13 @@ def index_workspace(
 
     with open_locus_db(db_path=db_path) as conn:
         existing_rows = conn.execute(
-            "SELECT rel_path, mtime, size_bytes, sha256 FROM files WHERE workspace_id = ?",
+            """
+            SELECT rel_path, mtime, size_bytes, sha256, lang, parser_revision
+            FROM files WHERE workspace_id = ?
+            """,
             (ws_id,),
         ).fetchall()
-        existing_by_path = {
-            r["rel_path"]: (float(r["mtime"]), int(r["size_bytes"]), r["sha256"]) for r in existing_rows
-        }
+        existing_by_path = {r["rel_path"]: r for r in existing_rows}
 
         discovered_paths = {rel for _, rel, _ in discovered}
         removed_paths = set(existing_by_path.keys()) - discovered_paths
@@ -610,7 +619,14 @@ def index_workspace(
         parse_errors: list[dict[str, str]] = []
         for full_path, rel_posix, st in discovered:
             prev = existing_by_path.get(rel_posix)
-            if not force and prev is not None and abs(prev[0] - st.st_mtime) < 1e-4 and prev[1] == st.st_size:
+            if prev is not None and prev["lang"] == "python" and prev["parser_revision"] < _PYTHON_PARSER_REVISION:
+                # Refresh legacy Python metadata even when source contents did not change.
+                # Leave the previous rows intact until parsing succeeds.
+                prev = None
+            if (
+                not force and prev is not None
+                and abs(prev["mtime"] - st.st_mtime) < 1e-4 and prev["size_bytes"] == st.st_size
+            ):
                 continue
             try:
                 raw_bytes = full_path.read_bytes()
@@ -619,7 +635,7 @@ def index_workspace(
             if b"\x00" in raw_bytes[:4096]:
                 continue
             digest = hashlib.sha256(raw_bytes).hexdigest()
-            if not force and prev is not None and prev[2] == digest:
+            if not force and prev is not None and prev["sha256"] == digest:
                 conn.execute(
                     "UPDATE files SET mtime = ?, size_bytes = ? WHERE workspace_id = ? AND rel_path = ?",
                     (st.st_mtime, st.st_size, ws_id, rel_posix),
@@ -767,7 +783,7 @@ def reindex_edited_file(
         old_rows = conn.execute(
             """
             SELECT symbol_id, name, qualified_name, kind, rel_path, line_start, line_end,
-                   signature, min_args, max_args, is_exported, docstring
+                   signature, min_args, max_args, is_exported, docstring, python_signature_json
             FROM symbols
             WHERE workspace_id = ? AND rel_path = ?
             """,
@@ -787,6 +803,7 @@ def reindex_edited_file(
                 max_args=int(r["max_args"]),
                 is_exported=bool(r["is_exported"]),
                 docstring=r["docstring"],
+                python_signature=json.loads(r["python_signature_json"]) if r["python_signature_json"] else None,
             )
             for r in old_rows
         }
@@ -830,6 +847,7 @@ def reindex_edited_file(
         alerts = [
             alert for alert in reconcile_drift_alerts(conn, ws_id)
             if alert.edited_path == rel_posix
+            or any(caller["path"] == rel_posix for caller in alert.affected_callers)
         ]
         file_count = int(
             conn.execute("SELECT COUNT(*) AS c FROM files WHERE workspace_id = ?", (ws_id,)).fetchone()["c"]

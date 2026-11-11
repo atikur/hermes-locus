@@ -17,6 +17,7 @@ from typing import Iterator, Optional
 
 PLUGIN_NAME = "locus-codegraph"
 DB_FILENAME = "locus.db"
+_SCHEMA_VERSION = 1
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS workspaces (
@@ -41,6 +42,7 @@ CREATE TABLE IF NOT EXISTS files (
     fan_in INTEGER NOT NULL DEFAULT 0,
     fan_out INTEGER NOT NULL DEFAULT 0,
     is_test INTEGER NOT NULL DEFAULT 0,
+    parser_revision INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (workspace_id, rel_path)
 );
 
@@ -58,6 +60,7 @@ CREATE TABLE IF NOT EXISTS symbols (
     max_args INTEGER NOT NULL DEFAULT -1,
     is_exported INTEGER NOT NULL DEFAULT 1,
     docstring TEXT NOT NULL DEFAULT '',
+    python_signature_json TEXT,
     PRIMARY KEY (workspace_id, symbol_id)
 );
 
@@ -77,7 +80,8 @@ CREATE TABLE IF NOT EXISTS calls (
     callee_name TEXT NOT NULL,
     resolved_path TEXT NOT NULL DEFAULT '',
     line_no INTEGER NOT NULL DEFAULT 1,
-    arg_count INTEGER NOT NULL DEFAULT -1
+    arg_count INTEGER NOT NULL DEFAULT -1,
+    python_call_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS drift_alerts (
@@ -91,7 +95,8 @@ CREATE TABLE IF NOT EXISTS drift_alerts (
     new_signature TEXT NOT NULL,
     reason TEXT NOT NULL,
     affected_callers_json TEXT NOT NULL DEFAULT '[]',
-    resolved INTEGER NOT NULL DEFAULT 0
+    resolved INTEGER NOT NULL DEFAULT 0,
+    baseline_signature_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS activity_log (
@@ -114,6 +119,26 @@ CREATE INDEX IF NOT EXISTS idx_calls_ws_res ON calls(workspace_id, resolved_path
 CREATE INDEX IF NOT EXISTS idx_drift_ws_open ON drift_alerts(workspace_id, resolved);
 CREATE INDEX IF NOT EXISTS idx_activity_ws_time ON activity_log(workspace_id, created_at DESC);
 """
+
+
+def _migrate_schema(conn: sqlite3.Connection) -> None:
+    if conn.execute("PRAGMA user_version").fetchone()[0] >= _SCHEMA_VERSION:
+        return
+
+    # Serialize upgrades across concurrently starting dashboard and agent processes.
+    conn.execute("BEGIN IMMEDIATE")
+    if conn.execute("PRAGMA user_version").fetchone()[0] < _SCHEMA_VERSION:
+        for table, column, declaration in (
+            ("files", "parser_revision", "INTEGER NOT NULL DEFAULT 0"),
+            ("symbols", "python_signature_json", "TEXT"),
+            ("calls", "python_call_json", "TEXT"),
+            ("drift_alerts", "baseline_signature_json", "TEXT"),
+        ):
+            columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+            if column not in columns:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {declaration}")
+        conn.execute(f"PRAGMA user_version={_SCHEMA_VERSION}")
+    conn.commit()
 
 
 def workspace_id_for(root_path: str | Path) -> str:
@@ -161,6 +186,7 @@ def open_locus_db(db_path: Optional[str | Path] = None) -> Iterator[sqlite3.Conn
     try:
         conn.execute("PRAGMA busy_timeout=5000")
         conn.executescript(_SCHEMA_SQL)
+        _migrate_schema(conn)
         yield conn
         conn.commit()
     except Exception:

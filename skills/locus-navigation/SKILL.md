@@ -6,7 +6,8 @@ description: Navigate repositories, inspect dependencies before refactoring, sel
 # Locus Codegraph navigation and refactoring
 
 Locus maintains a local structural dependency graph of the selected workspace.
-Python has AST definitions, signatures, and call argument counts. TypeScript and
+Python has AST definitions, signatures, and positional and keyword binding for
+supported direct imports. TypeScript and
 JavaScript have lighter structural and call extraction; Go and Rust have
 definitions and imports. The graph is useful evidence, not a complete type checker
 or execution-coverage report.
@@ -29,8 +30,9 @@ or execution-coverage report.
 ## Respond to a drift alert
 
 After supported editing-tool calls, Locus can append a
-`[Locus Signature Drift Alert]` naming known external references affected by an
-argument-count change or symbol removal.
+`[Locus Signature Drift Alert]` naming external references affected by a
+signature change or symbol removal. An exact binding diagnostic can explain
+which argument failed and suggest a keyword replacement to review.
 
 When an alert appears:
 

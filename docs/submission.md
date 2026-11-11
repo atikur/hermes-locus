@@ -5,8 +5,9 @@
 It adds a local structural code graph to Hermes Agent. Before a refactor, `@sym:`
 and `@impact:` expose definitions, callers, dependent modules, and suggested tests.
 After supported edits, its signature-drift guard puts actionable caller warnings
-in tool results so Hermes can repair them. Python receives AST and argument-count
-analysis; TypeScript/JavaScript, Go, and Rust receive lighter structural indexing.
+in tool results so Hermes can repair them. Python receives AST analysis and
+checks positional and keyword binding for supported direct imports. TypeScript,
+JavaScript, Go, and Rust receive lighter structural indexing.
 The same index powers four agent tools, commands, a Web Dashboard, and a Desktop
 pane. The analysis core uses Python's standard library and requires no hosted
 index or additional model call.
@@ -18,7 +19,16 @@ transforms tool results, registers context-reference providers, and exposes web
 and desktop interfaces. The distinctive capability is structural feedback arriving
 inside the editing loop. The plugin supplies evidence; Hermes performs repairs.
 
-## Recorded demonstration
+## Keyword rename replay
+
+Locus Codegraph 0.1.4 ran a controlled replay of a same-arity keyword rename on
+Hermes Agent's own source. Both versions received the same patch. The earlier
+version reported zero affected calls. The new version located two gateway calls
+and three test calls in the patch result and suggested replacing `max_len=`
+with `limit=`. After the scripted repair, all 26 upstream tests passed and the
+alert cleared. [Replay commands and results](verification.md#keyword-rename-on-hermes-agent)
+
+## Recorded model session
 
 A real Hermes session with OpenAI `gpt-5.4-mini` changed a shared helper to require
 an additional argument. Its actual editing-tool result contained a warning naming
@@ -31,7 +41,7 @@ tests successfully, and verified zero remaining drift alerts.
 - [Real dashboard capture](../assets/locus-live-dashboard.jpg)
 - [77-second video](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4)
 
-The 77-second submission video presents selected actual tool output and the real
+The earlier 77-second video presents selected actual tool output and the real
 dashboard capture, with narration. It is labeled “Recorded Hermes run · edited
 for clarity.” The full transcript retains incidental failed commands. Version
 0.1.2 changes the installation identity to `locus-codegraph`; the recorded session

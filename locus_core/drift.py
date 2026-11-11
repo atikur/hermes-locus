@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from .parsers import ParsedSymbol
+from .parsers import ParsedSymbol, python_call_compatibility
 
 
 @dataclass(slots=True)
@@ -24,6 +24,7 @@ class DriftAlert:
     new_signature: str
     reason: str
     affected_callers: list[dict[str, Any]] = field(default_factory=list)
+    baseline_signature: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -48,12 +49,20 @@ def _external_callers_for_symbol(
     """Find external call sites and explicit importers referencing *symbol_name*."""
     rows = conn.execute(
         """
-        SELECT caller_path, caller_symbol, line_no, arg_count
-        FROM calls
-        WHERE workspace_id = ?
-          AND callee_name = ?
-          AND caller_path != ?
-          AND (resolved_path = ? OR resolved_path = '')
+        SELECT c.caller_path, c.caller_symbol, c.line_no, c.arg_count,
+               c.python_call_json, c.resolved_path,
+               EXISTS (
+                   SELECT 1 FROM imports i
+                   WHERE i.workspace_id = c.workspace_id
+                     AND i.src_path = c.caller_path
+                     AND i.resolved_path = c.resolved_path
+                     AND instr(',' || i.imported_names || ',', ',' || c.callee_name || ',') > 0
+               ) AS explicit_import
+        FROM calls c
+        WHERE c.workspace_id = ?
+          AND c.callee_name = ?
+          AND c.caller_path != ?
+          AND (c.resolved_path = ? OR c.resolved_path = '')
         ORDER BY caller_path, line_no
         """,
         (workspace_id, symbol_name, edited_path, edited_path),
@@ -66,6 +75,11 @@ def _external_callers_for_symbol(
             "line": int(r["line_no"]),
             "arg_count": int(r["arg_count"]),
             "kind": "call",
+            "_python_call": (
+                _load_shape(r["python_call_json"])
+                if r["resolved_path"] == edited_path and r["explicit_import"]
+                else None
+            ),
         }
         for r in rows
     ]
@@ -101,13 +115,166 @@ def _accepts_arg_count(min_args: int, max_args: int, count: int) -> bool:
     return count >= min_args and (max_args < 0 or count <= max_args)
 
 
+def _load_shape(raw: str | None) -> dict[str, Any] | None:
+    if not raw:
+        return None
+    try:
+        shape = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    return shape if isinstance(shape, dict) else None
+
+
+def _public_caller(caller: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in caller.items() if key != "_python_call"}
+
+
+def _read_callers(raw: str) -> list[dict[str, Any]]:
+    try:
+        callers = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    return [caller for caller in callers if isinstance(caller, dict)] if isinstance(callers, list) else []
+
+
+def _caller_location(caller: dict[str, Any]) -> tuple[str, str, int]:
+    return caller.get("path", ""), caller.get("caller", ""), caller.get("line", 0)
+
+
+def _python_arity(signature: dict[str, Any]) -> tuple[int, int]:
+    maximum = -1 if signature["has_var_positional"] or signature["has_var_keyword"] else sum(
+        len(signature[kind]) for kind in ("posonly", "positional_or_keyword", "keyword_only")
+    )
+    return len(signature["required"]), maximum
+
+
+def _arity_narrowed(before: tuple[int, int], after: tuple[int, int]) -> bool:
+    old_min, old_max = before
+    new_min, new_max = after
+    return new_min > old_min or (new_max >= 0 and (old_max < 0 or new_max < old_max))
+
+
+def _python_contract_may_narrow(before: dict[str, Any], after: dict[str, Any]) -> bool:
+    """Recognize simple compatible changes before warning about unpacked calls."""
+    if before == after:
+        return False
+    if any(before[key] and not after[key] for key in ("has_var_positional", "has_var_keyword")):
+        return True
+
+    old_posonly, new_posonly = before["posonly"], after["posonly"]
+    old_regular, new_regular = before["positional_or_keyword"], after["positional_or_keyword"]
+    old_pos, new_pos = old_posonly + old_regular, new_posonly + new_regular
+    old_required, new_required = set(before["required"]), set(after["required"])
+    if len(old_pos) > len(new_pos) or not set(before["keyword_only"]).issubset(after["keyword_only"]):
+        return True
+    if (new_required & set(after["keyword_only"])) - (old_required & set(before["keyword_only"])):
+        return True
+    for index, name in enumerate(new_pos):
+        if index >= len(old_pos):
+            if name in new_required or (
+                index >= len(new_posonly) and before["has_var_positional"] and before["has_var_keyword"]
+            ):
+                return True
+            continue
+        if name in new_required and old_pos[index] not in old_required:
+            return True
+        if index >= len(old_posonly) and (index < len(new_posonly) or name != old_pos[index]):
+            return True
+        if index < len(old_posonly) and index >= len(new_posonly) and before["has_var_keyword"]:
+            return True
+    return False
+
+
+def _single_keyword_rename(before: dict[str, Any], after: dict[str, Any]) -> tuple[str, str] | None:
+    if any(before[key] != after[key] for key in ("posonly", "has_var_positional", "has_var_keyword")):
+        return None
+    changes: list[tuple[str, str]] = []
+    for kind in ("positional_or_keyword", "keyword_only"):
+        if len(before[kind]) != len(after[kind]):
+            return None
+        changes.extend((old, new) for old, new in zip(before[kind], after[kind]) if old != new)
+    if len(changes) != 1:
+        return None
+    old, new = changes[0]
+    expected_required = {new if name == old else name for name in before["required"]}
+    return (old, new) if expected_required == set(after["required"]) else None
+
+
+def _classify_callers(
+    callers: list[dict[str, Any]],
+    old_shape: dict[str, Any] | None,
+    new_shape: dict[str, Any] | None,
+    old_arity: tuple[int, int] | None,
+    new_arity: tuple[int, int],
+    *,
+    legacy_unknown_risk: bool,
+    tracked_sites: frozenset[tuple[str, str, int]] = frozenset(),
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Separate newly broken callers from ones requiring manual verification."""
+    broken: list[dict[str, Any]] = []
+    uncertain: list[dict[str, Any]] = []
+    shape_narrowed = False
+    rename = None
+    if old_shape is not None and new_shape is not None:
+        shape_narrowed = _python_contract_may_narrow(old_shape, new_shape)
+        rename = _single_keyword_rename(old_shape, new_shape)
+    for caller in callers:
+        already_tracked = _caller_location(caller) in tracked_sites
+        call_shape = caller.get("_python_call")
+        if (old_shape is not None and new_shape is not None and call_shape is not None
+                and call_shape.get("direct_import") is True):
+            accepted_before, _ = python_call_compatibility(old_shape, call_shape)
+            accepted_now, explanation = python_call_compatibility(new_shape, call_shape)
+            if (accepted_before is True or already_tracked) and accepted_now is False:
+                entry = {**_public_caller(caller), "incompatibility": explanation}
+                if rename is not None:
+                    old, new = rename
+                    keywords = call_shape["keywords"]
+                    if old in keywords and new not in keywords:
+                        updated_call = {**call_shape, "keywords": [new if name == old else name for name in keywords]}
+                        compatible, _ = python_call_compatibility(new_shape, updated_call)
+                        if compatible is True:
+                            entry["suggestion"] = f"Review replacing {old}= with {new}=."
+                broken.append(entry)
+            elif accepted_before is not False and accepted_now is None and shape_narrowed:
+                uncertain.append(_public_caller(caller))
+            continue
+
+        count = caller["arg_count"]
+        if count < 0:
+            if legacy_unknown_risk:
+                uncertain.append(_public_caller(caller))
+        elif (already_tracked or old_arity is None or _accepts_arg_count(*old_arity, count)) and not _accepts_arg_count(*new_arity, count):
+            broken.append(_public_caller(caller))
+    return broken, uncertain
+
+
+def _describe_break(
+    symbol_name: str,
+    affected: list[dict[str, Any]],
+    arity: tuple[int, int],
+) -> str:
+    explanations = list(dict.fromkeys(c["incompatibility"] for c in affected if c.get("incompatibility")))
+    if explanations:
+        detail = ". ".join(text[0].upper() + text[1:] for text in explanations[:3])
+        return (
+            f"Signature of '{symbol_name}' no longer accepts {len(affected)} external call site(s). "
+            f"{detail}."
+        )
+    minimum, maximum = arity
+    return (
+        f"Signature of '{symbol_name}' accepts {minimum}..{'*' if maximum < 0 else maximum} arg(s); "
+        f"{len(affected)} external call site(s) pass incompatible argument counts."
+    )
+
+
 def _record_alert(
     conn: sqlite3.Connection, workspace_id: str, alert: DriftAlert
 ) -> None:
     """Update an unresolved contract break without losing its original baseline."""
     existing = conn.execute(
         """
-        SELECT id, old_signature FROM drift_alerts
+        SELECT id, old_signature, affected_callers_json FROM drift_alerts
         WHERE workspace_id = ? AND edited_path = ? AND symbol_name = ? AND resolved = 0
         ORDER BY id DESC LIMIT 1
         """,
@@ -115,6 +282,10 @@ def _record_alert(
     ).fetchone()
     if existing is not None:
         alert.old_signature = existing["old_signature"]
+        # Keep known sites available for reconciliation if a caller was edited
+        # into a different invalid call before the definition changed again.
+        sites = {_caller_location(c): c for c in _read_callers(existing["affected_callers_json"])}
+        sites.update({_caller_location(c): c for c in alert.affected_callers})
         conn.execute(
             """
             UPDATE drift_alerts
@@ -123,7 +294,7 @@ def _record_alert(
             """,
             (
                 alert.severity, alert.new_signature, alert.reason,
-                json.dumps(alert.affected_callers), int(existing["id"]),
+                json.dumps(list(sites.values())), int(existing["id"]),
             ),
         )
         return
@@ -131,13 +302,15 @@ def _record_alert(
         """
         INSERT INTO drift_alerts (
             workspace_id, created_at, edited_path, symbol_name, severity,
-            old_signature, new_signature, reason, affected_callers_json, resolved
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+            old_signature, new_signature, reason, affected_callers_json, resolved,
+            baseline_signature_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
         """,
         (
             workspace_id, time.time(), alert.edited_path, alert.symbol_name,
             alert.severity, alert.old_signature, alert.new_signature, alert.reason,
             json.dumps(alert.affected_callers),
+            json.dumps(alert.baseline_signature) if alert.baseline_signature is not None else None,
         ),
     )
 
@@ -158,7 +331,7 @@ def reconcile_drift_alerts(
     for row in rows:
         symbol = conn.execute(
             """
-            SELECT signature, min_args, max_args FROM symbols
+            SELECT signature, min_args, max_args, python_signature_json FROM symbols
             WHERE workspace_id = ? AND rel_path = ? AND qualified_name = ?
             """,
             (workspace_id, row["edited_path"], row["symbol_name"]),
@@ -169,31 +342,37 @@ def reconcile_drift_alerts(
         )
         severity = "critical"
         new_signature = "<removed>"
+        baseline = _load_shape(row["baseline_signature_json"])
         if symbol is None:
-            affected = callers
+            affected = [_public_caller(caller) for caller in callers]
             reason = (
                 f"Exported symbol '{row['symbol_name']}' was removed, "
                 f"but {len(affected)} external site(s) still reference it."
             )
         else:
             new_signature = symbol["signature"]
-            affected = [
-                caller for caller in callers
-                if caller["arg_count"] >= 0 and not _accepts_arg_count(
-                    int(symbol["min_args"]), int(symbol["max_args"]), caller["arg_count"]
-                )
-            ]
-            reason = (
-                f"Signature of '{row['symbol_name']}' accepts "
-                f"{symbol['min_args']}..{'*' if symbol['max_args'] < 0 else symbol['max_args']} arg(s); "
-                f"{len(affected)} external call site(s) still pass incompatible argument counts."
+            current = _load_shape(symbol["python_signature_json"])
+            old_arity = _python_arity(baseline) if baseline is not None else None
+            new_arity = (int(symbol["min_args"]), int(symbol["max_args"]))
+            affected, uncertain = _classify_callers(
+                callers, baseline, current, old_arity, new_arity,
+                legacy_unknown_risk=(
+                    _arity_narrowed(old_arity, new_arity) if old_arity is not None
+                    else new_signature != row["old_signature"]
+                ),
+                tracked_sites=frozenset(
+                    _caller_location(caller) for caller in _read_callers(row["affected_callers_json"])
+                    if caller.get("kind") == "call"
+                ),
             )
-            if not affected and new_signature != row["old_signature"]:
-                affected = [caller for caller in callers if caller["arg_count"] < 0]
+            if affected:
+                reason = _describe_break(row["symbol_name"], affected, new_arity)
+            else:
+                affected = uncertain
                 severity = "warning"
                 reason = (
-                    f"Signature of '{row['symbol_name']}' changed; "
-                    f"verify {len(affected)} external call site(s) with unknown argument counts."
+                    f"The signature of '{row['symbol_name']}' may reject "
+                    f"{len(affected)} external call site(s) with unpacked or unknown arguments."
                 )
 
         if not affected:
@@ -243,7 +422,8 @@ def detect_and_record_drift(
                         f"Exported symbol '{old_sym.qualified_name}' was removed, "
                         f"but {len(callers)} external site(s) still reference it."
                     ),
-                    affected_callers=callers[:25],
+                    affected_callers=[_public_caller(caller) for caller in callers[:25]],
+                    baseline_signature=old_sym.python_signature,
                 )
             )
 
@@ -252,7 +432,11 @@ def detect_and_record_drift(
         old_sym = old_symbols.get(qname)
         if old_sym is None:
             continue
-        if old_sym.min_args == new_sym.min_args and old_sym.max_args == new_sym.max_args:
+        old_arity = (old_sym.min_args, old_sym.max_args)
+        new_arity = (new_sym.min_args, new_sym.max_args)
+        old_shape = old_sym.python_signature
+        new_shape = new_sym.python_signature
+        if old_arity == new_arity and old_shape == new_shape:
             continue
 
         callers = _external_callers_for_symbol(
@@ -261,19 +445,12 @@ def detect_and_record_drift(
         if not callers:
             continue
 
-        broken_arity_callers = [
-            c
-            for c in callers
-            if c["arg_count"] >= 0
-            and _accepts_arg_count(old_sym.min_args, old_sym.max_args, c["arg_count"])
-            and not _accepts_arg_count(new_sym.min_args, new_sym.max_args, c["arg_count"])
-        ]
-        uncertain_callers = [c for c in callers if c["arg_count"] < 0]
-        contract_narrowed = new_sym.min_args > old_sym.min_args or (
-            new_sym.max_args >= 0 and (old_sym.max_args < 0 or new_sym.max_args < old_sym.max_args)
+        broken, uncertain = _classify_callers(
+            callers, old_shape, new_shape, old_arity, new_arity,
+            legacy_unknown_risk=_arity_narrowed(old_arity, new_arity),
         )
 
-        if broken_arity_callers:
+        if broken:
             alerts.append(
                 DriftAlert(
                     edited_path=edited_path,
@@ -281,16 +458,12 @@ def detect_and_record_drift(
                     severity="critical",
                     old_signature=old_sym.signature,
                     new_signature=new_sym.signature,
-                    reason=(
-                        f"Signature of '{new_sym.qualified_name}' now accepts "
-                        f"{new_sym.min_args}..{'*' if new_sym.max_args < 0 else new_sym.max_args} arg(s) "
-                        f"(was {old_sym.min_args}..{'*' if old_sym.max_args < 0 else old_sym.max_args}); "
-                        f"{len(broken_arity_callers)} external call site(s) pass incompatible argument counts."
-                    ),
-                    affected_callers=broken_arity_callers[:25],
+                    reason=_describe_break(new_sym.qualified_name, broken, new_arity),
+                    affected_callers=broken[:25],
+                    baseline_signature=old_shape,
                 )
             )
-        elif uncertain_callers and contract_narrowed:
+        elif uncertain:
             alerts.append(
                 DriftAlert(
                     edited_path=edited_path,
@@ -299,10 +472,11 @@ def detect_and_record_drift(
                     old_signature=old_sym.signature,
                     new_signature=new_sym.signature,
                     reason=(
-                        f"Accepted argument range of '{new_sym.qualified_name}' narrowed; "
-                        f"verify {len(uncertain_callers)} external caller(s) with unknown argument counts."
+                        f"The signature of '{new_sym.qualified_name}' may reject "
+                        f"{len(uncertain)} external call site(s) with unpacked or unknown arguments."
                     ),
-                    affected_callers=uncertain_callers[:25],
+                    affected_callers=uncertain[:25],
+                    baseline_signature=old_shape,
                 )
             )
 
@@ -329,10 +503,7 @@ def list_open_drift_alerts(
     ).fetchall()
     out: list[dict[str, Any]] = []
     for r in rows:
-        try:
-            callers = json.loads(r["affected_callers_json"] or "[]")
-        except Exception:
-            callers = []
+        callers = _read_callers(r["affected_callers_json"])
         out.append(
             {
                 "id": int(r["id"]),

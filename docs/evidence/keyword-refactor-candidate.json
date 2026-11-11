@@ -1,0 +1,188 @@
+{
+  "scenario": "Rename the required keyword-only argument of prepare_tool_preview at the same arity",
+  "variant": "candidate",
+  "workspace_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+  "hermes_host_commit": "01672831e48c1224bc003f834dd9b8c1cfc96a57",
+  "plugin_revision": "candidate working tree",
+  "python_version": "3.14.7",
+  "model_calls": 0,
+  "max_files": 20000,
+  "host_hook_timeout_seconds": 120,
+  "steps": [
+    {
+      "label": "upstream tests before the edit",
+      "command": [
+        "<hermes-python>",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "--noconftest",
+        "-p",
+        "pytest_asyncio.plugin",
+        "tests/agent/test_display.py"
+      ],
+      "exit_code": 0,
+      "stdout": "..........................                                               [100%]\n26 passed in 0.24s\n",
+      "stderr": ""
+    },
+    {
+      "label": "alerts before the edit",
+      "tool": "locus_hotspots",
+      "args": {},
+      "result": {
+        "ok": true,
+        "report": "## Locus Codegraph Architectural Hotspots & Health\n\n### Open Signature Drift Alerts (0)\n- ✅ Zero unresolved signature drift alerts.\n\n### Circular Dependencies (44)\n- 🔄 `hermes_platform/host/__init__.py -> hermes_platform/host/facts.py -> hermes_platform/host/__init__.py`\n- 🔄 `acp_adapter/auth.py -> hermes_cli/runtime_provider.py -> hermes_cli/left_core_migration.py -> gateway/config.py -> tests/gateway/test_session_mutation_model_provider_replacement.py -> tests/gateway/test_session_mutation_model.py -> acp_adapter/gateway_server.py -> acp_adapter/auth.py`\n- 🔄 `apps/bootstrap-installer/src-tauri/src/marker.rs -> apps/bootstrap-installer/src-tauri/src/update.rs -> apps/bootstrap-installer/src-tauri/src/marker.rs`\n- 🔄 `ui-tui/packages/hermes-ink/src/ink/colorize.ts -> ui-tui/packages/hermes-ink/src/ink/styles.ts -> ui-tui/packages/hermes-ink/src/ink/render-border.ts -> ui-tui/packages/hermes-ink/src/ink/colorize.ts`\n- 🔄 `ui-tui/packages/hermes-ink/src/ink/frame.ts -> ui-tui/packages/hermes-ink/src/ink/render-node-to-output.ts -> ui-tui/packages/hermes-ink/src/ink/terminal.ts -> ui-tui/packages/hermes-ink/src/ink/frame.ts`\n- 🔄 `apps/desktop/src/store/desktop-metrics.ts -> apps/desktop/src/store/shared-metrics.ts -> apps/desktop/src/store/desktop-metrics.ts`\n- 🔄 `apps/desktop/src/lib/preview-annotate/group.ts -> apps/desktop/src/lib/preview-annotate/pack.ts -> apps/desktop/src/lib/preview-annotate/group.ts`\n- 🔄 `apps/desktop/src/api/client.ts -> apps/desktop/src/app/session/hooks/use-session-actions/utils.ts -> apps/desktop/src/api/sessions.ts -> apps/desktop/src/api/client.ts`\n\n### High-Coupling Hub Modules\n- `gateway/run.py` — fan-in `826`, fan-out `139`, `5193` lines\n- `hermes_cli/config.py` — fan-in `860`, fan-out `57`, `3945` lines\n- `gateway/platforms/base.py` — fan-in `535`, fan-out `65`, `4783` lines\n- `hermes_constants.py` — fan-in `1380`, fan-out `14`, `1490` lines\n- `agent/auxiliary_client.py` — fan-in `226`, fan-out `93`, `8270` lines\n- `hermes_state.py` — fan-in `933`, fan-out `38`, `1738` lines\n- `gateway/config.py` — fan-in `1348`, fan-out `17`, `894` lines\n- `agent/context_compressor.py` — fan-in `263`, fan-out `34`, `5707` lines\n\n### Untested High-Centrality Modules\n- ⚠️ `eslint.config.shared.mjs` (fan-in `5`, `108` lines, 0 covering tests)\n- ⚠️ `apps/desktop/src/app/capabilities/connectors/derive-tools.ts` (fan-in `7`, `312` lines, 0 covering tests)\n- ⚠️ `apps/desktop/src/debug/atom-churn.ts` (fan-in `1`, `132` lines, 0 covering tests)\n- ⚠️ `apps/desktop/src/debug/watched-atoms.ts` (fan-in `1`, `81` lines, 0 covering tests)\n- ⚠️ `skills/productivity/microsoft-office/scripts/docx_common.py` (fan-in `4`, `92` lines, 0 covering tests)\n- ⚠️ `website/src/components/RouteLink.tsx` (fan-in `2`, `36` lines, 0 covering tests)\n- ⚠️ `apps/bootstrap-installer/src/components/hackery-button.tsx` (fan-in `2`, `36` lines, 0 covering tests)\n- ⚠️ `web/src/i18n/define-locale.ts` (fan-in `1`, `12` lines, 0 covering tests)",
+        "cycle_count": 44,
+        "open_drift_count": 0,
+        "untested_core_count": 8
+      },
+      "elapsed_ms": 8446.5
+    },
+    {
+      "label": "rename the required keyword",
+      "tool": "patch",
+      "args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview:\n@@\n-    text = _tail_trunc(full_text, max_len)\n+    text = _tail_trunc(full_text, limit)\n*** End Patch"
+      },
+      "result": {
+        "success": true,
+        "diff": "--- a/<workspace>/agent/display.py\n+++ b/<workspace>/agent/display.py\n@@ -509,11 +509,11 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    text = _tail_trunc(full_text, limit)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n",
+        "files_modified": [
+          "<workspace>/agent/display.py"
+        ],
+        "lint": {
+          "<workspace>/agent/display.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "<workspace>/agent/display.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `prepare_tool_preview` in `agent/display.py` (`def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview` -> `def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview`) — Signature of 'prepare_tool_preview' no longer accepts 5 external call site(s). Unexpected keyword argument 'max_len'.\n  -> Update caller `gateway/platforms/base.py:2014` (`BasePlatformAdapter.format_tool_event`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\n  -> Update caller `gateway/run_turn_progress.py:375` (`GatewayTurnProgressMixin._progress_build_message`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\n  -> Update caller `tests/agent/test_display.py:142` (`TestPrepareToolPreview.test_recovers_and_describes_truncated_url`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\n  -> Update caller `tests/agent/test_display.py:155` (`TestPrepareToolPreview.test_untruncated_url_has_no_link_target`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\n  -> Update caller `tests/agent/test_display.py:164` (`TestPrepareToolPreview.test_truncated_non_url_has_no_link_target`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "elapsed_ms": 5526.08
+    },
+    {
+      "label": "alerts after the rename",
+      "tool": "locus_hotspots",
+      "args": {},
+      "result": {
+        "ok": true,
+        "report": "## Locus Codegraph Architectural Hotspots & Health\n\n### Open Signature Drift Alerts (1)\n- 🚨 **`agent/display.py` · `prepare_tool_preview`**: Signature of 'prepare_tool_preview' no longer accepts 5 external call site(s). Unexpected keyword argument 'max_len'.\n  - `gateway/platforms/base.py:2014` (`BasePlatformAdapter.format_tool_event`) — unexpected keyword argument 'max_len'\n  - `gateway/run_turn_progress.py:375` (`GatewayTurnProgressMixin._progress_build_message`) — unexpected keyword argument 'max_len'\n  - `tests/agent/test_display.py:142` (`TestPrepareToolPreview.test_recovers_and_describes_truncated_url`) — unexpected keyword argument 'max_len'\n  - `tests/agent/test_display.py:155` (`TestPrepareToolPreview.test_untruncated_url_has_no_link_target`) — unexpected keyword argument 'max_len'\n  - `tests/agent/test_display.py:164` (`TestPrepareToolPreview.test_truncated_non_url_has_no_link_target`) — unexpected keyword argument 'max_len'\n\n### Circular Dependencies (44)\n- 🔄 `hermes_platform/host/__init__.py -> hermes_platform/host/facts.py -> hermes_platform/host/__init__.py`\n- 🔄 `acp_adapter/auth.py -> hermes_cli/runtime_provider.py -> hermes_cli/left_core_migration.py -> gateway/config.py -> tests/gateway/test_session_mutation_model_provider_replacement.py -> tests/gateway/test_session_mutation_model.py -> acp_adapter/gateway_server.py -> acp_adapter/auth.py`\n- 🔄 `apps/bootstrap-installer/src-tauri/src/marker.rs -> apps/bootstrap-installer/src-tauri/src/update.rs -> apps/bootstrap-installer/src-tauri/src/marker.rs`\n- 🔄 `ui-tui/packages/hermes-ink/src/ink/colorize.ts -> ui-tui/packages/hermes-ink/src/ink/styles.ts -> ui-tui/packages/hermes-ink/src/ink/render-border.ts -> ui-tui/packages/hermes-ink/src/ink/colorize.ts`\n- 🔄 `ui-tui/packages/hermes-ink/src/ink/frame.ts -> ui-tui/packages/hermes-ink/src/ink/render-node-to-output.ts -> ui-tui/packages/hermes-ink/src/ink/terminal.ts -> ui-tui/packages/hermes-ink/src/ink/frame.ts`\n- 🔄 `apps/desktop/src/store/desktop-metrics.ts -> apps/desktop/src/store/shared-metrics.ts -> apps/desktop/src/store/desktop-metrics.ts`\n- 🔄 `apps/desktop/src/lib/preview-annotate/group.ts -> apps/desktop/src/lib/preview-annotate/pack.ts -> apps/desktop/src/lib/preview-annotate/group.ts`\n- 🔄 `apps/desktop/src/api/client.ts -> apps/desktop/src/app/session/hooks/use-session-actions/utils.ts -> apps/desktop/src/api/sessions.ts -> apps/desktop/src/api/client.ts`\n\n### High-Coupling Hub Modules\n- `gateway/run.py` — fan-in `826`, fan-out `139`, `5193` lines\n- `hermes_cli/config.py` — fan-in `860`, fan-out `57`, `3945` lines\n- `gateway/platforms/base.py` — fan-in `535`, fan-out `65`, `4783` lines\n- `hermes_constants.py` — fan-in `1380`, fan-out `14`, `1490` lines\n- `agent/auxiliary_client.py` — fan-in `226`, fan-out `93`, `8270` lines\n- `hermes_state.py` — fan-in `933`, fan-out `38`, `1738` lines\n- `gateway/config.py` — fan-in `1348`, fan-out `17`, `894` lines\n- `agent/context_compressor.py` — fan-in `263`, fan-out `34`, `5707` lines\n\n### Untested High-Centrality Modules\n- ⚠️ `eslint.config.shared.mjs` (fan-in `5`, `108` lines, 0 covering tests)\n- ⚠️ `apps/desktop/src/app/capabilities/connectors/derive-tools.ts` (fan-in `7`, `312` lines, 0 covering tests)\n- ⚠️ `apps/desktop/src/debug/atom-churn.ts` (fan-in `1`, `132` lines, 0 covering tests)\n- ⚠️ `apps/desktop/src/debug/watched-atoms.ts` (fan-in `1`, `81` lines, 0 covering tests)\n- ⚠️ `skills/productivity/microsoft-office/scripts/docx_common.py` (fan-in `4`, `92` lines, 0 covering tests)\n- ⚠️ `website/src/components/RouteLink.tsx` (fan-in `2`, `36` lines, 0 covering tests)\n- ⚠️ `apps/bootstrap-installer/src/components/hackery-button.tsx` (fan-in `2`, `36` lines, 0 covering tests)\n- ⚠️ `web/src/i18n/define-locale.ts` (fan-in `1`, `12` lines, 0 covering tests)",
+        "cycle_count": 44,
+        "open_drift_count": 1,
+        "untested_core_count": 8
+      },
+      "elapsed_ms": 8269.99
+    },
+    {
+      "label": "upstream tests with broken callers",
+      "command": [
+        "<hermes-python>",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "--noconftest",
+        "-p",
+        "pytest_asyncio.plugin",
+        "tests/agent/test_display.py"
+      ],
+      "exit_code": 1,
+      "stdout": "..............FFF.........                                               [100%]\n=================================== FAILURES ===================================\n_______ TestPrepareToolPreview.test_recovers_and_describes_truncated_url _______\ntests/agent/test_display.py:142: in test_recovers_and_describes_truncated_url\n    preview = prepare_tool_preview(\nE   TypeError: prepare_tool_preview() got an unexpected keyword argument 'max_len'\n________ TestPrepareToolPreview.test_untruncated_url_has_no_link_target ________\ntests/agent/test_display.py:155: in test_untruncated_url_has_no_link_target\n    preview = prepare_tool_preview(\nE   TypeError: prepare_tool_preview() got an unexpected keyword argument 'max_len'\n_______ TestPrepareToolPreview.test_truncated_non_url_has_no_link_target _______\ntests/agent/test_display.py:164: in test_truncated_non_url_has_no_link_target\n    preview = prepare_tool_preview(\nE   TypeError: prepare_tool_preview() got an unexpected keyword argument 'max_len'\n=========================== short test summary info ============================\nFAILED tests/agent/test_display.py::TestPrepareToolPreview::test_recovers_and_describes_truncated_url\nFAILED tests/agent/test_display.py::TestPrepareToolPreview::test_untruncated_url_has_no_link_target\nFAILED tests/agent/test_display.py::TestPrepareToolPreview::test_truncated_non_url_has_no_link_target\n3 failed, 23 passed in 0.24s\n",
+      "stderr": ""
+    },
+    {
+      "label": "repair all five callers",
+      "tool": "patch",
+      "args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: gateway/platforms/base.py\n@@\n         prepared = prepare_tool_preview(\n-            event.tool_name, event.args, fallback=event.preview, max_len=cap)\n+            event.tool_name, event.args, fallback=event.preview, limit=cap)\n*** Update File: gateway/run_turn_progress.py\n@@\n-        prepared = prepare_tool_preview(tool_name, args, fallback=preview, max_len=self._preview_cap())\n+        prepared = prepare_tool_preview(tool_name, args, fallback=preview, limit=self._preview_cap())\n*** Update File: tests/agent/test_display.py\n@@\n             fallback=url[:17] + \"...\",\n-            max_len=20,\n+            limit=20,\n@@\n-            \"browser_navigate\", None, fallback=url, max_len=40\n+            \"browser_navigate\", None, fallback=url, limit=40\n@@\n             fallback=\"how to parse a URL\",\n-            max_len=12,\n+            limit=12,\n*** End Patch"
+      },
+      "result": {
+        "success": true,
+        "diff": "--- a/<workspace>/gateway/platforms/base.py\n+++ b/<workspace>/gateway/platforms/base.py\n@@ -2012,7 +2012,7 @@\n         # \"all\" / \"new\": short capped preview (default 40; progress bubbles persist as messages).\n         cap = preview_max_len if preview_max_len > 0 else 40\n         prepared = prepare_tool_preview(\n-            event.tool_name, event.args, fallback=event.preview, max_len=cap)\n+            event.tool_name, event.args, fallback=event.preview, limit=cap)\n         return t(\"gateway.progress.tool_preview\", emoji=emoji, tool=tool, preview=self.format_tool_preview(prepared))\n \n \n\n--- a/<workspace>/gateway/run_turn_progress.py\n+++ b/<workspace>/gateway/run_turn_progress.py\n@@ -372,7 +372,7 @@\n         if not preview:\n             return t(\"gateway.progress.tool_pending\", emoji=emoji, tool=tool_name)\n         from agent.display import get_tool_verb, prepare_tool_preview, tool_verb_connector, verb_drops_preview\n-        prepared = prepare_tool_preview(tool_name, args, fallback=preview, max_len=self._preview_cap())\n+        prepared = prepare_tool_preview(tool_name, args, fallback=preview, limit=self._preview_cap())\n         preview = adapter.format_tool_preview(prepared) if adapter is not None else prepared.text\n         # Friendly labels: human-phrased line for built-in tools (\"🔍 Searching the web for ...\")\n         # by prefixing the verb onto the computed preview, so the command/url/query is kept.\n\n--- a/<workspace>/tests/agent/test_display.py\n+++ b/<workspace>/tests/agent/test_display.py\n@@ -143,7 +143,7 @@\n             \"web_extract\",\n             {\"urls\": [url]},\n             fallback=url[:17] + \"...\",\n-            max_len=20,\n+            limit=20,\n         )\n \n         assert preview.text == url[:17] + \"...\"\n@@ -153,7 +153,7 @@\n     def test_untruncated_url_has_no_link_target(self):\n         url = \"https://example.com/page\"\n         preview = prepare_tool_preview(\n-            \"browser_navigate\", None, fallback=url, max_len=40\n+            \"browser_navigate\", None, fallback=url, limit=40\n         )\n \n         assert preview.text == url\n@@ -165,7 +165,7 @@\n             \"web_search\",\n             {\"query\": \"how to parse a URL\"},\n             fallback=\"how to parse a URL\",\n-            max_len=12,\n+            limit=12,\n         )\n \n         assert preview.truncated is True\n",
+        "files_modified": [
+          "<workspace>/gateway/platforms/base.py",
+          "<workspace>/gateway/run_turn_progress.py",
+          "<workspace>/tests/agent/test_display.py"
+        ],
+        "lint": {
+          "<workspace>/gateway/platforms/base.py": {
+            "status": "ok",
+            "output": ""
+          },
+          "<workspace>/gateway/run_turn_progress.py": {
+            "status": "ok",
+            "output": ""
+          },
+          "<workspace>/tests/agent/test_display.py": {
+            "status": "ok",
+            "output": ""
+          }
+        }
+      },
+      "elapsed_ms": 14545.74
+    },
+    {
+      "label": "alerts after repair",
+      "tool": "locus_hotspots",
+      "args": {},
+      "result": {
+        "ok": true,
+        "report": "## Locus Codegraph Architectural Hotspots & Health\n\n### Open Signature Drift Alerts (0)\n- ✅ Zero unresolved signature drift alerts.\n\n### Circular Dependencies (44)\n- 🔄 `hermes_platform/host/__init__.py -> hermes_platform/host/facts.py -> hermes_platform/host/__init__.py`\n- 🔄 `acp_adapter/auth.py -> hermes_cli/runtime_provider.py -> hermes_cli/left_core_migration.py -> gateway/config.py -> tests/gateway/test_session_mutation_model_provider_replacement.py -> tests/gateway/test_session_mutation_model.py -> acp_adapter/gateway_server.py -> acp_adapter/auth.py`\n- 🔄 `apps/bootstrap-installer/src-tauri/src/marker.rs -> apps/bootstrap-installer/src-tauri/src/update.rs -> apps/bootstrap-installer/src-tauri/src/marker.rs`\n- 🔄 `ui-tui/packages/hermes-ink/src/ink/colorize.ts -> ui-tui/packages/hermes-ink/src/ink/styles.ts -> ui-tui/packages/hermes-ink/src/ink/render-border.ts -> ui-tui/packages/hermes-ink/src/ink/colorize.ts`\n- 🔄 `ui-tui/packages/hermes-ink/src/ink/frame.ts -> ui-tui/packages/hermes-ink/src/ink/render-node-to-output.ts -> ui-tui/packages/hermes-ink/src/ink/terminal.ts -> ui-tui/packages/hermes-ink/src/ink/frame.ts`\n- 🔄 `apps/desktop/src/store/desktop-metrics.ts -> apps/desktop/src/store/shared-metrics.ts -> apps/desktop/src/store/desktop-metrics.ts`\n- 🔄 `apps/desktop/src/lib/preview-annotate/group.ts -> apps/desktop/src/lib/preview-annotate/pack.ts -> apps/desktop/src/lib/preview-annotate/group.ts`\n- 🔄 `apps/desktop/src/api/client.ts -> apps/desktop/src/app/session/hooks/use-session-actions/utils.ts -> apps/desktop/src/api/sessions.ts -> apps/desktop/src/api/client.ts`\n\n### High-Coupling Hub Modules\n- `gateway/run.py` — fan-in `826`, fan-out `139`, `5193` lines\n- `hermes_cli/config.py` — fan-in `860`, fan-out `57`, `3945` lines\n- `gateway/platforms/base.py` — fan-in `535`, fan-out `65`, `4783` lines\n- `hermes_constants.py` — fan-in `1380`, fan-out `14`, `1490` lines\n- `agent/auxiliary_client.py` — fan-in `226`, fan-out `93`, `8270` lines\n- `hermes_state.py` — fan-in `933`, fan-out `38`, `1738` lines\n- `gateway/config.py` — fan-in `1348`, fan-out `17`, `894` lines\n- `agent/context_compressor.py` — fan-in `263`, fan-out `34`, `5707` lines\n\n### Untested High-Centrality Modules\n- ⚠️ `eslint.config.shared.mjs` (fan-in `5`, `108` lines, 0 covering tests)\n- ⚠️ `apps/desktop/src/app/capabilities/connectors/derive-tools.ts` (fan-in `7`, `312` lines, 0 covering tests)\n- ⚠️ `apps/desktop/src/debug/atom-churn.ts` (fan-in `1`, `132` lines, 0 covering tests)\n- ⚠️ `apps/desktop/src/debug/watched-atoms.ts` (fan-in `1`, `81` lines, 0 covering tests)\n- ⚠️ `skills/productivity/microsoft-office/scripts/docx_common.py` (fan-in `4`, `92` lines, 0 covering tests)\n- ⚠️ `website/src/components/RouteLink.tsx` (fan-in `2`, `36` lines, 0 covering tests)\n- ⚠️ `apps/bootstrap-installer/src/components/hackery-button.tsx` (fan-in `2`, `36` lines, 0 covering tests)\n- ⚠️ `web/src/i18n/define-locale.ts` (fan-in `1`, `12` lines, 0 covering tests)",
+        "cycle_count": 44,
+        "open_drift_count": 0,
+        "untested_core_count": 8
+      },
+      "elapsed_ms": 8255.73
+    },
+    {
+      "label": "upstream tests after repair",
+      "command": [
+        "<hermes-python>",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "--noconftest",
+        "-p",
+        "pytest_asyncio.plugin",
+        "tests/agent/test_display.py"
+      ],
+      "exit_code": 0,
+      "stdout": "..........................                                               [100%]\n26 passed in 0.23s\n",
+      "stderr": ""
+    }
+  ],
+  "status": "PASS",
+  "plugin_engine_sha256": "2d3341c41cddda1ed032c00524fd55d91e042451dce4cbeb3fbe632f3cd75404",
+  "plugin_discovery": {
+    "name": "locus-codegraph",
+    "key": "locus-codegraph",
+    "kind": "standalone",
+    "version": "0.1.4",
+    "description": "Live AST codebase graph, transitive blast-radius analyzer, signature drift guard, @sym:/@impact:/@hotspots: context references, and interactive visual graph explorer for Web Dashboard and Hermes Desktop.",
+    "source": "user",
+    "enabled": true,
+    "tools": 4,
+    "hooks": 3,
+    "middleware": 0,
+    "commands": 1,
+    "error": null
+  },
+  "index": {
+    "files": 17025,
+    "symbols": 192406,
+    "edges": 79469,
+    "elapsed_ms": 33553.11
+  },
+  "indexed_call_sites": [
+    "gateway/platforms/base.py:2014",
+    "gateway/run_turn_progress.py:375",
+    "tests/agent/test_display.py:142",
+    "tests/agent/test_display.py:155",
+    "tests/agent/test_display.py:164"
+  ]
+}

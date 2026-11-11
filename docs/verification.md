@@ -2,7 +2,7 @@
 
 Verified on 11 November 2026 on macOS (Darwin 25.4.0, arm64).
 
-The local checks below cover **0.1.3** after the reliability changes. The
+The local checks below cover **0.1.4** with Python call binding. The
 [GitHub workflow](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
 separately runs the standalone suite on Python 3.11, 3.12, and 3.14.
 
@@ -15,8 +15,8 @@ by the identity update.
 
 | Check | Observed result |
 | --- | --- |
-| Standalone Python 3.11.16, `requirements-dev.txt` | 63 tests run: 60 passed, 3 Hermes-specific checks skipped |
-| Installed Hermes, Python 3.14.7 | 63 tests passed, no skips |
+| Standalone Python 3.11.16, `requirements-dev.txt` | 74 tests passed and 3 Hermes-specific checks skipped |
+| Installed Hermes, Python 3.14.7 | 77 tests passed, no skips |
 | `hermes plugins validate . --install-deps` | Passed; security scan safe; declarations match registrations |
 | `hermes plugins doctor . --ci` | Passed; 4 tools and 3 hooks registered |
 | Hermes payload scanner | Passed |
@@ -32,6 +32,52 @@ Run the standalone suite using the README instructions. For the host suite,
 use the Hermes interpreter and a disposable `HERMES_HOME`, then run the same
 `python -m unittest discover -s tests -v` command. Host-dependent tests are
 explicitly skipped when Hermes is unavailable.
+
+## Keyword rename on Hermes Agent
+
+Both runs started from fresh archives of Hermes Agent commit
+[`78abaafc`](https://github.com/NousResearch/hermes-agent/commit/78abaafcccec20a546c94e8734a70e38c08a6a69)
+and indexed 17,025 files. The integration test sent the same edit and repair
+payloads through Hermes's real `patch` tool. The edit renamed the required
+keyword `max_len` to `limit` in `agent/display.py`'s `prepare_tool_preview` and
+updated the function body. The parameter count and kinds stayed the same.
+
+| Observation | v0.1.3 | v0.1.4 |
+| --- | ---: | ---: |
+| Original display tests before the edit | 26 passed | 26 passed |
+| Call sites named in the signature edit result | 0 | 5 |
+| Original display tests after the edit | 23 passed, 3 failed | 23 passed, 3 failed |
+| Original display tests after updating all five calls | 26 passed | 26 passed |
+| Open drift alerts after repair | 0 | 0 |
+
+The five diagnostics point to two gateway calls and three test calls. Each
+explains that `max_len` is unexpected and suggests reviewing a replacement
+with `limit`. The test failures reproduced Python's `TypeError` for the old
+keyword. The browser dashboard also displayed caller paths, errors, and
+suggestions on a small fixture, and cleared the alert after a repair and rescan.
+
+[v0.1.3 replay](evidence/keyword-refactor-baseline.json) ·
+[v0.1.4 replay](evidence/keyword-refactor-candidate.json) ·
+[Integration test](../tests/integration/verify_hermes_refactor.py)
+
+The replay scripts the edits and makes zero model calls. It measures the alert
+and its clearance on one real refactor, with the same edits in both runs. The
+scratch profiles use a 20,000-file cap and a 120-second hook timeout to index the
+whole selected checkout. The test runs the upstream display file with
+`--noconftest` because the global process cleanup hook needs process enumeration
+that is unavailable in the sandbox.
+
+To reproduce, use the Hermes Python interpreter and install `pytest==9.1.1`
+and `pytest-asyncio==1.4.0` into an isolated directory. Point `--source` at a
+Hermes checkout containing the pinned commit and `--runtime` at the installed
+Hermes runtime. Use `--variant baseline` with a separate output file to replay
+the v0.1.3 commit from this plugin's history.
+
+```bash
+/path/to/hermes/python tests/integration/verify_hermes_refactor.py \
+  --source /path/to/hermes-agent --runtime /path/to/hermes-runtime \
+  --pytest-deps /path/to/test-deps --variant candidate --output candidate.json
+```
 
 ## Real model-assisted refactor
 

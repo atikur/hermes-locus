@@ -8,22 +8,24 @@ The analysis engine uses Python's standard library (`ast`, `sqlite3`, and struct
 
 ## One refactor, a complete feedback loop
 
-Suppose `verify_token(token)` is called by checkout code, which is used by an API route:
+Suppose checkout code calls `verify_token(token, audience="checkout")`, and an API route depends on checkout.
 
 1. **See the impact.** `@impact:auth/tokens.py` identifies direct and indirect dependents and suggests related tests.
-2. **Make the change.** Hermes adds a required `audience` argument.
-3. **Catch a missed caller.** Locus appends an actionable warning to the editing tool's result:
+2. **Make the change.** Hermes renames the `audience` parameter to `scope`. The total number of parameters stays the same.
+3. **Catch a missed caller.** Locus appends a warning to the editing tool's result.
 
    ```text
    [Locus Signature Drift Alert]
-   Your edit changed or removed exported symbol contract(s) with existing external callers:
-   - CRITICAL: verify_token now requires 2 arguments
-     -> Update caller services/checkout.py:6 (passes 1 argument)
+   CRITICAL: verify_token in auth/tokens.py
+   -> Update caller services/checkout.py:6: unexpected keyword argument 'audience'
+      Review replacing audience= with scope=.
    ```
 
 4. **Repair and verify.** Hermes updates the caller and runs the relevant tests. Locus re-evaluates the tracked mismatch as files are indexed and clears it when the incompatible references are gone.
 
-Locus supplies the evidence; the agent performs the repair. It never edits your workspace source files itself. The warning above is abbreviated for illustration.
+Locus supplies the evidence and the agent performs the repair. The warning above is abbreviated for illustration.
+
+In a replay on Hermes Agent's own code, the same keyword rename passed through the real `patch` tool on both versions. Locus 0.1.4 named five affected call sites before testing. The earlier version reported zero. Three upstream tests failed after the rename, and all 26 passed again after repair. [Replay and evidence](docs/verification.md#keyword-rename-on-hermes-agent)
 
 ## Install
 
@@ -107,13 +109,13 @@ Check the selected workspace when switching between repositories. Dismissing a w
 
 | Language | Analysis |
 | --- | --- |
-| Python (`.py`, `.pyi`) | AST definitions, signatures, imports, call sites, and argument-count checks |
+| Python (`.py`, `.pyi`) | AST definitions, signatures, imports, and call sites. Checks argument counts and binding for supported direct imports of functions. |
 | TypeScript / JavaScript | Structural definitions and imports, plus approximate call extraction; call argument counts are not available |
 | Go / Rust | Structural definitions and imports; no call-site extraction |
 
 Locus is a navigation and refactoring aid. Its results have these boundaries:
 
-- **Static resolution:** Python calls are linked using names and imports. Dynamic dispatch, runtime imports, aliases, and ambiguous names can produce missing or approximate links. Argument-count checks do not prove keyword binding, type compatibility, or behavioral correctness.
+- **Static resolution:** Python calls are linked using names and imports. For supported direct imports of undecorated functions, Locus checks positional and keyword binding against the old and new signatures. This covers renamed keywords, required arguments, and positional-only and keyword-only parameters. Dynamic dispatch, aliases, ambiguous imports, and unpacked arguments limit what Locus can verify. Runtime tests still check values and behavior.
 - **Suggested tests:** the reports' “covering tests” are inferred from dependencies and filename conventions. Locus does not measure execution coverage or run those tests.
 - **Risk scores:** the 0–100 score combines dependency counts, inferred test gaps, and drift alerts. It is a prioritization heuristic, not a failure probability.
 - **Edit feedback:** hooks respond to supported Hermes editing tools and recognized paths. Locus is not a filesystem watcher; after external editor or shell changes, use `/locus reindex` to refresh the graph.
@@ -123,7 +125,7 @@ Locus is a navigation and refactoring aid. Its results have these boundaries:
 
 ## Configuration
 
-Use Hermes Settings or `plugins.config.locus-codegraph` in your Hermes configuration:
+Use Hermes Settings or `plugins.entries.locus-codegraph.settings` in your Hermes configuration.
 
 | Setting | Default | Effect |
 | --- | --- | --- |
@@ -176,7 +178,7 @@ For a reproducible larger-workspace trial, see [performance observations and the
 
 ## Verified behavior
 
-The release passes 63 tests in the Hermes environment. A real GPT-5.4 mini session received the drift warning, repaired both callers, and passed the fixture tests. Version 0.1.2 gives this project the distinct installation identity `locus-codegraph`; the recorded refactor used version 0.1.1. See [verification evidence and the full transcript](docs/verification.md) for commands, results, and limits.
+The release passes 77 tests in the Hermes environment. A recorded v0.1.1 session with GPT-5.4 mini also shows the model responding to an arity warning, repairing both callers, and passing the fixture tests. [Verification evidence and full transcript](docs/verification.md)
 
 [Watch the 77-second working demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4) · [Download captions](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.srt)
 

@@ -1,7 +1,7 @@
-<user-home>/.gemini/antigravity/brain/418e923d-2a07-4ed6-9549-643c2565e54e/scratch/hermes-agent/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+<hermes-venv>/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
   from starlette.testclient import TestClient as TestClient  # noqa
 test_fastapi_plugin_routes_end_to_end (test_api_and_validation.TestApiAndValidation.test_fastapi_plugin_routes_end_to_end) ... ok
-test_hermes_admission_validator_zero_warnings_when_available (test_api_and_validation.TestApiAndValidation.test_hermes_admission_validator_zero_warnings_when_available) ... <workspace>/.submission/hermes-agent/hermes_cli/plugins_manifest.py:475: DeprecationWarning: 'maxsplit' is passed as positional argument
+test_hermes_admission_validator_zero_warnings_when_available (test_api_and_validation.TestApiAndValidation.test_hermes_admission_validator_zero_warnings_when_available) ... <hermes-source>/hermes_cli/plugins_manifest.py:475: DeprecationWarning: 'maxsplit' is passed as positional argument
   parts = re.split(r"[-+]", str(v).strip().lstrip("v"), 1)[0].split(".")
 ok
 test_dismissal_is_scoped_idempotent_and_refreshes_desktop (test_api_mutations.TestApiMutations.test_dismissal_is_scoped_idempotent_and_refreshes_desktop) ... ok
@@ -20,16 +20,26 @@ test_compatible_calls_and_import_only_users_do_not_raise_arity_warning (test_dri
 test_deleted_file_alert_survives_repeat_hook_and_resolves_on_restore (test_drift_regressions.TestDriftRegressions.test_deleted_file_alert_survives_repeat_hook_and_resolves_on_restore) ... ok
 test_deleted_symbol_alert_survives_edits_until_import_and_call_removed (test_drift_regressions.TestDriftRegressions.test_deleted_symbol_alert_survives_edits_until_import_and_call_removed) ... ok
 test_emptying_a_file_detects_removed_exports (test_drift_regressions.TestDriftRegressions.test_emptying_a_file_detects_removed_exports) ... ok
+test_exact_binding_excludes_shadowed_and_attribute_call_targets (test_drift_regressions.TestDriftRegressions.test_exact_binding_excludes_shadowed_and_attribute_call_targets) ... ok
+test_invalid_attempted_caller_repair_keeps_and_returns_the_warning (test_drift_regressions.TestDriftRegressions.test_invalid_attempted_caller_repair_keeps_and_returns_the_warning) ... ok
+test_legacy_open_alert_without_shape_still_reconciles_by_arity (test_drift_regressions.TestDriftRegressions.test_legacy_open_alert_without_shape_still_reconciles_by_arity) ... ok
 test_partial_caller_fix_refreshes_remaining_sites_then_resolves (test_drift_regressions.TestDriftRegressions.test_partial_caller_fix_refreshes_remaining_sites_then_resolves) ... ok
 test_restoring_optional_parameter_resolves_after_repeated_callee_edits (test_drift_regressions.TestDriftRegressions.test_restoring_optional_parameter_resolves_after_repeated_callee_edits) ... ok
+test_same_arity_keyword_only_change_flags_excess_positionals (test_drift_regressions.TestDriftRegressions.test_same_arity_keyword_only_change_flags_excess_positionals) ... ok
+test_same_arity_keyword_rename_tracks_only_newly_broken_calls (test_drift_regressions.TestDriftRegressions.test_same_arity_keyword_rename_tracks_only_newly_broken_calls) ... ok
+test_same_arity_positional_only_change_flags_explicit_keyword (test_drift_regressions.TestDriftRegressions.test_same_arity_positional_only_change_flags_explicit_keyword) ... ok
 test_scan_reconciles_alert_after_caller_fixed_outside_hook (test_drift_regressions.TestDriftRegressions.test_scan_reconciles_alert_after_caller_fixed_outside_hook) ... ok
 test_unknown_arity_warning_survives_until_contract_or_caller_is_known_safe (test_drift_regressions.TestDriftRegressions.test_unknown_arity_warning_survives_until_contract_or_caller_is_known_safe) ... ok
 test_unknown_call_can_resolve_by_restoring_original_signature (test_drift_regressions.TestDriftRegressions.test_unknown_call_can_resolve_by_restoring_original_signature) ... ok
+test_unpacked_keyword_rename_warns_until_original_contract_restored (test_drift_regressions.TestDriftRegressions.test_unpacked_keyword_rename_warns_until_original_contract_restored) ... ok
+test_unpacking_does_not_warn_for_optional_keyword_addition (test_drift_regressions.TestDriftRegressions.test_unpacking_does_not_warn_for_optional_keyword_addition) ... ok
 test_cli_subcommands_json_and_markdown (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_cli_subcommands_json_and_markdown) ... ok
 test_deleted_symbol_and_default_restored_drift_auto_resolve (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_deleted_symbol_and_default_restored_drift_auto_resolve) ... ok
 test_empty_workspace_behaves_gracefully (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_empty_workspace_behaves_gracefully) ... ok
 test_failed_tool_call_does_not_trigger_drift (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_failed_tool_call_does_not_trigger_drift) ... ok
-test_hermes_context_reference_preprocessor_end_to_end (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_hermes_context_reference_preprocessor_end_to_end) ... ok
+test_hermes_context_reference_preprocessor_end_to_end (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_hermes_context_reference_preprocessor_end_to_end) ... <frozen importlib._bootstrap>:491: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x10cb56020>
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+ok
 test_malformed_python_and_binary_files_fail_open (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_malformed_python_and_binary_files_fail_open) ... ok
 test_manual_drift_resolution_via_fastapi (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_manual_drift_resolution_via_fastapi) ... ok
 test_merge_drift_into_tool_result_formats (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_merge_drift_into_tool_result_formats) ... ok
@@ -64,9 +74,15 @@ test_multilanguage_parsers_ts_go_rust (test_parsers_and_graph.TestParsersAndGrap
 test_python_parser_extracts_arity_methods_and_calls (test_parsers_and_graph.TestParsersAndGraph.test_python_parser_extracts_arity_methods_and_calls) ... ok
 test_symlink_escape_is_ignored (test_parsers_and_graph.TestParsersAndGraph.test_symlink_escape_is_ignored) ... ok
 test_default_database_is_isolated_from_existing_locus_plugin_data (test_plugin_identity.TestPluginIdentity.test_default_database_is_isolated_from_existing_locus_plugin_data) ... ok
+test_decorated_function_keeps_arity_fallback (test_python_call_shapes.TestPythonCallShapes.test_decorated_function_keeps_arity_fallback) ... ok
+test_direct_imports_are_limited_to_provable_scope_and_order (test_python_call_shapes.TestPythonCallShapes.test_direct_imports_are_limited_to_provable_scope_and_order) ... ok
+test_keyword_rename_distinguishes_positional_and_keyword_callers (test_python_call_shapes.TestPythonCallShapes.test_keyword_rename_distinguishes_positional_and_keyword_callers) ... ok
+test_parameter_kinds_and_defaults (test_python_call_shapes.TestPythonCallShapes.test_parameter_kinds_and_defaults) ... ok
+test_variadics_bind_explicit_arguments_but_unpacking_is_unknown (test_python_call_shapes.TestPythonCallShapes.test_variadics_bind_explicit_arguments_but_unpacking_is_unknown) ... ok
+test_refreshes_unchanged_python_and_preserves_open_alert (test_storage_migration.TestStorageMigration.test_refreshes_unchanged_python_and_preserves_open_alert) ... ok
 test_three_hop_test_is_suggested_consistently_and_four_hops_remain_bounded (test_test_reachability.TestTestReachability.test_three_hop_test_is_suggested_consistently_and_four_hops_remain_bounded) ... ok
 
 ----------------------------------------------------------------------
-Ran 63 tests in 4.108s
+Ran 77 tests in 4.553s
 
 OK

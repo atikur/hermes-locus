@@ -13,7 +13,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Optional, TypedDict
 
 LANGUAGE_BY_EXT: dict[str, str] = {
     ".py": "python",
@@ -27,6 +27,23 @@ LANGUAGE_BY_EXT: dict[str, str] = {
     ".go": "go",
     ".rs": "rust",
 }
+
+
+class PythonSignature(TypedDict):
+    posonly: list[str]
+    positional_or_keyword: list[str]
+    keyword_only: list[str]
+    required: list[str]
+    has_var_positional: bool
+    has_var_keyword: bool
+
+
+class PythonCall(TypedDict):
+    positional_count: int
+    keywords: list[str]
+    has_star_args: bool
+    has_star_kwargs: bool
+    direct_import: bool
 
 
 @dataclass(slots=True)
@@ -43,6 +60,7 @@ class ParsedSymbol:
     max_args: int = -1
     is_exported: bool = True
     docstring: str = ""
+    python_signature: PythonSignature | None = None
 
 
 @dataclass(slots=True)
@@ -60,6 +78,7 @@ class ParsedCall:
     callee_name: str
     line_no: int
     arg_count: int = -1  # -1 means variadic/unpacked or unknown
+    python_call: PythonCall | None = None
 
 
 @dataclass(slots=True)
@@ -103,6 +122,65 @@ def _first_doc_line(doc: Optional[str]) -> str:
 
 
 # ─── Python AST Parser ───────────────────────────────────────────────────────
+
+
+def python_call_compatibility(
+    signature: PythonSignature | None, call: PythonCall | None,
+) -> tuple[bool | None, str]:
+    """Bind explicit arguments to a static signature; leave unpacked calls uncertain."""
+    if signature is None or call is None:
+        return None, "Python call shape is unavailable"
+    if call["has_star_args"] or call["has_star_kwargs"]:
+        return None, "argument unpacking may change the call shape"
+
+    positional_only = signature["posonly"]
+    positional_names = positional_only + signature["positional_or_keyword"]
+    keyword_only = set(signature["keyword_only"])
+    keyword_names = keyword_only.union(signature["positional_or_keyword"])
+    count = call["positional_count"]
+    if count > len(positional_names) and not signature["has_var_positional"]:
+        return False, f"passes {count} positional arguments but accepts at most {len(positional_names)}"
+
+    bound = set(positional_names[:count])
+    seen_keywords: set[str] = set()
+    for name in call["keywords"]:
+        if name in seen_keywords:
+            return False, f"duplicate keyword argument {name!r}"
+        seen_keywords.add(name)
+        if name in keyword_names:
+            if name in bound:
+                return False, f"multiple values for argument {name!r}"
+            bound.add(name)
+        elif not signature["has_var_keyword"]:
+            if name in positional_only:
+                return False, f"positional-only argument {name!r} passed by keyword"
+            return False, f"unexpected keyword argument {name!r}"
+
+    for name in signature["required"]:
+        if name not in bound:
+            if name in keyword_only:
+                return False, f"missing required keyword-only argument {name!r}"
+            if name in positional_only:
+                return False, f"missing required positional-only argument {name!r}"
+            return False, f"missing required argument {name!r}"
+    return True, ""
+
+
+def _python_signature(args: ast.arguments) -> PythonSignature:
+    posonly = [arg.arg for arg in args.posonlyargs]
+    positional_or_keyword = [arg.arg for arg in args.args]
+    positional = posonly + positional_or_keyword
+    required_positional = len(positional) - len(args.defaults)
+    return {
+        "posonly": posonly,
+        "positional_or_keyword": positional_or_keyword,
+        "keyword_only": [arg.arg for arg in args.kwonlyargs],
+        "required": positional[:required_positional] + [
+            arg.arg for arg, default in zip(args.kwonlyargs, args.kw_defaults) if default is None
+        ],
+        "has_var_positional": args.vararg is not None,
+        "has_var_keyword": args.kwarg is not None,
+    }
 
 
 def _unparse_safe(node: Optional[ast.AST]) -> str:
@@ -155,6 +233,8 @@ def _python_func_signature_and_arity(
                 d_str = "..."
             piece += f" = {d_str}"
         rendered_params.append(piece)
+        if idx + 1 == len(posonly):
+            rendered_params.append("/")
 
     if node.args.vararg is not None:
         va = f"*{node.args.vararg.arg}"
@@ -187,25 +267,51 @@ def _python_func_signature_and_arity(
     return sig, min_args, max_args
 
 
+_PythonFunction = ast.FunctionDef | ast.AsyncFunctionDef
+
+
 class _PythonCallCollector(ast.NodeVisitor):
-    def __init__(self, rel_path: str) -> None:
+    def __init__(self, rel_path: str, tree: ast.Module) -> None:
         self.rel_path = rel_path
         self.scope_stack: list[str] = ["<module>"]
         self.calls: list[ParsedCall] = []
         self.imports: list[ParsedImport] = []
+        self.function_scope: _PythonFunction | None = None
+        self.direct_import_scopes: dict[ast.ImportFrom, _PythonFunction | None] = {
+            stmt: None for stmt in tree.body if isinstance(stmt, ast.ImportFrom) and stmt.module
+        }
+        self.direct_imports: dict[str, ast.ImportFrom] = {}
+        self.bare_calls: list[tuple[ParsedCall, _PythonFunction | None]] = []
+        self.rebound_names: set[str] = set()
+        self.has_star_import = False
 
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
+            import_name = alias.asname or alias.name.split(".")[-1]
+            self.rebound_names.update((alias.asname or alias.name.split(".")[0], import_name))
             self.imports.append(
                 ParsedImport(
                     src_path=self.rel_path,
                     target_spec=alias.name,
-                    imported_names=[alias.asname or alias.name.split(".")[-1]],
+                    imported_names=[import_name],
                     line_no=getattr(node, "lineno", 1),
                 )
             )
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        for alias in node.names:
+            if alias.name == "*":
+                self.has_star_import = True
+                continue
+            bound_name = alias.asname or alias.name
+            if (node in self.direct_import_scopes and bound_name == alias.name
+                    and bound_name not in self.direct_imports):
+                self.direct_imports[bound_name] = node
+            else:
+                # The graph's legacy import index also lists the original name
+                # for an aliased from-import. Neither name proves a binding.
+                self.rebound_names.update((bound_name, alias.name))
+
         dots = "." * (node.level or 0)
         mod = node.module or ""
         spec = f"{dots}{mod}" if (dots or mod) else "."
@@ -220,9 +326,13 @@ class _PythonCallCollector(ast.NodeVisitor):
         )
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self.rebound_names.add(node.name)
+        previous_function = self.function_scope
+        self.function_scope = None
         self.scope_stack.append(node.name)
         self.generic_visit(node)
         self.scope_stack.pop()
+        self.function_scope = previous_function
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self._visit_fn(node)
@@ -230,12 +340,46 @@ class _PythonCallCollector(ast.NodeVisitor):
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         self._visit_fn(node)
 
-    def _visit_fn(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+    def _visit_fn(self, node: _PythonFunction) -> None:
+        self.rebound_names.add(node.name)
+        self.direct_import_scopes.update({
+            stmt: node for stmt in node.body if isinstance(stmt, ast.ImportFrom) and stmt.module
+        })
+        previous_function = self.function_scope
+        self.function_scope = node
         parent = self.scope_stack[-1]
         qname = f"{parent}.{node.name}" if parent != "<module>" else node.name
         self.scope_stack.append(qname)
         self.generic_visit(node)
         self.scope_stack.pop()
+        self.function_scope = previous_function
+
+    def visit_arg(self, node: ast.arg) -> None:
+        self.rebound_names.add(node.arg)
+        self.generic_visit(node)
+
+    def visit_Name(self, node: ast.Name) -> None:
+        if isinstance(node.ctx, (ast.Store, ast.Del)):
+            self.rebound_names.add(node.id)
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        if node.name is not None:
+            self.rebound_names.add(node.name)
+        self.generic_visit(node)
+
+    def visit_MatchAs(self, node: ast.MatchAs) -> None:
+        if node.name is not None:
+            self.rebound_names.add(node.name)
+        self.generic_visit(node)
+
+    def visit_MatchStar(self, node: ast.MatchStar) -> None:
+        if node.name is not None:
+            self.rebound_names.add(node.name)
+
+    def visit_MatchMapping(self, node: ast.MatchMapping) -> None:
+        if node.rest is not None:
+            self.rebound_names.add(node.rest)
+        self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> None:
         callee = ""
@@ -251,20 +395,49 @@ class _PythonCallCollector(ast.NodeVisitor):
             "append", "extend", "get", "items", "keys", "values", "strip", "split", "join",
             "format", "lower", "upper", "replace", "startswith", "endswith",
         }:
-            has_unpack = any(isinstance(a, ast.Starred) for a in node.args) or any(
-                kw.arg is None for kw in node.keywords
+            positional_count = sum(not isinstance(arg, ast.Starred) for arg in node.args)
+            keywords = [kw.arg for kw in node.keywords if kw.arg is not None]
+            has_star_args = positional_count != len(node.args)
+            has_star_kwargs = len(keywords) != len(node.keywords)
+            arg_count = -1 if has_star_args or has_star_kwargs else positional_count + len(keywords)
+            python_call: PythonCall | None = None
+            # Attribute targets may be bound methods. The resolver cannot
+            # establish the receiver, so keep their existing arity behavior.
+            if isinstance(node.func, ast.Name):
+                python_call = {
+                    "positional_count": positional_count,
+                    "keywords": keywords,
+                    "has_star_args": has_star_args,
+                    "has_star_kwargs": has_star_kwargs,
+                    "direct_import": False,
+                }
+            call = ParsedCall(
+                caller_path=self.rel_path,
+                caller_symbol=self.scope_stack[-1],
+                callee_name=callee,
+                line_no=node.lineno,
+                arg_count=arg_count,
+                python_call=python_call,
             )
-            arg_count = -1 if has_unpack else (len(node.args) + len(node.keywords))
-            self.calls.append(
-                ParsedCall(
-                    caller_path=self.rel_path,
-                    caller_symbol=self.scope_stack[-1],
-                    callee_name=callee,
-                    line_no=getattr(node, "lineno", 1),
-                    arg_count=arg_count,
-                )
-            )
+            self.calls.append(call)
+            if python_call is not None:
+                self.bare_calls.append((call, self.function_scope))
         self.generic_visit(node)
+
+    def mark_direct_imports(self) -> None:
+        # The graph resolves short names across a whole file. Use precise
+        # binding only where a direct import gives that guess a static basis.
+        if self.has_star_import:
+            return
+        for call, function_scope in self.bare_calls:
+            declaration = self.direct_imports.get(call.callee_name)
+            if declaration is None or call.callee_name in self.rebound_names:
+                continue
+            scope = self.direct_import_scopes[declaration]
+            if scope is not None and scope is not function_scope:
+                continue
+            if call.line_no > (declaration.end_lineno or declaration.lineno) and call.python_call is not None:
+                call.python_call["direct_import"] = True
 
 
 def _parse_python(rel_path: str, source: str) -> ParsedFile:
@@ -318,6 +491,8 @@ def _parse_python(rel_path: str, source: str) -> ParsedFile:
                     max_args=max_a,
                     is_exported=_exported(stmt.name),
                     docstring=_first_doc_line(ast.get_docstring(stmt)),
+                    # A decorator may replace the declared binding rules.
+                    python_signature=_python_signature(stmt.args) if not stmt.decorator_list else None,
                 )
             )
         elif isinstance(stmt, ast.ClassDef):
@@ -385,8 +560,9 @@ def _parse_python(rel_path: str, source: str) -> ParsedFile:
                         )
                     )
 
-    collector = _PythonCallCollector(rel_path)
+    collector = _PythonCallCollector(rel_path, tree)
     collector.visit(tree)
+    collector.mark_direct_imports()
     parsed.imports = collector.imports
     parsed.calls = collector.calls
     return parsed

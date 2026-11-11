@@ -159,7 +159,9 @@ def format_hotspots_markdown(data: dict[str, Any]) -> str:
         for d in drifts[:10]:
             lines.append(f"- 🚨 **`{d['edited_path']}` · `{d['symbol_name']}`**: {d['reason']}")
             for caller in d.get("affected_callers", [])[:5]:
-                lines.append(f"  - Broken caller: `{caller['path']}:{caller['line']}` (`{caller['caller']}`)")
+                detail = caller.get("incompatibility")
+                suffix = f" — {detail}" if detail else ""
+                lines.append(f"  - `{caller['path']}:{caller['line']}` (`{caller['caller']}`){suffix}")
     else:
         lines.append("- ✅ Zero unresolved signature drift alerts.")
 
@@ -194,7 +196,7 @@ def format_drift_banner(alerts: list[dict[str, Any]]) -> str:
         return ""
     lines: list[str] = [
         "[Locus Signature Drift Alert]",
-        "Your edit changed or removed exported symbol contract(s) with existing external callers:",
+        "Changed or removed signatures still affect these workspace callers:",
     ]
     for a in alerts[:5]:
         lines.append(
@@ -202,8 +204,13 @@ def format_drift_banner(alerts: list[dict[str, Any]]) -> str:
             f"(`{a['old_signature']}` -> `{a['new_signature']}`) — {a['reason']}"
         )
         for c in a.get("affected_callers", [])[:6]:
-            arg_info = f"passes {c['arg_count']} arg(s)" if c.get("arg_count", -1) >= 0 else c.get("kind", "ref")
-            lines.append(f"  -> Update caller `{c['path']}:{c['line']}` (`{c['caller']}`, {arg_info})")
+            detail = c.get("incompatibility")
+            if not detail:
+                detail = f"passes {c['arg_count']} arg(s)" if c.get("arg_count", -1) >= 0 else c.get("kind", "reference")
+            action = "Inspect" if a["severity"] == "warning" or c.get("kind") == "import" else "Update caller"
+            lines.append(f"  -> {action} `{c['path']}:{c['line']}` (`{c['caller']}`): {detail}")
+            if c.get("suggestion"):
+                lines.append(f"     {c['suggestion']}")
     lines.append("Inspect and update the affected call sites above before concluding your task.")
     return "\n".join(lines)
 

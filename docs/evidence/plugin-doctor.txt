@@ -1,4 +1,4 @@
-Plugin Doctor: <workspace>/hermes-locus
-  manifest: locus-codegraph 0.1.3 (standalone)
+Plugin Doctor: <plugin>
+  manifest: locus-codegraph 0.1.4 (standalone)
   OK: runtime discovery, manifest parsing, import, and registration passed
   registrations: 4 tool(s), 3 hook(s)
