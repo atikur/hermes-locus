@@ -43,7 +43,7 @@ SKIP_DIR_NAMES = frozenset(
 DEFAULT_MAX_FILES = 2500
 DEFAULT_MAX_FILE_BYTES = 512 * 1024  # 512 KiB
 MAX_ACTIVITY_LOG_ROWS = 200
-_PYTHON_PARSER_REVISION = 3
+_PYTHON_PARSER_REVISION = 4
 
 _BLOCKED_SYSTEM_ROOTS: tuple[str, ...] = (
     "/etc",
@@ -309,37 +309,79 @@ class _PythonModuleIndex:
             return ""
         return self.resolve(src, _join_python_spec(module, name))
 
-    def _function_export(self, path: str, name: str, metadata: dict,
-                         seen: frozenset = frozenset()) -> tuple[str, str]:
+    def _export(self, path: str, name: str, metadata: dict,
+                seen: frozenset = frozenset()) -> tuple[str, str, str]:
+        """Follow static re-exports to ``(path, name, kind)``; an empty path is unknown."""
         key = (path, name)
         if not path or key in seen or len(seen) >= 8:
-            return "", name
+            return "", name, ""
         info = metadata.get(path, {})
         if info.get("dynamic"):
-            return "", name
+            return "", name, ""
         kind = info.get("bindings", {}).get(name)
         if kind == "from":
             binding = info.get("imports", {}).get(name, {})
             target = self.resolve(path, binding.get("module", ""))
-            return self._function_export(target, binding.get("name", name), metadata, seen | {key})
-        if kind is None and "__getattr__" in info.get("bindings", {}):
-            return "", name
-        # Keep a missing name linked to its module so deletion alerts survive.
-        # Assignments, classes and decorated/conditional definitions are unknown.
-        return (path, name) if kind in (None, "function") else ("", name)
+            return self._export(target, binding.get("name", name), metadata, seen | {key})
+        if kind is None:
+            if "__getattr__" in info.get("bindings", {}):
+                return "", name, ""
+            # Keep a missing name linked to its module so deletion alerts survive.
+            return path, name, "missing"
+        # Assignments and decorated/conditional definitions are unknown.
+        return (path, name, kind) if kind in ("function", "class") else ("", name, "")
 
-    def call_target(self, src: str, shape: dict, metadata: dict[str, dict]) -> tuple[str, str]:
+    def _class_member(self, module_path: str, class_name: str, member: str,
+                      metadata: dict) -> tuple[str, str, str]:
+        """Resolve ``Class.member()`` only where the receiver's type is not needed."""
+        path, canonical, kind = self._export(module_path, class_name, metadata)
+        classes = metadata.get(path, {}).get("classes", {}) if kind == "class" else {}
+        owner = canonical
+        for _ in range(8):
+            info = classes.get(owner)
+            if not info:
+                break
+            member_kind = info["members"].get(member)
+            if member_kind in ("staticmethod", "classmethod"):
+                return path, member, f"{owner}.{member}"
+            if member_kind is not None:
+                break
+            if info["closed"]:
+                # Nothing left to inherit from: keep the absent name linked, like
+                # a removed function, so its deletion alert survives.
+                return path, member, f"{canonical}.{member}"
+            # Single inheritance within one module has an unambiguous lookup order.
+            owner = info.get("base")
+        return "", member, ""
+
+    def call_binding(self, src: str, shape: dict, metadata: dict[str, dict]) -> tuple[str, str, str]:
+        """Return ``(path, name, qualified name)`` of a statically proven callee.
+
+        A call to a class resolves to the class symbol, whose contract is its
+        constructor. Instance-method calls need the receiver's type and stay unresolved.
+        """
         attrs = shape.get("attribute_path", [])
         name = shape.get("import_name", "")
         symbol = attrs[-1] if attrs else name
-        if not shape.get("direct_import"):
-            return "", symbol
+        if not shape.get("direct_import") or len(attrs) > 2:
+            return "", symbol, ""
         module = shape.get("import_module", "")
         if shape.get("import_kind") == "from" and attrs:
             target = self._module_from(src, module, name, metadata)
+            if not target:
+                # Not a module: the imported name may be a class whose member is called.
+                if len(attrs) != 1:
+                    return "", symbol, ""
+                return self._class_member(self.resolve(src, module), name, attrs[0], metadata)
         else:
             target = self.resolve(src, module)
-        return self._function_export(target, symbol, metadata)
+        if len(attrs) == 2:
+            return self._class_member(target, attrs[0], attrs[1], metadata)
+        path, canonical, _ = self._export(target, symbol, metadata)
+        return path, canonical, canonical if path else ""
+
+    def call_target(self, src: str, shape: dict, metadata: dict[str, dict]) -> tuple[str, str]:
+        return self.call_binding(src, shape, metadata)[:2]
 
 
 def _resolve_import_spec(
@@ -598,19 +640,23 @@ def _relink_and_rank(conn: sqlite3.Connection, workspace_id: str) -> int:
             exported_defs_by_name.setdefault(sr["name"], []).append(sr["rel_path"])
 
     call_rows = conn.execute(
-        "SELECT rowid, caller_path, callee_name, resolved_path, python_call_json FROM calls WHERE workspace_id = ?",
+        "SELECT rowid, caller_path, callee_name, callee_qualname, resolved_path, python_call_json "
+        "FROM calls WHERE workspace_id = ?",
         (workspace_id,),
     ).fetchall()
-    call_updates: list[tuple[str, str, int]] = []
+    call_updates: list[tuple[str, str, str, int]] = []
     call_edges: dict[str, set[str]] = {f: set() for f in known_files}
 
     for cr in call_rows:
         cpath = cr["caller_path"]
         cname = cr["callee_name"]
         resolved_target = ""
+        # Exact symbol identity of a proven Python callee ("f", "Class" for a
+        # constructor call, "Class.method"); empty for approximate resolution.
+        qualname = ""
         shape = json.loads(cr["python_call_json"]) if cr["python_call_json"] else None
         if lang_by_file.get(cpath) == "python" and shape and shape.get("binding_version") == 2:
-            resolved_target, canonical_name = python_modules.call_target(cpath, shape, python_metadata)
+            resolved_target, canonical_name, qualname = python_modules.call_binding(cpath, shape, python_metadata)
             if canonical_name:
                 cname = canonical_name
         # Legacy/non-Python structural calls retain their approximate graph resolution.
@@ -627,13 +673,15 @@ def _relink_and_rank(conn: sqlite3.Connection, workspace_id: str) -> int:
             elif len(candidate_files) == 1:
                 resolved_target = candidate_files[0]
 
-        if resolved_target != cr["resolved_path"] or cname != cr["callee_name"]:
-            call_updates.append((resolved_target, cname, int(cr["rowid"])))
+        if (resolved_target != cr["resolved_path"] or cname != cr["callee_name"]
+                or qualname != cr["callee_qualname"]):
+            call_updates.append((resolved_target, cname, qualname, int(cr["rowid"])))
         if resolved_target and resolved_target != cpath and resolved_target in known_files:
             call_edges.setdefault(cpath, set()).add(resolved_target)
 
     if call_updates:
-        conn.executemany("UPDATE calls SET resolved_path = ?, callee_name = ? WHERE rowid = ?", call_updates)
+        conn.executemany(
+            "UPDATE calls SET resolved_path = ?, callee_name = ?, callee_qualname = ? WHERE rowid = ?", call_updates)
 
     # 3. Combine directed dependency graph (A -> B means A depends on B)
     nodes = sorted(known_files)

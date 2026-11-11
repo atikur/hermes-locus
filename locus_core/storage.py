@@ -17,7 +17,7 @@ from typing import Iterator, Optional
 
 PLUGIN_NAME = "locus-codegraph"
 DB_FILENAME = "locus.db"
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS workspaces (
@@ -83,7 +83,8 @@ CREATE TABLE IF NOT EXISTS calls (
     resolved_path TEXT NOT NULL DEFAULT '',
     line_no INTEGER NOT NULL DEFAULT 1,
     arg_count INTEGER NOT NULL DEFAULT -1,
-    python_call_json TEXT
+    python_call_json TEXT,
+    callee_qualname TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS drift_alerts (
@@ -136,6 +137,7 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
             ("files", "parser_revision", "INTEGER NOT NULL DEFAULT 0"),
             ("symbols", "python_signature_json", "TEXT"),
             ("calls", "python_call_json", "TEXT"),
+            ("calls", "callee_qualname", "TEXT NOT NULL DEFAULT ''"),
             ("drift_alerts", "baseline_signature_json", "TEXT"),
         ):
             columns = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}

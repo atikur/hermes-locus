@@ -313,6 +313,31 @@ def _attribute_parts(node: ast.AST) -> list[str]:
     return [node.id, *reversed(parts)]
 
 
+# Built-in bases that keep the default metaclass and always return an instance,
+# so instantiation reaches the subclass's own ``__init__`` with the call's arguments.
+_PLAIN_BUILTIN_BASES = frozenset({
+    "object", "BaseException", "Exception", "ArithmeticError", "AssertionError",
+    "AttributeError", "ConnectionError", "FileExistsError", "FileNotFoundError",
+    "IndexError", "IOError", "ImportError", "KeyError", "LookupError",
+    "NotImplementedError", "OSError", "PermissionError", "RuntimeError",
+    "TimeoutError", "TypeError", "ValueError",
+})
+_EMPTY_PYTHON_SIGNATURE: PythonSignature = {
+    "posonly": [], "positional_or_keyword": [], "keyword_only": [], "required": [],
+    "has_var_positional": False, "has_var_keyword": False,
+}
+
+
+def _without_receiver(signature: PythonSignature) -> PythonSignature:
+    """Drop the implicit first parameter (``self``/``cls``) bound by the call itself."""
+    for kind in ("posonly", "positional_or_keyword"):
+        if signature[kind]:
+            receiver = signature[kind][0]
+            return {**signature, kind: signature[kind][1:],
+                    "required": [name for name in signature["required"] if name != receiver]}
+    return signature  # ``*args`` absorbs the receiver.
+
+
 class _PythonCallCollector(ast.NodeVisitor):
     """Collect lexical import bindings, declining ambiguous/dynamic targets.
 
@@ -329,6 +354,8 @@ class _PythonCallCollector(ast.NodeVisitor):
         self.pending: list[tuple[ParsedCall, list[str], _PythonScope]] = []
         self.nonlocal_mutations: set[str] = set()
         self.attribute_mutations: set[str] = set()
+        self.class_scopes: dict[str, tuple[ast.ClassDef, _PythonScope]] = {}
+        self._contracts: dict[str, dict[str, Any]] | None = None
 
     def _unconditional(self, node: ast.AST) -> bool:
         return node in getattr(self.scope.node, "body", ())
@@ -364,10 +391,18 @@ class _PythonCallCollector(ast.NodeVisitor):
                 self.scope.bind(arg.arg)
 
     def _visit_fn(self, node: _PythonFunction) -> None:
-        self.scope.bind(node.name, _PythonBinding(
-            "function" if self._unconditional(node) and not node.decorator_list else "unknown",
-            line=node.lineno, unconditional=self._unconditional(node),
-        ))
+        unconditional = self._unconditional(node)
+        decorators = node.decorator_list
+        kind = "unknown"
+        if unconditional and not decorators:
+            kind = "function"
+        elif (unconditional and self.scope.kind == "class" and len(decorators) == 1
+              and isinstance(decorators[0], ast.Name)
+              and decorators[0].id in {"staticmethod", "classmethod"}):
+            # Whether the builtin decorator is shadowed is checked once the whole
+            # module has been read (see class_contracts).
+            kind = decorators[0].id
+        self.scope.bind(node.name, _PythonBinding(kind, line=node.lineno, unconditional=unconditional))
         # Defaults and decorators execute in the enclosing scope, not the body.
         for item in [*node.decorator_list, *node.args.defaults, *node.args.kw_defaults]:
             if item is not None:
@@ -386,14 +421,21 @@ class _PythonCallCollector(ast.NodeVisitor):
         self._visit_fn(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        self.scope.bind(node.name)
+        unconditional = self._unconditional(node)
+        # A class decorator may replace the class, so only a bare definition is known.
+        self.scope.bind(node.name, _PythonBinding(
+            "class" if unconditional and not node.decorator_list else "unknown",
+            line=node.lineno, unconditional=unconditional,
+        ))
         for item in [*node.bases, *node.decorator_list, *node.keywords]:
             self.visit(item)
         previous = self.scope
-        self.scope = self._child_scope(node, "class", node.name)
+        self.scope = class_scope = self._child_scope(node, "class", node.name)
         for stmt in node.body:
             self.visit(stmt)
         self.scope = previous
+        if previous is self.root:
+            self.class_scopes[node.name] = (node, class_scope)
 
     def visit_Lambda(self, node: ast.Lambda) -> None:
         for item in [*node.args.defaults, *node.args.kw_defaults]:
@@ -538,12 +580,14 @@ class _PythonCallCollector(ast.NodeVisitor):
                     if attrs[:len(prefix)] != prefix:
                         continue
                     suffix = attrs[len(prefix):]
-                if len(suffix) != 1:
+                # module.function(), module.Class() or module.Class.method().
+                if len(suffix) not in (1, 2):
                     continue
                 module, imported_name = binding.module, ""
             else:
-                # A direct function or a member of an explicitly imported module.
-                if len(attrs) > 1:
+                # A direct function or class, a member of an explicitly imported
+                # module or class, or a class member reached through a module.
+                if len(attrs) > 2:
                     continue
                 module, imported_name, suffix = binding.module, binding.name, attrs
             assert call.python_call is not None
@@ -563,7 +607,87 @@ class _PythonCallCollector(ast.NodeVisitor):
                 and name not in self.nonlocal_mutations and name not in self.attribute_mutations) else "unknown"
             if bindings[name] in {"from", "module"}:
                 imports[name] = {"kind": entry.kind, "module": entry.module, "name": entry.name}
-        return {"bindings": bindings, "imports": imports, "dynamic": self.root.dynamic or self.root.star_import}
+        classes = {name: {"closed": info["closed"], "base": info["base"], "members": info["members"]}
+                   for name, info in self.class_contracts().items()}
+        return {"bindings": bindings, "imports": imports, "classes": classes,
+                "dynamic": self.root.dynamic or self.root.star_import}
+
+    def _root_import(self, name: str, kind: str, module: str, imported: str = "") -> bool:
+        entries = self.root.bindings.get(name, [])
+        return (len(entries) == 1 and entries[0].unconditional and entries[0].kind == kind
+                and entries[0].module == module and (kind == "module" or entries[0].name == imported)
+                and name not in self.nonlocal_mutations and name not in self.attribute_mutations)
+
+    def class_contracts(self) -> dict[str, dict[str, Any]]:
+        """Describe what is statically provable about each bare top-level class.
+
+        ``constructor`` is the signature ``Class(...)`` must satisfy, or ``None``
+        when a metaclass, ``__new__``, an unknown base or a rebound ``__init__``
+        could change it. ``members`` records class-body names; only static and
+        class methods have a calling convention that does not need the receiver's
+        type. ``closed`` means no workspace base can contribute further members,
+        and ``base`` names a sole base defined earlier in the same module.
+        This is not general inheritance analysis: imported bases stay unknown.
+        """
+        if self._contracts is not None:
+            return self._contracts
+        contracts: dict[str, dict[str, Any]] = {}
+        for name, (node, scope) in self.class_scopes.items():
+            entries = self.root.bindings.get(name, [])
+            if (len(entries) != 1 or entries[0].kind != "class" or node.keywords
+                    or scope.dynamic or scope.star_import
+                    or name in self.nonlocal_mutations or name in self.attribute_mutations):
+                continue
+
+            def builtin(candidate: str) -> bool:
+                return candidate not in self.root.bindings and candidate not in scope.bindings
+
+            closed = True
+            plain = "__new__" not in scope.bindings
+            local_bases: list[str] = []
+            permissive_base = False  # e.g. Exception(*args) accepts any arguments
+            for base in node.bases:
+                parts = _attribute_parts(base)
+                if len(parts) == 1 and parts[0] in _PLAIN_BUILTIN_BASES and builtin(parts[0]):
+                    permissive_base = permissive_base or parts[0] != "object"
+                elif (parts == ["ABC"] and self._root_import("ABC", "from", "abc", "ABC")) or (
+                        parts == ["abc", "ABC"] and self._root_import("abc", "module", "abc")):
+                    pass
+                else:
+                    closed = False
+                    if len(parts) == 1 and parts[0] in contracts:
+                        local_bases.append(parts[0])
+                    if not (len(parts) == 1 and contracts.get(parts[0], {}).get("plain")):
+                        plain = False
+
+            methods = {item.name: item for item in node.body
+                       if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))}
+            members: dict[str, str] = {}
+            signatures: dict[str, PythonSignature] = {}
+            for member, bound in scope.bindings.items():
+                kind = bound[0].kind if len(bound) == 1 and bound[0].unconditional else "unknown"
+                if kind in {"staticmethod", "classmethod"} and builtin(kind) and member in methods:
+                    declared = _python_signature(methods[member].args)
+                    signatures[member] = declared if kind == "staticmethod" else _without_receiver(declared)
+                    members[member] = kind
+                else:
+                    members[member] = "function" if kind == "function" else "unknown"
+
+            constructor: PythonSignature | None = None
+            if plain:
+                if "__init__" in scope.bindings:
+                    init = methods.get("__init__")
+                    if members["__init__"] == "function" and isinstance(init, ast.FunctionDef):
+                        constructor = _without_receiver(_python_signature(init.args))
+                elif not node.bases or (closed and not permissive_base):
+                    constructor = dict(_EMPTY_PYTHON_SIGNATURE)  # object() takes no arguments
+                elif len(node.bases) == 1 and local_bases:
+                    constructor = contracts[local_bases[0]]["constructor"]
+            contracts[name] = {"plain": plain, "closed": closed, "constructor": constructor,
+                               "base": local_bases[0] if len(node.bases) == 1 and local_bases else None,
+                               "members": members, "member_signatures": signatures}
+        self._contracts = contracts
+        return contracts
 
 
 def _parse_python(rel_path: str, source: str) -> ParsedFile:
@@ -599,6 +723,14 @@ def _parse_python(rel_path: str, source: str) -> ParsedFile:
             return name in explicit_all
         return not name.startswith("_")
 
+    collector = _PythonCallCollector(rel_path, tree)
+    collector.visit(tree)
+    collector.mark_direct_imports()
+    parsed.imports = collector.imports
+    parsed.calls = collector.calls
+    parsed.python_module = collector.module_metadata()
+    contracts = collector.class_contracts()
+
     for stmt in tree.body:
         if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
             sig, min_a, max_a = _python_func_signature_and_arity(stmt, is_method=False)
@@ -622,6 +754,7 @@ def _parse_python(rel_path: str, source: str) -> ParsedFile:
                 )
             )
         elif isinstance(stmt, ast.ClassDef):
+            contract = contracts.get(stmt.name, {})
             bases = [_unparse_safe(b) for b in stmt.bases]
             base_part = f"({', '.join(bases)})" if bases else ""
             init_min, init_max = 0, -1
@@ -643,6 +776,8 @@ def _parse_python(rel_path: str, source: str) -> ParsedFile:
                     max_args=init_max,
                     is_exported=_exported(stmt.name),
                     docstring=_first_doc_line(ast.get_docstring(stmt)),
+                    # The class symbol carries the contract of calling the class.
+                    python_signature=contract.get("constructor"),
                 )
             )
             for body_item in stmt.body:
@@ -665,6 +800,7 @@ def _parse_python(rel_path: str, source: str) -> ParsedFile:
                             max_args=mmax,
                             is_exported=_exported(stmt.name) and not body_item.name.startswith("_"),
                             docstring=_first_doc_line(ast.get_docstring(body_item)),
+                            python_signature=contract.get("member_signatures", {}).get(body_item.name),
                         )
                     )
         elif isinstance(stmt, ast.Assign):
@@ -685,13 +821,6 @@ def _parse_python(rel_path: str, source: str) -> ParsedFile:
                             is_exported=_exported(target.id),
                         )
                     )
-
-    collector = _PythonCallCollector(rel_path, tree)
-    collector.visit(tree)
-    collector.mark_direct_imports()
-    parsed.imports = collector.imports
-    parsed.calls = collector.calls
-    parsed.python_module = collector.module_metadata()
     return parsed
 
 

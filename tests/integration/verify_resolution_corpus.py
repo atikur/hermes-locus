@@ -5,6 +5,12 @@ No model calls. Real source projections keep pinned original callers. Separate
 constructed controls execute in isolated Python processes to label binding and
 non-target/shadowing behavior. This is a targeted regression set, not a blind or
 representative held-out benchmark. Every case is declared before running Locus.
+
+Protocol 2 adds class-bound calls in two further groups, leaving the original
+two groups and their cases unchanged: constructors and static/class methods on
+pinned Hermes classes, and authored executable class fixtures. Breaks that the
+documented limits exclude (instance receivers, decorated classes, imported
+bases) stay in the denominator under their own scope instead of being omitted.
 """
 from __future__ import annotations
 
@@ -20,6 +26,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 
 from verify_hermes_refactor import WORKSPACE_COMMIT, engine_digest, extract_commit, git_head
 from verify_signature_corpus import binding_error, callable_signature, definition, git, patch_text
@@ -36,6 +43,22 @@ PINS = {
     "agent/auxiliary_client.py": "c7866a87a03e0283c41ec284ca66f21c96830013",
     "plugins/image_gen/_common.py": "8af6741ae47138021fec100c3d8f3628138348e1",
     "tests/hermes_state/test_aux_usage_accounting.py": "1d6a101b414f2d4ba4c90a9627eb2543581f30b5",
+    # Protocol 2: class-bound targets.
+    "tools/debug_helpers.py": "259a69075e1b2c6393fe16d1cef1ac2361bd700f",
+    "tools/image_generation_tool.py": "08eb613126e545ee6f544e7c56f9e2016ba1ee63",
+    "tools/vision_tools.py": "78d8a431f12c8e4889fc6b44215a3166050aa7fe",
+    "tools/web_tools.py": "02b9ef3f3a8ddb933bd1fe7f093d43c456609e45",
+    "tests/tools/test_debug_helpers.py": "eb4b1081a8e94850e38c43d72f923940ae61427b",
+    "plugins/platforms/signal/signal_rate_limit.py": "320c61edaf1906dbc54b1abad7710fb1f5b7f408",
+    "plugins/platforms/signal/adapter.py": "8f21db746e7092e8dfed6480c8be695b9d8c9896",
+    "tests/gateway/test_signal.py": "5584f505701f0e06db636cf23767520b6c6e08a8",
+    "hermes_cli/local_runtime/supervisor.py": "6fd9e6868df8c0b8f9296d890d7c1746cd356f10",
+    "hermes_cli/local_runtime/bootstrap.py": "b23950044be2200f36d0936d558cdc5ba0ce085e",
+    "hermes_cli/local_runtime/recovery.py": "f7a481be17302e92e7d550077f402d899d576e04",
+    "tests/hermes_cli/test_local_runtime_recovery.py": "80836fa6283ec3c32d12e8df63336a8da330ffe2",
+    "plugins/teams_pipeline/store.py": "1bc47c49224f2fdab0ce8eba361c0fee63937da9",
+    "plugins/teams_pipeline/pipeline.py": "e18d89b56e2f26eafeafda161ee4e9c6d3854b5c",
+    "tests/plugins/test_teams_pipeline_plugin.py": "606ebecd3fd108666e3cb755737dbed036be9dc7",
 }
 TARGETS = [
     {"name": "retry", "helper": "agent/retry_utils.py", "symbol": "jittered_backoff", "parameter": "max_delay",
@@ -54,10 +77,67 @@ TARGETS = [
                "tests/hermes_state/test_aux_usage_accounting.py:199", "tests/hermes_state/test_aux_usage_accounting.py:222",
                "tests/hermes_state/test_aux_usage_accounting.py:223"]},
 ]
+# Class-bound targets: "owner" is the class, "symbol" the member whose signature
+# changes. A changed ``__init__`` is the contract of calling the class itself.
+CLASS_TARGETS = [
+    {"name": "debug-session", "helper": "tools/debug_helpers.py", "owner": "DebugSession", "symbol": "__init__",
+     "parameter": "env_var",
+     "files": ["tools/debug_helpers.py", "tools/image_generation_tool.py", "tools/vision_tools.py",
+               "tools/web_tools.py", "tests/tools/test_debug_helpers.py"],
+     "sites": ["tools/image_generation_tool.py:48", "tools/vision_tools.py:59", "tools/web_tools.py:263",
+               "tests/tools/test_debug_helpers.py:14", "tests/tools/test_debug_helpers.py:24"]},
+    {"name": "signal-rate-limit", "helper": "plugins/platforms/signal/signal_rate_limit.py",
+     "owner": "SignalRateLimitError", "symbol": "__init__", "parameter": "retry_after",
+     "files": ["plugins/platforms/signal/signal_rate_limit.py", "plugins/platforms/signal/adapter.py",
+               "tests/gateway/test_signal.py"],
+     "sites": ["plugins/platforms/signal/adapter.py:618", "plugins/platforms/signal/adapter.py:625",
+               "tests/gateway/test_signal.py:1145"]},
+    {"name": "terminate-tree", "helper": "hermes_cli/local_runtime/supervisor.py",
+     "owner": "LlamaServerSupervisor", "symbol": "_terminate_tree", "parameter": "verified_root",
+     "files": ["hermes_cli/local_runtime/supervisor.py", "hermes_cli/local_runtime/bootstrap.py",
+               "hermes_cli/local_runtime/recovery.py", "tests/hermes_cli/test_local_runtime_recovery.py"],
+     "sites": ["hermes_cli/local_runtime/supervisor.py:301", "hermes_cli/local_runtime/bootstrap.py:183",
+               "hermes_cli/local_runtime/recovery.py:194", "tests/hermes_cli/test_local_runtime_recovery.py:284",
+               "tests/hermes_cli/test_local_runtime_recovery.py:286"]},
+    {"name": "receipt-key", "helper": "plugins/teams_pipeline/store.py", "owner": "TeamsPipelineStore",
+     "symbol": "build_notification_receipt_key", "parameter": "notification",
+     "files": ["plugins/teams_pipeline/store.py", "plugins/teams_pipeline/pipeline.py",
+               "tests/plugins/test_teams_pipeline_plugin.py"],
+     "sites": ["plugins/teams_pipeline/pipeline.py:193", "plugins/teams_pipeline/pipeline.py:447",
+               "tests/plugins/test_teams_pipeline_plugin.py:398"]},
+]
 
 
-def mutated(source, symbol, parameter, kind):
-    node = definition(source, symbol)
+def member_definition(source, owner, member):
+    """Locate a class member whose binding a static oracle can state.
+
+    Asserts ordinary construction and lookup: no class decorator, metaclass or
+    ``__new__``, and only ``object``/``Exception`` bases.
+    """
+    classes = [node for node in ast.parse(source).body if isinstance(node, ast.ClassDef) and node.name == owner]
+    assert len(classes) == 1, owner
+    cls = classes[0]
+    assert not cls.decorator_list and not cls.keywords, owner
+    assert all(isinstance(base, ast.Name) and base.id in {"object", "Exception"} for base in cls.bases), owner
+    assert not any(isinstance(node, ast.FunctionDef) and node.name == "__new__" for node in cls.body), owner
+    members = [node for node in cls.body if isinstance(node, ast.FunctionDef) and node.name == member]
+    assert len(members) == 1, (owner, member)
+    decorators = [ast.unparse(item) for item in members[0].decorator_list]
+    assert decorators == [] if member == "__init__" else decorators in (["staticmethod"], ["classmethod"]), decorators
+    return members[0]
+
+
+def member_signature(source, owner, member):
+    """Parameters a caller binds: the declared ones without the implicit receiver."""
+    node = copy.deepcopy(member_definition(source, owner, member))
+    static = [ast.unparse(item) for item in node.decorator_list] == ["staticmethod"]
+    node.decorator_list = []
+    signature = callable_signature(ast.unparse(node), member)
+    return signature if static else signature.replace(parameters=list(signature.parameters.values())[1:])
+
+
+def mutated(source, symbol, parameter, kind, owner=None, preserve_lines=True):
+    node = member_definition(source, owner, symbol) if owner else definition(source, symbol)
     revised = copy.deepcopy(node)
     if kind == "keyword-rename":
         for child in ast.walk(revised):
@@ -73,11 +153,13 @@ def mutated(source, symbol, parameter, kind):
     else:
         raise ValueError(kind)
     lines = source.splitlines(keepends=True)
-    rendered = ast.unparse(revised) + "\n"
-    old_line_count = node.end_lineno - node.lineno + 1
-    assert len(rendered.splitlines()) <= old_line_count, "Preserve downstream caller locations in this corpus"
+    # A method keeps its indentation; ast.unparse also emits its decorators.
+    start = min([node.lineno, *(item.lineno for item in node.decorator_list)])
+    rendered = textwrap.indent(ast.unparse(revised), " " * node.col_offset) + "\n"
+    old_line_count = node.end_lineno - start + 1
+    assert len(rendered.splitlines()) <= old_line_count or not preserve_lines, "Preserve downstream caller locations in this corpus"
     rendered += "\n" * (old_line_count - len(rendered.splitlines()))
-    return "".join(lines[:node.lineno - 1]) + rendered + "".join(lines[node.end_lineno:])
+    return "".join(lines[:start - 1]) + rendered + "".join(lines[node.end_lineno:])
 
 
 def real_cases(host):
@@ -111,6 +193,46 @@ def real_cases(host):
                           "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
                           "labels": {site: {"error": binding_error(signature, call),
                                             "scope": "same-file" if site.rsplit(":", 1)[0] == target["helper"] else "cross-file"}
+                                     for site, call in calls.items()}})
+    for target in CLASS_TARGETS:
+        owner, symbol, helper = target["owner"], target["symbol"], target["helper"]
+        files = {path: sources[path] for path in target["files"]}
+        calls, scopes = {}, {}
+        for path, text in files.items():
+            for node in ast.walk(ast.parse(text)):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                if symbol == "__init__":
+                    class_bound = (isinstance(func, ast.Name) and func.id == owner
+                                   or isinstance(func, ast.Attribute) and func.attr == owner)
+                    if not class_bound:
+                        continue
+                elif isinstance(func, ast.Attribute) and func.attr == symbol:
+                    class_bound = (isinstance(func.value, ast.Name) and func.value.id == owner
+                                   or isinstance(func.value, ast.Attribute) and func.value.attr == owner)
+                else:
+                    continue
+                site = f"{path}:{node.lineno}"
+                assert site not in calls
+                calls[site] = node
+                scopes[site] = "same-file" if path == helper else "cross-file" if class_bound else "instance-receiver"
+        assert set(calls) == set(target["sites"]), (target["name"], sorted(calls))
+        before = files[helper]
+        end = member_definition(before, owner, symbol).end_lineno
+        # Growing the definition is only safe when no labelled call follows it in the helper.
+        preserve = any(site.rsplit(":", 1)[0] == helper and int(site.rsplit(":", 1)[1]) > end for site in calls)
+        original_signature = member_signature(before, owner, symbol)
+        assert all(binding_error(original_signature, call) is None for call in calls.values())
+        for kind in ("keyword-rename", "required-keyword", "optional-keyword", "body-only"):
+            after = mutated(before, symbol, target["parameter"], kind, owner=owner, preserve_lines=preserve)
+            signature = member_signature(after, owner, symbol)
+            cases.append({"case": f"hermes-{target['name']}-{kind}", "group": "pinned-real-class-source",
+                          "files": files, "helper": helper, "after": after,
+                          "oracle": "CPython inspect.Signature.bind on the member's declared parameters without the implicit "
+                                    "receiver; the pinned class is asserted to have no decorator, metaclass or __new__; "
+                                    "original source call shapes, no Locus resolver",
+                          "labels": {site: {"error": binding_error(signature, call), "scope": scopes[site]}
                                      for site, call in calls.items()}})
     return cases
 
@@ -193,6 +315,213 @@ def control_cases():
     return cases
 
 
+CLASS_API = """import dataclasses
+
+from pkg.base import Root
+
+
+def parse(raw):
+    return raw
+
+
+class Client:
+    def __init__(self, host, timeout=5):
+        self.host = host
+        self.timeout = timeout
+
+    @staticmethod
+    def parse(raw):
+        return raw
+
+    @classmethod
+    def build(cls, raw):
+        return cls(raw).host
+
+    def send(self, body):
+        return body
+
+
+class Child(Client):
+    retries = 1
+
+
+class Override(Client):
+    def __init__(self, host, timeout=5):
+        self.host = host
+
+    @staticmethod
+    def parse(raw):
+        return raw
+
+
+class Other:
+    def __init__(self, host, timeout=5):
+        self.host = host
+
+    @staticmethod
+    def parse(raw):
+        return raw
+
+
+class Plain:
+    label = "plain"
+
+
+class Failure(ValueError):
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
+
+def _first_argument_only(cls):
+    return lambda *args, **kwargs: cls(args[0])
+
+
+@_first_argument_only
+class Wrapped:
+    def __init__(self, host, timeout=5):
+        self.host = host
+
+
+class _FirstArgumentOnly(type):
+    def __call__(cls, *args, **kwargs):
+        return super().__call__(args[0])
+
+
+class Managed(metaclass=_FirstArgumentOnly):
+    def __init__(self, host, timeout=5):
+        self.host = host
+
+
+class Replaced:
+    def __new__(cls, *args, **kwargs):
+        return object.__new__(Other)
+
+    def __init__(self, host, timeout=5):
+        self.host = host
+
+
+class Patched:
+    def __init__(self, host, timeout=5):
+        self.host = host
+
+
+def _original_init(self, host, timeout=5):
+    self.host = host
+
+
+Patched.__init__ = _original_init
+
+
+@dataclasses.dataclass
+class Record:
+    host: str
+    timeout: int = 5
+
+
+class Derived(Root):
+    pass
+"""
+CLASS_BASE = "class Root:\n    def __init__(self, host, timeout=5):\n        self.host = host\n"
+_INIT = "    def __init__(self, host, timeout=5):"
+_RENAMED = "    def __init__(self, host, deadline=5):"
+# name: (edited file, text replaced exactly once, replacement)
+CLASS_MUTATIONS = {
+    "client-init-keyword-rename": ("pkg/api.py", "class Client:\n" + _INIT + "\n        self.host = host\n        self.timeout = timeout",
+                                   "class Client:\n" + _RENAMED + "\n        self.host = host\n        self.timeout = deadline"),
+    "client-init-required-keyword": ("pkg/api.py", "class Client:\n" + _INIT,
+                                     "class Client:\n    def __init__(self, host, timeout=5, *, region):"),
+    "client-parse-required": ("pkg/api.py", "self.timeout = timeout\n\n    @staticmethod\n    def parse(raw):",
+                              "self.timeout = timeout\n\n    @staticmethod\n    def parse(raw, strict):"),
+    "client-build-keyword-only": ("pkg/api.py", "    def build(cls, raw):", "    def build(cls, raw, *, issuer):"),
+    "client-send-required": ("pkg/api.py", "    def send(self, body):", "    def send(self, body, encoding):"),
+    "plain-gains-init": ("pkg/api.py", 'class Plain:\n    label = "plain"\n',
+                         'class Plain:\n    label = "plain"\n\n    def __init__(self, host):\n        self.host = host\n'),
+    "failure-init-required": ("pkg/api.py", "    def __init__(self, code):", "    def __init__(self, code, detail):"),
+    "wrapped-init-keyword-rename": ("pkg/api.py", "class Wrapped:\n" + _INIT, "class Wrapped:\n" + _RENAMED),
+    "managed-init-keyword-rename": ("pkg/api.py", "class Managed(metaclass=_FirstArgumentOnly):\n" + _INIT,
+                                    "class Managed(metaclass=_FirstArgumentOnly):\n" + _RENAMED),
+    "replaced-init-keyword-rename": ("pkg/api.py", "return object.__new__(Other)\n\n" + _INIT,
+                                     "return object.__new__(Other)\n\n" + _RENAMED),
+    "patched-init-keyword-rename": ("pkg/api.py", "class Patched:\n" + _INIT, "class Patched:\n" + _RENAMED),
+    "record-field-rename": ("pkg/api.py", "    timeout: int = 5", "    deadline: int = 5"),
+    "root-init-keyword-rename": ("pkg/base.py", _INIT, _RENAMED),
+}
+_CTOR = "    return {}('h', timeout=1).host  # site\n"
+# fixture: (caller source with one "# site" call, mutation, scope, breaks?)
+# Scopes other than cross-file are breaks outside the documented supported set.
+CLASS_CONTROLS = {
+    # Supported class-bound calls that the change breaks.
+    "ctor-direct": ("from pkg.api import Client\ndef run():\n" + _CTOR.format("Client"), "client-init-keyword-rename", "cross-file", True),
+    "ctor-direct-required": ("from pkg.api import Client\ndef run():\n" + _CTOR.format("Client"), "client-init-required-keyword", "cross-file", True),
+    "ctor-alias": ("from pkg.api import Client as Api\ndef run():\n" + _CTOR.format("Api"), "client-init-keyword-rename", "cross-file", True),
+    "ctor-module": ("import pkg.api\ndef run():\n" + _CTOR.format("pkg.api.Client"), "client-init-keyword-rename", "cross-file", True),
+    "ctor-module-alias": ("import pkg.api as api\ndef run():\n" + _CTOR.format("api.Client"), "client-init-keyword-rename", "cross-file", True),
+    "ctor-reexport": ("from pkg import Client\ndef run():\n" + _CTOR.format("Client"), "client-init-keyword-rename", "cross-file", True),
+    "ctor-local-import": ("def run():\n    from pkg.api import Client\n" + _CTOR.format("Client"), "client-init-keyword-rename", "cross-file", True),
+    "ctor-inherited": ("from pkg.api import Child\ndef run():\n" + _CTOR.format("Child"), "client-init-keyword-rename", "cross-file", True),
+    "default-ctor": ("from pkg.api import Plain\ndef run():\n    return Plain().label  # site\n", "plain-gains-init", "cross-file", True),
+    "exception-ctor": ("from pkg.api import Failure\ndef run():\n    try:\n        raise Failure(2)  # site\n    except Failure as error:\n        return error.code\n",
+                       "failure-init-required", "cross-file", True),
+    "static-direct": ("from pkg.api import Client\ndef run():\n    return Client.parse('x')  # site\n", "client-parse-required", "cross-file", True),
+    "static-module-alias": ("import pkg.api as api\ndef run():\n    return api.Client.parse('x')  # site\n", "client-parse-required", "cross-file", True),
+    "static-from-module": ("from pkg import api\ndef run():\n    return api.Client.parse('x')  # site\n", "client-parse-required", "cross-file", True),
+    "static-inherited": ("from pkg.api import Child\ndef run():\n    return Child.parse('x')  # site\n", "client-parse-required", "cross-file", True),
+    "classmethod-direct": ("from pkg.api import Client\ndef run():\n    return Client.build('x')  # site\n", "client-build-keyword-only", "cross-file", True),
+    "classmethod-inherited": ("from pkg.api import Child\ndef run():\n    return Child.build('x')  # site\n", "client-build-keyword-only", "cross-file", True),
+    # Calls the change leaves valid: another target, or construction that never binds the edited signature.
+    "ctor-positional": ("from pkg.api import Client\ndef run():\n    return Client('h', 1).host  # site\n", "client-init-keyword-rename", "cross-file", False),
+    "ctor-other-class": ("from pkg.api import Other\ndef run():\n" + _CTOR.format("Other"), "client-init-keyword-rename", "cross-file", False),
+    "ctor-override": ("from pkg.api import Override\ndef run():\n" + _CTOR.format("Override"), "client-init-keyword-rename", "cross-file", False),
+    "ctor-other-module": ("from pkg.other import Client\ndef run():\n" + _CTOR.format("Client"), "client-init-keyword-rename", "cross-file", False),
+    "ctor-parameter-shadow": ("from pkg.api import Client\ndef build(Client):\n" + _CTOR.format("Client")
+                              + "def run():\n    from pkg.other import Client as Unchanged\n    return build(Unchanged)\n",
+                              "client-init-keyword-rename", "cross-file", False),
+    "ctor-assignment-shadow": ("from pkg.api import Client\nfrom pkg import other\nClient = other.Client\ndef run():\n" + _CTOR.format("Client"),
+                               "client-init-keyword-rename", "cross-file", False),
+    "decorated-class": ("from pkg.api import Wrapped\ndef run():\n" + _CTOR.format("Wrapped"), "wrapped-init-keyword-rename", "cross-file", False),
+    "metaclass-call": ("from pkg.api import Managed\ndef run():\n" + _CTOR.format("Managed"), "managed-init-keyword-rename", "cross-file", False),
+    "custom-new": ("from pkg.api import Replaced\ndef run():\n    return type(Replaced('h', timeout=1)).__name__  # site\n",
+                   "replaced-init-keyword-rename", "cross-file", False),
+    "patched-init": ("from pkg.api import Patched\ndef run():\n" + _CTOR.format("Patched"), "patched-init-keyword-rename", "cross-file", False),
+    "static-other-class": ("from pkg.api import Other\ndef run():\n    return Other.parse('x')  # site\n", "client-parse-required", "cross-file", False),
+    "static-module-function": ("from pkg.api import parse\ndef run():\n    return parse('x')  # site\n", "client-parse-required", "cross-file", False),
+    "static-override": ("from pkg.api import Override\ndef run():\n    return Override.parse('x')  # site\n", "client-parse-required", "cross-file", False),
+    # Real breaks outside the documented supported set: retained, not required.
+    "instance-method": ("from pkg.api import Client\ndef run():\n    client = Client('h')\n    return client.send('b')  # site\n",
+                        "client-send-required", "instance-receiver", True),
+    "instance-static": ("from pkg.api import Client\ndef run():\n    client = Client('h')\n    return client.parse('x')  # site\n",
+                        "client-parse-required", "instance-receiver", True),
+    "dataclass-ctor": ("from pkg.api import Record\ndef run():\n" + _CTOR.format("Record"), "record-field-rename", "decorated-class", True),
+    "imported-base-ctor": ("from pkg.api import Derived\ndef run():\n" + _CTOR.format("Derived"), "root-init-keyword-rename", "imported-base", True),
+}
+
+
+def class_control_cases():
+    """Authored class fixtures labelled only by executing them before and after the edit."""
+    cases = []
+    for name, (caller, mutation, scope, breaks) in CLASS_CONTROLS.items():
+        helper, old, new = CLASS_MUTATIONS[mutation]
+        files = {"pkg/__init__.py": "from .api import Client\n" if name == "ctor-reexport" else "",
+                 "pkg/api.py": CLASS_API, "pkg/base.py": CLASS_BASE, "pkg/other.py": CLASS_API, "pkg/client.py": caller}
+        assert files[helper].count(old) == 1, mutation
+        after = files[helper].replace(old, new)
+        original = executable_control(files)
+        changed = executable_control({**files, helper: after})
+        assert original["ok"], name
+        # The fixture's intent is checked against execution; execution supplies the label.
+        assert changed["ok"] is not breaks, (name, changed)
+        marked = [number for number, line in enumerate(caller.splitlines(), 1) if line.endswith("# site")]
+        assert len(marked) == 1, name
+        cases.append({"case": f"class-control-{name}", "fixture_name": "class-" + name,
+                      "group": "constructed-class-control", "mutation": mutation, "files": files,
+                      "helper": helper, "after": after,
+                      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+                      "oracle_execution": {"before": {"run": original}, "after": {"run": changed}},
+                      "labels": {f"pkg/client.py:{marked[0]}": {"error": changed.get("error"), "scope": scope}}})
+    return cases
+
+
 def score(rows):
     groups = {}
     for row in rows:
@@ -231,12 +560,18 @@ def main():
     args.source, args.runtime, args.output = (path.resolve() for path in (args.source, args.runtime, args.output))
     args.plugin_snapshot = args.plugin_snapshot.resolve() if args.plugin_snapshot else None
     assert not args.output.exists(), "Refuse to overwrite any prior evidence. Use a new output path."
-    cases = real_cases(args.source) + control_cases()
-    report = {"protocol_version": 1, "model_calls": 0, "source_commit": WORKSPACE_COMMIT,
+    # Protocol 1 order first: the original pinned and authored cases keep their manifests.
+    cases = real_cases(args.source)
+    cases = ([case for case in cases if case["group"] == "pinned-real-source"] + control_cases()
+             + [case for case in cases if case["group"] != "pinned-real-source"] + class_control_cases())
+    report = {"protocol_version": 2, "model_calls": 0, "source_commit": WORKSPACE_COMMIT,
               "source_blob_pins": PINS, "selection": "Targeted extension declared before execution; not a blind held-out accuracy estimate.",
               "limits": ["Counts repeat source calls across mutations; report distinct locations separately.",
                          "Same-file calls remain in the denominator and are marked separately.",
                          "Constructed controls are separate from untouched real-source projections.",
+                         "Class-bound groups label the member's parameters without the receiver; a non-cross-file scope "
+                         "marks a real break outside the documented supported set (same file, instance receiver, "
+                         "decorated class, imported base), kept in the denominator.",
                          "Original 19-case corpus and historical evidence remain separate and unchanged."],
               "planned_cases": len(cases), "cases": []}
     report["case_manifest"] = [{"case": case["case"], "group": case["group"], "labels": case["labels"],
@@ -320,7 +655,7 @@ def main():
             os.chdir(previous)
     report["summary"] = score(report["cases"])
     report["status"] = "complete"
-    report["distinct_labelled_sites"] = len({(row["group"] if row["group"] == "pinned-real-source" else row["fixture_name"], site)
+    report["distinct_labelled_sites"] = len({(row.get("fixture_name", row["group"]), site)
                                              for row in report["cases"] for site in row["labels"]})
     args.output.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report["summary"], indent=2))

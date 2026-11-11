@@ -415,9 +415,10 @@ def lookup_symbol_details(
             WHERE workspace_id = ?
               AND callee_name = ?
               AND resolved_path = ?
+              AND callee_qualname IN ('', ?)
             ORDER BY CASE WHEN caller_path = ? THEN 1 ELSE 0 END, caller_path, line_no
             """,
-            (ws_id, sym_name, rel_path, rel_path),
+            (ws_id, sym_name, rel_path, primary["qualified_name"], rel_path),
         ).fetchall()
 
         callee_rows = conn.execute(
@@ -555,9 +556,10 @@ def analyze_impact(
                 SELECT caller_path, caller_symbol, line_no, arg_count
                 FROM calls
                 WHERE workspace_id = ? AND callee_name = ? AND resolved_path = ? AND caller_path != ?
+                  AND callee_qualname IN ('', ?)
                 ORDER BY caller_path, line_no
                 """,
-                (ws_id, matched_symbol["name"], resolved_file, resolved_file),
+                (ws_id, matched_symbol["name"], resolved_file, resolved_file, matched_symbol["qualified_name"]),
             ).fetchall()
         else:
             call_rows = conn.execute(

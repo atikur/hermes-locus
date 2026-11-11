@@ -43,6 +43,7 @@ acknowledgment, and closed history does not imply passing tests.
 | Minimum supported Python 3.10.22, standalone with pinned development requirements | [120 passed and 3 Hermes-runtime-only checks skipped](evidence/v015-tests-release-python310.txt), out of 123 discovered tests; the [earlier 106-pass/3-skip record](evidence/v015-tests-python310.txt) is preserved. Python 3.10 is included in the Ubuntu CI matrix |
 | Evaluation-protocol validity | [7 checks passed](evidence/v015-tests-evaluator-complete.txt), including paired input control, source-integrity oracle, multi-path file boundary, stopping rules, and excluding interrupted pairs from comparisons |
 | Pinned source and resolution corpora | Final reruns complete at `e71824bc` / `c622b20c`; all counts below reproduced, including the two same-file misses |
+| Class-bound call extension | Measured separately on the extended engine: [constructors and static/class methods](#class-bound-calls-on-the-extended-engine). The other rows in this table were not repeated on it |
 | Matched model study | [24 attempts preserved: 23 completed and one privacy interruption](evidence/v015-model-study/analysis-final.json). Eleven complete pairs: 10 both pass, one warning-on-only pass, none warning-off-only |
 | Actual Web and native Desktop interaction | Passed the [synthetic-fixture interaction checklist](evidence/v015-native-verification.md), including eight callers, complete unsent repair draft, keyboard navigation, live parse warnings, repair, and dismissal; [structured record](evidence/v015-native-verification.json) |
 | Actual stale-source Web/Desktop follow-up on the final engine | Passed the [oversized-caller workflow](evidence/v015-native-stale-verification.md): six stale caller records retained alongside two confirmed failures, persistent warnings after Web reload, recheck without false clearance, and cleanup with three passing fixture tests |
@@ -115,6 +116,70 @@ The [resolution corpus](../tests/integration/verify_resolution_corpus.py) uses
 pinned source projections and separately authored executable controls. It keeps
 same-file misses in the overall denominator. These targeted cases were selected
 during development; they are not a representative or blind accuracy benchmark.
+
+### Class-bound calls on the extended engine
+
+A later local extension checks two further kinds of supported cross-file call:
+calling an imported class, which binds to its constructor, and
+`Class.method()` for static and class methods. It applies to bare top-level
+classes with no decorator, metaclass, or `__new__`, whose bases are absent,
+`object`, `ABC`, built-in exceptions, or such classes in the same module.
+Instance-method calls, decorated classes including dataclasses, and classes
+with an imported base remain unchecked.
+
+This engine is
+`fb368374ff8975569b5dcb83aa1aaca2c92d0c458aa3664f61ef8f02a8250363`, measured
+as working-tree changes on top of commit
+`d72752365b3256ea5bd3e02a1d4ec2306f7aeedb` before they were committed. The
+evidence identifies it by this digest, not by an installed commit. The
+install replay, catalog admission, runtime doctor, performance trial, and
+Web/Desktop checks above were not repeated on it; hosted CI has not run; and
+the model study did not use it.
+
+| Check on the extended engine | Result |
+| --- | --- |
+| Complete Python suite in Hermes, Python 3.14.7 | [130 checks passed, no skips](evidence/v015-class-calls-tests-host.txt), including seven [class-bound call checks](../tests/test_class_bound_calls.py) |
+| Minimum supported Python 3.10.22, standalone | [127 passed and 3 Hermes-runtime-only checks skipped](evidence/v015-class-calls-tests-python310.txt), out of 130 discovered tests |
+| Original 19-case signature corpus | [42 / 42 incompatible and 0 / 34 compatible instances named](evidence/v015-class-calls-signature-corpus.json), at the same sites as the recorded run |
+| Original 37 resolution cases | [22 / 24 and 16 / 16 incompatible, 0 / 41 compatible](evidence/v015-class-calls-resolution-corpus.json), at the same sites as the recorded run, including the two same-file misses |
+
+Protocol 2 of the [resolution corpus](../tests/integration/verify_resolution_corpus.py)
+adds 49 class-bound cases in two new groups. The original 37 cases keep
+identical labels and patches. Every case ran through real Hermes editing hooks
+with zero model calls, on the [extended engine](evidence/v015-class-calls-resolution-corpus.json)
+and, for contrast, on the [previous engine](evidence/v015-class-calls-resolution-corpus-previous-engine.json)
+`c622b20c`.
+
+| Class-bound group | Cases | Incompatible named, extended engine | Incompatible named, previous engine | Compatible named, either engine |
+| --- | ---: | ---: | ---: | ---: |
+| Pinned Hermes classes | 16 | 25 / 26 | 0 / 26 | 0 / 38 |
+| Separately authored executable class fixtures | 33 | 16 / 20 | 0 / 20 | 0 / 13 |
+
+The pinned group applies four mutations each to two constructors
+(`DebugSession`, `SignalRateLimitError`), one static method
+(`LlamaServerSupervisor._terminate_tree`), and one class method
+(`TeamsPipelineStore.build_notification_receipt_key`). Labels come from
+`inspect.Signature.bind` on the member's declared parameters without the
+implicit receiver. Its one miss is `hermes_cli/local_runtime/supervisor.py:301`,
+a call in the edited file.
+
+The authored fixtures are labelled only by executing them before and after the
+edit. All 16 supported breaks were named: direct, aliased, module-qualified,
+re-exported, and function-local constructor calls; inherited and default
+constructors; an exception subclass; and static and class methods, including
+inherited ones. None of 13 calls that stay valid was named: a positional call
+unaffected by a rename, other classes and modules with the same names,
+shadowed bindings, and classes whose decorator, metaclass, `__new__`, or
+patched `__init__` keeps the edited signature from binding. The four retained
+misses are real breaks outside the supported set: two calls through an
+instance, a dataclass constructor, and a class with an imported base.
+
+These cases were written alongside the extension, and the pinned targets were
+chosen among classes the extended engine already resolves. They show behavior
+where the check applies, not how often it applies, and are not a blind or
+representative benchmark. Labels were prepared before Locus ran, and the run's
+case manifest equals that plan; the plan embeds full pinned sources, so only
+its checksum is in the [evidence manifest](evidence/v015-evidence-manifest.json).
 
 ### Paired model study on the frozen engine
 

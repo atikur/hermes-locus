@@ -391,6 +391,63 @@
       "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
       "candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
       "scope": "Environment-only installation failure: sandbox DNS blocked a Hermes runtime dependency download; no replay steps executed"
+    },
+    {
+      "file": "v015-class-calls-tests-host.txt",
+      "source_file": "evidence/tests-class-calls-host.log",
+      "original_sha256": "1060b4e3987910f0f4027cc072b21f03c668985ecd03d751ab78ddc8c2b68749",
+      "packaged_sha256": "8392cbbad00391dd952f32a403dce0ab7148b02f958c80e2600e8450b779f74f",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ],
+      "extended_engine_sha256": "fb368374ff8975569b5dcb83aa1aaca2c92d0c458aa3664f61ef8f02a8250363",
+      "tests_discovered": 130,
+      "tests_passed": 130,
+      "tests_skipped": 0
+    },
+    {
+      "file": "v015-class-calls-tests-python310.txt",
+      "source_file": "evidence/tests-class-calls-python310.log",
+      "original_sha256": "c1dc1561204e571789102615002bb95bbaa4728d6b6684ee0613a5dd20ccf9df",
+      "packaged_sha256": "c1dc1561204e571789102615002bb95bbaa4728d6b6684ee0613a5dd20ccf9df",
+      "redactions": [],
+      "extended_engine_sha256": "fb368374ff8975569b5dcb83aa1aaca2c92d0c458aa3664f61ef8f02a8250363",
+      "python_version": "3.10.22",
+      "tests_discovered": 130,
+      "tests_passed": 127,
+      "tests_skipped": 3,
+      "skip_scope": "Hermes-runtime-only checks"
+    },
+    {
+      "file": "v015-class-calls-signature-corpus.json",
+      "source_file": "evidence/worktree-class-calls-signature-corpus.json",
+      "original_sha256": "ec10029413e30045bc91f4f5ad56a881dd1fc87c0460ee832cad9d6605853daf",
+      "packaged_sha256": "ec10029413e30045bc91f4f5ad56a881dd1fc87c0460ee832cad9d6605853daf",
+      "redactions": [],
+      "extended_engine_sha256": "fb368374ff8975569b5dcb83aa1aaca2c92d0c458aa3664f61ef8f02a8250363"
+    },
+    {
+      "file": "v015-class-calls-resolution-corpus.json",
+      "source_file": "evidence/worktree-class-calls-resolution-corpus-protocol2.json",
+      "original_sha256": "df54bdb0efe17d629dc64cac423a629fb24100fdb70de15ef863142642f33e92",
+      "packaged_sha256": "df54bdb0efe17d629dc64cac423a629fb24100fdb70de15ef863142642f33e92",
+      "redactions": [],
+      "extended_engine_sha256": "fb368374ff8975569b5dcb83aa1aaca2c92d0c458aa3664f61ef8f02a8250363",
+      "protocol_version": 2,
+      "cases": 86,
+      "predeclared_plan_sha256": "bd99642a617a251f92a1dfcc9436849dee070940582ec2d9aba23cfc1d1623f7",
+      "predeclared_plan_note": "Prepared with --prepare-only before Locus ran; its case manifest equals this run's. The plan embeds full pinned sources and is not packaged."
+    },
+    {
+      "file": "v015-class-calls-resolution-corpus-previous-engine.json",
+      "source_file": "evidence/previous-engine-d727523-resolution-corpus-protocol2.json",
+      "original_sha256": "5620dbb0674bcfd37ddff6c114824dd951b0de13bd836b38c433c620d13079d2",
+      "packaged_sha256": "5620dbb0674bcfd37ddff6c114824dd951b0de13bd836b38c433c620d13079d2",
+      "redactions": [],
+      "extended_engine_sha256": null,
+      "protocol_version": 2,
+      "cases": 86,
+      "engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
     }
   ],
   "frozen_corpus_engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
@@ -399,5 +456,8 @@
   "current_corpus_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
   "current_candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
   "model_study_package": "v015-model-study/checksum-manifest.json",
-  "current_performance_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+  "current_performance_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+  "class_calls_extended_engine_sha256": "fb368374ff8975569b5dcb83aa1aaca2c92d0c458aa3664f61ef8f02a8250363",
+  "class_calls_base_commit": "d72752365b3256ea5bd3e02a1d4ec2306f7aeedb",
+  "class_calls_note": "Class-bound call extension measured as working-tree changes on the base commit before they were committed; evidence identifies the engine by digest, not by an installed commit. Install replay, admission, doctor, performance, Web/Desktop and model-study evidence were not repeated on it."
 }

@@ -45,12 +45,19 @@ def _external_callers_for_symbol(
     symbol_name: str,
     *,
     include_imports: bool = True,
+    qualname: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Find external call sites and explicit importers referencing *symbol_name*."""
+    """Find external call sites and explicit importers referencing *symbol_name*.
+
+    *qualname* is the symbol's exact identity within the edited file. A proven
+    Python call must name that symbol, so ``Class.method`` never inherits the
+    callers of a same-named module function or of another class's method.
+    """
+    qualname = qualname or symbol_name
     rows = conn.execute(
         """
         SELECT c.caller_path, c.caller_symbol, c.line_no, c.arg_count,
-               c.python_call_json, c.resolved_path,
+               c.python_call_json, c.resolved_path, c.callee_qualname,
                EXISTS (
                    SELECT 1 FROM imports i
                    WHERE i.workspace_id = c.workspace_id
@@ -74,6 +81,11 @@ def _external_callers_for_symbol(
         precise = shape is not None and shape.get("binding_version") == 2
         if precise and (row["resolved_path"] != edited_path or not shape.get("direct_import")):
             continue
+        bound = row["callee_qualname"]
+        # Rows linked before qualified identities existed are empty until the
+        # next relink; they only ever named top-level functions.
+        if precise and bound != qualname and (bound or "." in qualname):
+            continue
         callers.append({
             "path": row["caller_path"], "caller": row["caller_symbol"],
             "line": int(row["line_no"]), "arg_count": int(row["arg_count"]), "kind": "call",
@@ -81,7 +93,7 @@ def _external_callers_for_symbol(
                 and (precise or row["explicit_import"])) else None,
         })
 
-    if include_imports:
+    if include_imports and "." not in qualname:
         imp_rows = conn.execute(
             """
             SELECT src_path, imported_names, line_no
@@ -352,6 +364,15 @@ def _describe_break(
     )
 
 
+def _contract_signature(symbols: dict[str, ParsedSymbol], symbol: ParsedSymbol) -> str:
+    """Show a class's constructor, the contract that calling the class must satisfy."""
+    if symbol.kind == "class":
+        init = symbols.get(f"{symbol.qualified_name}.__init__")
+        if init is not None:
+            return init.signature
+    return symbol.signature
+
+
 def _record_alert(
     conn: sqlite3.Connection, workspace_id: str, alert: DriftAlert
 ) -> None:
@@ -427,14 +448,14 @@ def reconcile_drift_alerts(
         tracked = _read_callers(row["affected_callers_json"])
         symbol = conn.execute(
             """
-            SELECT signature, min_args, max_args, python_signature_json FROM symbols
+            SELECT kind, signature, min_args, max_args, python_signature_json FROM symbols
             WHERE workspace_id = ? AND rel_path = ? AND qualified_name = ?
             """,
             (workspace_id, row["edited_path"], row["symbol_name"]),
         ).fetchone()
         callers = _external_callers_for_symbol(
             conn, workspace_id, row["edited_path"], row["symbol_name"].split(".")[-1],
-            include_imports=symbol is None,
+            include_imports=symbol is None, qualname=row["symbol_name"],
         )
         stale_callers = []
         fresh_callers = []
@@ -459,6 +480,13 @@ def reconcile_drift_alerts(
             )
         else:
             new_signature = symbol["signature"]
+            if symbol["kind"] == "class":
+                init = conn.execute(
+                    "SELECT signature FROM symbols WHERE workspace_id = ? AND rel_path = ? AND qualified_name = ?",
+                    (workspace_id, row["edited_path"], row["symbol_name"] + ".__init__"),
+                ).fetchone()
+                if init is not None:
+                    new_signature = init["signature"]
             current = _load_shape(symbol["python_signature_json"])
             old_arity = _python_arity(baseline) if baseline is not None else None
             new_arity = (int(symbol["min_args"]), int(symbol["max_args"]))
@@ -531,14 +559,16 @@ def detect_and_record_drift(
     for qname, old_sym in old_symbols.items():
         if not old_sym.is_exported or qname in new_symbols:
             continue
-        callers = _external_callers_for_symbol(conn, workspace_id, edited_path, old_sym.name)
+        callers = _external_callers_for_symbol(
+            conn, workspace_id, edited_path, old_sym.name, qualname=old_sym.qualified_name,
+        )
         if callers:
             alerts.append(
                 DriftAlert(
                     edited_path=edited_path,
                     symbol_name=old_sym.qualified_name,
                     severity="critical",
-                    old_signature=old_sym.signature,
+                    old_signature=_contract_signature(old_symbols, old_sym),
                     new_signature="<removed>",
                     reason=(
                         f"Exported symbol '{old_sym.qualified_name}' was removed, "
@@ -562,7 +592,8 @@ def detect_and_record_drift(
             continue
 
         callers = _external_callers_for_symbol(
-            conn, workspace_id, edited_path, new_sym.name, include_imports=False
+            conn, workspace_id, edited_path, new_sym.name, include_imports=False,
+            qualname=new_sym.qualified_name,
         )
         if not callers:
             continue
@@ -578,8 +609,8 @@ def detect_and_record_drift(
                     edited_path=edited_path,
                     symbol_name=new_sym.qualified_name,
                     severity="critical",
-                    old_signature=old_sym.signature,
-                    new_signature=new_sym.signature,
+                    old_signature=_contract_signature(old_symbols, old_sym),
+                    new_signature=_contract_signature(new_symbols, new_sym),
                     reason=_describe_break(new_sym.qualified_name, broken, new_arity),
                     affected_callers=broken,
                     baseline_signature=old_shape,
@@ -591,8 +622,8 @@ def detect_and_record_drift(
                     edited_path=edited_path,
                     symbol_name=new_sym.qualified_name,
                     severity="warning",
-                    old_signature=old_sym.signature,
-                    new_signature=new_sym.signature,
+                    old_signature=_contract_signature(old_symbols, old_sym),
+                    new_signature=_contract_signature(new_symbols, new_sym),
                     reason=(
                         f"The signature of '{new_sym.qualified_name}' may reject "
                         f"{len(uncertain)} external call site(s) with unpacked or unknown arguments."
