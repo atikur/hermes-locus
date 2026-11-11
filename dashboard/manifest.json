@@ -1,0 +1,15 @@
+{
+  "name": "locus",
+  "label": "Locus Graph",
+  "description": "Live AST codebase dependency graph, transitive blast-radius visualizer & signature drift guard",
+  "icon": "Code",
+  "version": "0.1.0",
+  "tab": {
+    "path": "/locus",
+    "position": "after:skills"
+  },
+  "slots": ["sessions:top"],
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

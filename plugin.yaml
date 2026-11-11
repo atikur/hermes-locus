@@ -1,0 +1,47 @@
+manifest_version: 2
+api_version: 1
+name: locus
+version: 0.1.0
+description: >-
+  Live AST codebase graph, transitive blast-radius analyzer, signature drift guard,
+  @sym:/@impact:/@hotspots: context references, and interactive visual graph explorer
+  for Web Dashboard and Hermes Desktop.
+author: Atikur Rahman
+license: MIT
+homepage: https://github.com/atikur/hermes-locus
+requires_hermes: ">=0.22.0"
+python_dependencies: []
+tags:
+  - code-graph
+  - ast
+  - blast-radius
+  - context-references
+  - refactoring
+  - architecture
+  - dashboard
+  - desktop
+config_schema:
+  auto_index_on_start:
+    type: bool
+    default: true
+    label: Auto-index workspace on session start
+    description: Incrementally scan the active workspace when a session opens.
+  drift_guard:
+    type: bool
+    default: true
+    label: Signature drift guard
+    description: Append [Locus Signature Drift Alert] to file-edit tool results when external callers break.
+  max_files:
+    type: int
+    default: 2500
+    label: Maximum indexed files
+    description: Upper bound on source files indexed per workspace.
+provides_tools:
+  - locus_map
+  - locus_symbol
+  - locus_impact
+  - locus_hotspots
+provides_hooks:
+  - on_session_start
+  - post_tool_call
+  - transform_tool_result

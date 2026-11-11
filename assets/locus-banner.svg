@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600" role="img" aria-label="Locus — Live AST Codebase Graph, Blast-Radius Engine and Signature Drift Guard for Hermes Agent">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16"/>
+      <stop offset="52%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#131c36"/>
+    </linearGradient>
+    <radialGradient id="glowCyan" cx="74%" cy="50%" r="42%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.22"/>
+      <stop offset="60%" stop-color="#6366f1" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#090d16" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="accentPill" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <filter id="softShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="600" fill="url(#bgGrad)"/>
+  <rect width="1200" height="600" fill="url(#glowCyan)"/>
+
+  <!-- Subtle dot grid -->
+  <g fill="#334155" opacity="0.35">
+    <circle cx="80" cy="80" r="1.5"/><circle cx="160" cy="80" r="1.5"/><circle cx="240" cy="80" r="1.5"/>
+    <circle cx="80" cy="160" r="1.5"/><circle cx="160" cy="160" r="1.5"/><circle cx="240" cy="160" r="1.5"/>
+    <circle cx="80" cy="520" r="1.5"/><circle cx="160" cy="520" r="1.5"/><circle cx="240" cy="520" r="1.5"/>
+    <circle cx="1040" cy="80" r="1.5"/><circle cx="1120" cy="80" r="1.5"/>
+    <circle cx="1040" cy="520" r="1.5"/><circle cx="1120" cy="520" r="1.5"/>
+  </g>
+
+  <!-- Left Column: Brand & Value Prop -->
+  <g transform="translate(72, 86)">
+    <rect x="0" y="0" width="268" height="32" rx="16" fill="#0f2942" stroke="#38bdf8" stroke-opacity="0.45"/>
+    <circle cx="18" cy="16" r="5" fill="#38bdf8"/>
+    <text x="32" y="21" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#bae6fd" letter-spacing="0.8">HERMES AGENT PLUGIN · v0.1.0</text>
+
+    <text x="0" y="106" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="72" font-weight="800" fill="#f8fafc" letter-spacing="-1.5">Locus</text>
+    <circle cx="212" cy="84" r="8" fill="#38bdf8"/>
+
+    <text x="0" y="152" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="23" font-weight="600" fill="#cbd5e1">Architectural GPS &amp; Self-Healing</text>
+    <text x="0" y="184" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="23" font-weight="600" fill="#cbd5e1">Signature Drift Guard for Coding Agents</text>
+
+    <!-- Feature Chips -->
+    <g transform="translate(0, 224)" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="14" font-weight="600">
+      <rect x="0" y="0" width="166" height="36" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-opacity="0.5"/>
+      <text x="16" y="23" fill="#7dd3fc">@sym:verify_token</text>
+
+      <rect x="178" y="0" width="212" height="36" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-opacity="0.55"/>
+      <text x="194" y="23" fill="#fcd34d">@impact:auth/tokens.py</text>
+
+      <rect x="0" y="48" width="162" height="36" rx="8" fill="#1e293b" stroke="#a855f7" stroke-opacity="0.5"/>
+      <text x="16" y="71" fill="#d8b4fe">@hotspots:cycles</text>
+
+      <rect x="174" y="48" width="216" height="36" rx="8" fill="#1e293b" stroke="#22c55e" stroke-opacity="0.5"/>
+      <text x="190" y="71" fill="#86efac">0 Runtime Dependencies</text>
+    </g>
+
+    <!-- 4 Surfaces Strip -->
+    <g transform="translate(0, 354)" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="#94a3b8">
+      <rect x="0" y="0" width="504" height="64" rx="12" fill="#0b1220" stroke="#1e293b"/>
+      <text x="20" y="27" font-weight="700" fill="#e2e8f0">4 Unified Surfaces · Python, TypeScript/JS, Go &amp; Rust</text>
+      <text x="20" y="48" font-size="13" fill="#94a3b8">4 Agent Tools  ·  3 @-Context Prefixes  ·  Web Dashboard  ·  Desktop SDK</text>
+    </g>
+  </g>
+
+  <!-- Right Column: Radial Blast-Radius Graph Visualization -->
+  <g transform="translate(885, 290)" filter="url(#softShadow)">
+    <!-- Concentric Blast Rings -->
+    <circle cx="0" cy="0" r="215" fill="none" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="6 6"/>
+    <circle cx="0" cy="0" r="138" fill="none" stroke="#f59e0b" stroke-opacity="0.32" stroke-width="1.5" stroke-dasharray="5 5"/>
+    <circle cx="0" cy="0" r="64" fill="#0ea5e9" fill-opacity="0.08" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1.5"/>
+
+    <!-- Ring Labels -->
+    <text x="0" y="-146" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#fbbf24" opacity="0.9">HOP 1 · DIRECT CALLERS</text>
+    <text x="0" y="-223" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#94a3b8">HOP 2 · TRANSITIVE &amp; COVERING TESTS</text>
+
+    <!-- Directed Edges -->
+    <g stroke-width="2.2" fill="none">
+      <!-- Hop 1 to Focus -->
+      <line x1="-118" y1="-72" x2="-24" y2="-14" stroke="#f59e0b" stroke-opacity="0.85"/>
+      <line x1="122" y1="-64" x2="24" y2="-12" stroke="#f59e0b" stroke-opacity="0.85"/>
+      <line x1="-98" y1="98" x2="-20" y2="20" stroke="#ef4444" stroke-opacity="0.9"/>
+      <!-- Focus to Dependency -->
+      <line x1="22" y1="22" x2="104" y2="92" stroke="#64748b" stroke-opacity="0.65" stroke-dasharray="4 3"/>
+      <!-- Hop 2 to Hop 1 -->
+      <line x1="-188" y1="-12" x2="-124" y2="-66" stroke="#fb923c" stroke-opacity="0.65"/>
+      <line x1="0" y1="205" x2="-92" y2="104" stroke="#22c55e" stroke-opacity="0.8"/>
+      <line x1="192" y1="8" x2="126" y2="-58" stroke="#22c55e" stroke-opacity="0.8"/>
+    </g>
+
+    <!-- Center Focus Node -->
+    <g transform="translate(0, 0)">
+      <circle cx="0" cy="0" r="32" fill="#0284c7" stroke="#bae6fd" stroke-width="3"/>
+      <text x="0" y="4" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="700" fill="#ffffff">tokens.py</text>
+    </g>
+
+    <!-- Hop 1 Nodes -->
+    <g transform="translate(-122, -72)">
+      <circle cx="0" cy="0" r="20" fill="#1e293b" stroke="#f59e0b" stroke-width="2.5"/>
+      <text x="0" y="-28" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="600" fill="#fde68a">checkout.py</text>
+    </g>
+    <g transform="translate(124, -64)">
+      <circle cx="0" cy="0" r="20" fill="#1e293b" stroke="#f59e0b" stroke-width="2.5"/>
+      <text x="0" y="-28" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="600" fill="#fde68a">billing.py</text>
+    </g>
+    <g transform="translate(-100, 100)">
+      <circle cx="0" cy="0" r="22" fill="#450a0a" stroke="#ef4444" stroke-width="2.5"/>
+      <text x="0" y="36" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="700" fill="#fca5a5">session.py (DRIFT!)</text>
+    </g>
+    <g transform="translate(108, 96)">
+      <circle cx="0" cy="0" r="18" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+      <text x="0" y="32" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#94a3b8">crypto.py</text>
+    </g>
+
+    <!-- Hop 2 & Covering Test Nodes -->
+    <g transform="translate(-192, -8)">
+      <circle cx="0" cy="0" r="16" fill="#1e293b" stroke="#fb923c" stroke-width="2"/>
+      <text x="-8" y="28" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="#fdba74">gateway.py</text>
+    </g>
+    <g transform="translate(0, 205)">
+      <circle cx="0" cy="0" r="17" fill="#052e16" stroke="#22c55e" stroke-width="2.5"/>
+      <text x="0" y="32" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="600" fill="#86efac">test_auth.py ✓</text>
+    </g>
+    <g transform="translate(194, 12)">
+      <circle cx="0" cy="0" r="17" fill="#052e16" stroke="#22c55e" stroke-width="2.5"/>
+      <text x="0" y="32" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="600" fill="#86efac">test_checkout.py ✓</text>
+    </g>
+  </g>
+</svg>

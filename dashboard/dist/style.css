@@ -1,0 +1,163 @@
+/* Locus Dashboard Styles — 100% theme-variable driven across all Hermes themes */
+
+.locus-root {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.locus-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.locus-kpi-card {
+  border: 1px solid var(--color-border, rgba(148, 163, 184, 0.22));
+  background: var(--color-card, rgba(15, 23, 42, 0.65));
+  border-radius: var(--radius, 0.5rem);
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.locus-kpi-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.locus-kpi-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.72;
+}
+
+.locus-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .locus-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.locus-canvas-wrap {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius, 0.5rem);
+  border: 1px solid var(--color-border, rgba(148, 163, 184, 0.22));
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--color-primary, #38bdf8) 7%, transparent),
+    transparent 72%
+  );
+  overflow: hidden;
+}
+
+.locus-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+}
+
+.locus-node-group {
+  cursor: pointer;
+  transition: opacity 0.16s ease;
+}
+
+.locus-node-group:hover .locus-node-circle {
+  stroke-width: 2.8px;
+}
+
+@keyframes locus-pulse {
+  0%, 100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 0.28;
+  }
+}
+
+@keyframes locus-dash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.locus-pulse-ring {
+  animation: locus-pulse 2.2s ease-in-out infinite;
+}
+
+.locus-edge-cycle {
+  stroke-dasharray: 6 4;
+  animation: locus-dash 1.4s linear infinite;
+}
+
+.locus-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.72rem;
+  border-top: 1px solid var(--color-border, rgba(148, 163, 184, 0.18));
+  opacity: 0.85;
+}
+
+.locus-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.locus-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.locus-scroll-list {
+  max-height: 410px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.locus-row-btn {
+  text-align: left;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border-radius: calc(var(--radius, 0.5rem) * 0.8);
+  border: 1px solid var(--color-border, rgba(148, 163, 184, 0.18));
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.locus-row-btn:hover {
+  background: color-mix(in srgb, var(--color-primary, #38bdf8) 10%, transparent);
+  border-color: var(--color-primary, #38bdf8);
+}
+
+.locus-code-excerpt {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.73rem;
+  line-height: 1.45;
+  padding: 0.65rem;
+  border-radius: calc(var(--radius, 0.5rem) * 0.8);
+  border: 1px solid var(--color-border, rgba(148, 163, 184, 0.2));
+  background: color-mix(in srgb, var(--color-card, #0f172a) 88%, black);
+  overflow-x: auto;
+  white-space: pre;
+}
