@@ -1,9 +1,15 @@
-<hermes-source>/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+<user-home>/.gemini/antigravity/brain/418e923d-2a07-4ed6-9549-643c2565e54e/scratch/hermes-agent/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
   from starlette.testclient import TestClient as TestClient  # noqa
 test_fastapi_plugin_routes_end_to_end (test_api_and_validation.TestApiAndValidation.test_fastapi_plugin_routes_end_to_end) ... ok
-test_hermes_admission_validator_zero_warnings_when_available (test_api_and_validation.TestApiAndValidation.test_hermes_admission_validator_zero_warnings_when_available) ... <hermes-source>/hermes_cli/plugins_manifest.py:475: DeprecationWarning: 'maxsplit' is passed as positional argument
+test_hermes_admission_validator_zero_warnings_when_available (test_api_and_validation.TestApiAndValidation.test_hermes_admission_validator_zero_warnings_when_available) ... <workspace>/.submission/hermes-agent/hermes_cli/plugins_manifest.py:475: DeprecationWarning: 'maxsplit' is passed as positional argument
   parts = re.split(r"[-+]", str(v).strip().lstrip("v"), 1)[0].split(".")
 ok
+test_dismissal_is_scoped_idempotent_and_refreshes_desktop (test_api_mutations.TestApiMutations.test_dismissal_is_scoped_idempotent_and_refreshes_desktop) ... ok
+test_graph_query_limits_reject_out_of_bounds_values (test_api_mutations.TestApiMutations.test_graph_query_limits_reject_out_of_bounds_values) ... ok
+test_nonexistent_or_wrong_workspace_alert_is_not_successful (test_api_mutations.TestApiMutations.test_nonexistent_or_wrong_workspace_alert_is_not_successful) ... ok
+test_reindex_rejects_truthy_strings_and_non_string_workspaces (test_api_mutations.TestApiMutations.test_reindex_rejects_truthy_strings_and_non_string_workspaces) ... ok
+test_rejects_invalid_alert_ids_without_mutation (test_api_mutations.TestApiMutations.test_rejects_invalid_alert_ids_without_mutation) ... ok
+test_rescan_exposes_parse_diagnostics_without_erasing_valid_graph (test_api_mutations.TestApiMutations.test_rescan_exposes_parse_diagnostics_without_erasing_valid_graph) ... ok
 test_sym_impact_hotspots_autocomplete_and_expand (test_context_references.TestContextReferencesAndCommands.test_sym_impact_hotspots_autocomplete_and_expand) ... ok
 test_deleted_symbol_drift_alert (test_drift_and_hooks.TestDriftAndHooks.test_deleted_symbol_drift_alert) ... ok
 test_plugin_hooks_append_drift_banner_to_json_tool_result (test_drift_and_hooks.TestDriftAndHooks.test_plugin_hooks_append_drift_banner_to_json_tool_result) ... ok
@@ -31,6 +37,8 @@ test_reindex_edited_file_skips_symlinks_oversized_and_binaries (test_edge_cases_
 test_safe_workspace_root_blocks_credentials_system_and_home (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_safe_workspace_root_blocks_credentials_system_and_home) ... ok
 test_typescript_js_extension_resolution_and_three_node_cycle (test_edge_cases_and_cli.TestEdgeCasesAndCLI.test_typescript_js_extension_resolution_and_three_node_cycle) ... ok
 test_failed_and_cancelled_calls_do_not_index (test_hook_contracts.TestHookContracts.test_failed_and_cancelled_calls_do_not_index) ... ok
+test_invalid_python_preserves_graph_and_returns_separate_index_warning (test_hook_contracts.TestHookContracts.test_invalid_python_preserves_graph_and_returns_separate_index_warning) ... ok
+test_multi_file_patch_reports_drift_and_parse_diagnostics_together (test_hook_contracts.TestHookContracts.test_multi_file_patch_reports_drift_and_parse_diagnostics_together) ... ok
 test_partial_patch_failure_inspects_only_successful_result_paths (test_hook_contracts.TestHookContracts.test_partial_patch_failure_inspects_only_successful_result_paths) ... ok
 test_patch_moves_and_deletes_extract_both_endpoints (test_hook_contracts.TestHookContracts.test_patch_moves_and_deletes_extract_both_endpoints) ... ok
 test_patch_only_payload_indexes_all_files_and_removes_transient_alert (test_hook_contracts.TestHookContracts.test_patch_only_payload_indexes_all_files_and_removes_transient_alert) ... ok
@@ -38,6 +46,19 @@ test_real_hermes_dispatch_with_suppressed_post_hook (test_hook_contracts.TestHoo
 test_result_paths_override_argument_path (test_hook_contracts.TestHookContracts.test_result_paths_override_argument_path) ... ok
 test_structured_result_preserves_json_envelope (test_hook_contracts.TestHookContracts.test_structured_result_preserves_json_envelope) ... ok
 test_transform_before_post_injects_once_and_indexes_once (test_hook_contracts.TestHookContracts.test_transform_before_post_injects_once_and_indexes_once) ... ok
+test_deletion_removes_previously_indexed_path_after_ignore_change (test_indexing_boundaries.TestIndexingBoundaries.test_deletion_removes_previously_indexed_path_after_ignore_change) ... ok
+test_edit_does_not_follow_symlinked_directory_inside_workspace (test_indexing_boundaries.TestIndexingBoundaries.test_edit_does_not_follow_symlinked_directory_inside_workspace) ... ok
+test_edit_skips_gitignored_hidden_and_generated_paths (test_indexing_boundaries.TestIndexingBoundaries.test_edit_skips_gitignored_hidden_and_generated_paths) ... ok
+test_scan_reports_truncation_only_when_more_files_exist (test_indexing_boundaries.TestIndexingBoundaries.test_scan_reports_truncation_only_when_more_files_exist) ... ok
+test_first_edit_reports_parse_failure_when_no_baseline_exists (test_invalid_python_indexing.TestInvalidPythonIndexing.test_first_edit_reports_parse_failure_when_no_baseline_exists) ... ok
+test_invalid_callee_preserves_baseline_without_removed_export_alert (test_invalid_python_indexing.TestInvalidPythonIndexing.test_invalid_callee_preserves_baseline_without_removed_export_alert) ... ok
+test_invalid_caller_does_not_clear_drift_and_valid_repair_does (test_invalid_python_indexing.TestInvalidPythonIndexing.test_invalid_caller_does_not_clear_drift_and_valid_repair_does) ... ok
+test_new_invalid_file_is_reported_but_not_counted_as_indexed (test_invalid_python_indexing.TestInvalidPythonIndexing.test_new_invalid_file_is_reported_but_not_counted_as_indexed) ... ok
+test_scan_preserves_invalid_caller_and_retries_after_repair (test_invalid_python_indexing.TestInvalidPythonIndexing.test_scan_preserves_invalid_caller_and_retries_after_repair) ... ok
+test_linked_components_remain_distinct (test_large_graphs.LargeDependencyGraphTests.test_linked_components_remain_distinct) ... ok
+test_long_acyclic_chain_does_not_overflow_python_stack (test_large_graphs.LargeDependencyGraphTests.test_long_acyclic_chain_does_not_overflow_python_stack) ... ok
+test_long_cycle_returns_a_real_closed_path (test_large_graphs.LargeDependencyGraphTests.test_long_cycle_returns_a_real_closed_path) ... ok
+test_self_edge_does_not_hide_a_nontrivial_cycle (test_large_graphs.LargeDependencyGraphTests.test_self_edge_does_not_hide_a_nontrivial_cycle) ... ok
 test_incremental_indexing_pagerank_blast_radius_and_cycles (test_parsers_and_graph.TestParsersAndGraph.test_incremental_indexing_pagerank_blast_radius_and_cycles) ... ok
 test_multilanguage_parsers_ts_go_rust (test_parsers_and_graph.TestParsersAndGraph.test_multilanguage_parsers_ts_go_rust) ... ok
 test_python_parser_extracts_arity_methods_and_calls (test_parsers_and_graph.TestParsersAndGraph.test_python_parser_extracts_arity_methods_and_calls) ... ok
@@ -46,6 +67,6 @@ test_default_database_is_isolated_from_existing_locus_plugin_data (test_plugin_i
 test_three_hop_test_is_suggested_consistently_and_four_hops_remain_bounded (test_test_reachability.TestTestReachability.test_three_hop_test_is_suggested_consistently_and_four_hops_remain_bounded) ... ok
 
 ----------------------------------------------------------------------
-Ran 42 tests in 3.874s
+Ran 63 tests in 4.108s
 
 OK

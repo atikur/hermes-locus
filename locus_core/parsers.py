@@ -71,6 +71,7 @@ class ParsedFile:
     symbols: list[ParsedSymbol] = field(default_factory=list)
     imports: list[ParsedImport] = field(default_factory=list)
     calls: list[ParsedCall] = field(default_factory=list)
+    parse_error: str = ""
 
 
 def detect_language(rel_path: str) -> Optional[str]:
@@ -276,7 +277,10 @@ def _parse_python(rel_path: str, source: str) -> ParsedFile:
     )
     try:
         tree = ast.parse(source, filename=rel_path)
-    except SyntaxError:
+    except SyntaxError as exc:
+        # An incomplete edit is not an empty module. Keep this explicit so the
+        # indexer can retain the last valid graph rather than infer deletions.
+        parsed.parse_error = f"{exc.msg} (line {exc.lineno or 1})"
         return parsed
 
     explicit_all: Optional[set[str]] = None

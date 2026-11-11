@@ -1,0 +1,68 @@
+{
+  "python": "3.11.16",
+  "platform": "macOS-26.4-arm64-arm-64bit",
+  "max_files": 2500,
+  "method": "One fresh database scan, one cached scan, one call per report; OS caches unchanged",
+  "measurements": [
+    {
+      "name": "fresh_database_scan",
+      "elapsed_ms": 4244.33,
+      "summary": {
+        "ok": true,
+        "file_count": 2500,
+        "symbol_count": 22622,
+        "edge_count": 8056,
+        "updated_files": 2500,
+        "removed_files": 0,
+        "parse_errors": [],
+        "truncated": true,
+        "max_files": 2500,
+        "scan_ms": 4167.72
+      }
+    },
+    {
+      "name": "cached_scan",
+      "elapsed_ms": 258.13,
+      "summary": {
+        "ok": true,
+        "file_count": 2500,
+        "symbol_count": 22622,
+        "edge_count": 8056,
+        "updated_files": 0,
+        "removed_files": 0,
+        "parse_errors": [],
+        "truncated": true,
+        "max_files": 2500,
+        "scan_ms": 257.16
+      }
+    },
+    {
+      "name": "map",
+      "elapsed_ms": 38.34,
+      "result_bytes": 23576
+    },
+    {
+      "name": "impact",
+      "elapsed_ms": 51.22,
+      "result_bytes": 41968
+    },
+    {
+      "name": "hotspots",
+      "elapsed_ms": 122.82,
+      "result_bytes": 5584
+    },
+    {
+      "name": "visual_graph",
+      "elapsed_ms": 39.97,
+      "result_bytes": 22906
+    }
+  ],
+  "plugin_version": "0.1.3 local candidate",
+  "date": "2026-11-11",
+  "hardware": {
+    "cpu": "Apple M4",
+    "ram_gib": 16
+  },
+  "workspace": "Hermes Agent source checkout",
+  "source_commit": "01672831e48c1224bc003f834dd9b8c1cfc96a57"
+}

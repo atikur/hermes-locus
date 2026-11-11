@@ -15,7 +15,7 @@ import {
   useQuery,
   useValue
 } from '@hermes/plugin-sdk'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { jsx, jsxs } from 'react/jsx-runtime'
 
 function roleStroke(role, hasDrift) {
@@ -23,6 +23,17 @@ function roleStroke(role, hasDrift) {
   if (role === 'focus') return 'var(--ui-accent)'
   if (role === 'direct_dependent') return 'var(--ui-text-primary, currentColor)'
   return 'var(--ui-text-tertiary)'
+}
+
+function scanNoticeText(result) {
+  if (!result || !result.ok) throw new Error((result && result.error) || 'Workspace scan failed')
+  const notices = []
+  if (result.parse_errors && result.parse_errors.length) {
+    notices.push(`${result.parse_errors.length} source file(s) could not be parsed; any previously indexed version was retained.`)
+    notices.push(...result.parse_errors.slice(0, 3).map(item => `${item.path}: ${item.error}`))
+  }
+  if (result.truncated) notices.push(`Scan reached the ${result.max_files} file limit; the graph is incomplete.`)
+  return notices.join(' ')
 }
 
 async function insertRefChip(token) {
@@ -105,7 +116,14 @@ function LocusDesktopPane({ ctx }) {
   const workspace = useValue(host.state.cwd)
   const [focus, setFocus] = useState('')
   const [filter, setFilter] = useState('')
-  useEffect(() => { setFocus(''); setFilter('') }, [workspace])
+  const [scanNotice, setScanNotice] = useState('')
+  const view = useRef({ workspace, mounted: true })
+  view.current.workspace = workspace
+  useEffect(() => {
+    view.current.mounted = true
+    setFocus(''); setFilter(''); setScanNotice('')
+    return () => { view.current.mounted = false }
+  }, [workspace])
   const wsQuery = workspace ? '?workspace=' + encodeURIComponent(workspace) : ''
 
   const summaryQuery = useQuery({
@@ -142,10 +160,14 @@ function LocusDesktopPane({ ctx }) {
   async function triggerReindex() {
     haptic('tap')
     try {
-      await ctx.rest('/reindex', { method: 'POST', body: { force: true, workspace } })
+      const result = await ctx.rest('/reindex', { method: 'POST', body: { force: true, workspace } })
+      const notice = scanNoticeText(result)
       queryClient.invalidateQueries({ queryKey: [ctx.source] })
-      host.notify({ kind: 'info', message: 'Locus Codegraph workspace graph re-indexed' })
+      if (!view.current.mounted || view.current.workspace !== workspace) return
+      setScanNotice(notice)
+      host.notify({ kind: 'info', message: notice || 'Locus Codegraph workspace graph re-indexed' })
     } catch (err) {
+      if (!view.current.mounted || view.current.workspace !== workspace) return
       host.notify({
         kind: 'error',
         message: 'Locus Codegraph re-index failed: ' + String((err && err.message) || err)
@@ -199,6 +221,12 @@ function LocusDesktopPane({ ctx }) {
             })
           ]
         }),
+
+      scanNotice && jsx('div', {
+        role: 'status',
+        style: { border: '1px solid var(--ui-stroke-secondary)', padding: 8, borderRadius: 6 },
+        children: scanNotice
+      }),
 
       jsx(MiniBlastSvg, {
         graph,
@@ -363,9 +391,14 @@ export default {
           label: 'Locus Codegraph: Re-index Workspace Codebase Graph',
           keywords: ['locus', 'ast', 'graph', 'blast', 'reindex'],
           run: async () => {
-            await ctx.rest('/reindex', { method: 'POST', body: { force: true, workspace: host.state.cwd.get() } })
-            queryClient.invalidateQueries({ queryKey: [ctx.source] })
-            host.notify({ kind: 'info', message: 'Locus Codegraph re-indexed' })
+            try {
+              const result = await ctx.rest('/reindex', { method: 'POST', body: { force: true, workspace: host.state.cwd.get() } })
+              const notice = scanNoticeText(result)
+              queryClient.invalidateQueries({ queryKey: [ctx.source] })
+              host.notify({ kind: 'info', message: notice || 'Locus Codegraph re-indexed' })
+            } catch (err) {
+              host.notify({ kind: 'error', message: 'Locus Codegraph re-index failed: ' + String((err && err.message) || err) })
+            }
           }
         }
       },

@@ -104,6 +104,30 @@ class TestHookContracts(unittest.TestCase):
         args = {"patch": "*** Begin Patch\n*** Move File: old.py -> new.py\n*** Delete File: gone.py\n*** End Patch"}
         self.assertEqual(self.plugin._edited_paths(args, {}), ["old.py", "new.py", "gone.py"])
 
+    def test_invalid_python_preserves_graph_and_returns_separate_index_warning(self) -> None:
+        self.break_signature()
+        self.ctx.hooks["transform_tool_result"](**self.call())
+        (self.workspace / "lib.py").write_text("def calc(value, factor\n")
+        call = self.call(tool_call_id="invalid-edit", result=json.dumps({"success": True, "output": "Patched lib.py"}))
+        self.ctx.hooks["post_tool_call"](**call)
+        transformed = self.ctx.hooks["transform_tool_result"](**call)
+        decoded = json.loads(transformed)
+        self.assertTrue(decoded["success"])
+        self.assertEqual(decoded["locus_index_warnings"][0]["path"], "lib.py")
+        self.assertIn("[Locus Indexing Warning]", decoded["output"])
+        self.assertNotIn("locus_drift_alert", decoded)
+        self.assertEqual(len(self.plugin.get_hotspots_report(self.workspace)["open_drift_alerts"]), 1)
+        self.assertIn("factor", self.plugin.lookup_symbol_details(self.workspace, "calc")["symbol"]["signature"])
+
+    def test_multi_file_patch_reports_drift_and_parse_diagnostics_together(self) -> None:
+        self.break_signature()
+        (self.workspace / "new.py").write_text("def invalid(\n")
+        call = self.call(result=json.dumps({"success": True, "files_modified": ["lib.py", "new.py"]}))
+        transformed = self.ctx.hooks["transform_tool_result"](**call)
+        decoded = json.loads(transformed)
+        self.assertIn("app.py:3", decoded["locus_drift_alert"])
+        self.assertEqual(decoded["locus_index_warnings"][0]["path"], "new.py")
+
     def test_real_hermes_dispatch_with_suppressed_post_hook(self) -> None:
         try:
             import model_tools

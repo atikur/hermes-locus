@@ -290,6 +290,34 @@ def _tool_result_failed(result: Any, kwargs: dict[str, Any]) -> bool:
     return bool(parsed.get("error")) or parsed.get("success") is False or parsed.get("ok") is False
 
 
+def _append_index_warnings(result: Any, warnings: list[dict[str, str]]) -> str:
+    """Keep parse diagnostics separate from caller-contract drift in host results."""
+    shown = warnings[:5]
+    lines = ["[Locus Indexing Warning]", "These edited files could not be indexed:"]
+    lines.extend(f"- `{item['path']}`: {item['error']}" for item in shown)
+    if len(warnings) > len(shown):
+        lines.append(f"- {len(warnings) - len(shown)} more file(s) could not be indexed.")
+    lines.append("Graph results may reflect the last valid version. Fix the syntax and re-index before relying on them.")
+    banner = "\n".join(lines)
+    payload: Any = result
+    if isinstance(result, str):
+        try:
+            payload = json.loads(result)
+        except ValueError:
+            payload = None
+    if isinstance(payload, dict):
+        payload = dict(payload)
+        payload["locus_index_warnings"] = shown
+        for key in ("output", "message", "result", "detail"):
+            if isinstance(payload.get(key), str):
+                payload[key] += "\n\n" + banner
+                break
+        else:
+            payload["locus_index_warning"] = banner
+        return json.dumps(payload, ensure_ascii=False)
+    return f"{result}\n\n{banner}"
+
+
 # ─── @ContextReferenceProviders (@sym:, @impact:, @hotspots:) ────────────────
 
 
@@ -537,7 +565,7 @@ def register(ctx: PluginContext) -> None:
     drift_lock = threading.Lock()
     # Both hook orders occur in Hermes. Retain bounded, per-registration receipts
     # so inspection happens once and only transform_tool_result delivers the alert.
-    inspected_calls: dict[str, tuple[str, bool]] = {}
+    inspected_calls: dict[str, tuple[str, list[dict[str, str]], bool]] = {}
 
     # 1. Model Tools (return JSON strings per Hermes tool contract)
     def handle_locus_map(args: dict[str, Any], **kwargs: Any) -> str:
@@ -704,8 +732,14 @@ def register(ctx: PluginContext) -> None:
                     _record_active_workspace(ctx, root)
                     candidates: set[tuple[str, str]] = set()
                     changed: list[str] = []
+                    index_warnings: list[dict[str, str]] = []
                     for edited_path in edited_paths:
                         outcome = reindex_edited_file(root, edited_path, tool_name=tool_name)
+                        if outcome.get("reason") == "parse_error":
+                            index_warnings.append({
+                                "path": outcome.get("rel_path", edited_path),
+                                "error": str(outcome.get("error") or "Source could not be parsed"),
+                            })
                         if outcome.get("ok") and not outcome.get("skipped"):
                             changed.append(outcome.get("rel_path", edited_path))
                             candidates.update((a["edited_path"], a["symbol_name"])
@@ -720,21 +754,24 @@ def register(ctx: PluginContext) -> None:
                     banner = format_drift_banner(alerts) if bool(ctx.get_config("drift_guard", True)) else ""
                     if len(inspected_calls) >= _MAX_PENDING_DRIFT:
                         inspected_calls.pop(next(iter(inspected_calls)))
-                    inspected_calls[key] = (banner, False)
+                    inspected_calls[key] = (banner, index_warnings, False)
                     if changed:
                         _broadcast_desktop_update("graph.updated", {
                             "workspace": str(root), "edited_paths": changed, "drift_count": len(alerts),
                         })
-                banner, delivered = inspected_calls[key]
+                banner, index_warnings, delivered = inspected_calls[key]
                 if not deliver or delivered:
                     return None
                 if kwargs.get("tool_call_id"):
-                    inspected_calls[key] = (banner, True)
+                    inspected_calls[key] = (banner, index_warnings, True)
                 else:
                     # execute_code calls can omit IDs; don't suppress a later edit
                     # just because it reuses the same arguments.
                     inspected_calls.pop(key, None)
-                return merge_drift_into_tool_result(result, banner) if banner else None
+                transformed = merge_drift_into_tool_result(result, banner) if banner else result
+                if index_warnings:
+                    return _append_index_warnings(transformed, index_warnings)
+                return transformed if banner else None
         except Exception as exc:
             logger.debug("Locus edit inspection skipped: %s", exc)
             return None

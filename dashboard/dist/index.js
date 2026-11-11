@@ -374,10 +374,15 @@
     const [busyScan, setBusyScan] = useState(false);
     const [copied, setCopied] = useState("");
     const [errMsg, setErrMsg] = useState("");
+    const [loadError, setLoadError] = useState("");
+    const [scanNotice, setScanNotice] = useState(null);
     const loadSequence = useRef(0);
     const loadInFlight = useRef(false);
     const symbolSearchSequence = useRef(0);
     const symbolDetailSequence = useRef(0);
+    const mutationGeneration = useRef(0);
+    const currentView = useRef({ workspace: workspace, focus: focus });
+    currentView.current = { workspace: workspace, focus: focus };
 
     const loadAll = useCallback(
       function (ws, foc, background) {
@@ -386,7 +391,7 @@
         loadInFlight.current = true;
         if (!background) {
           setLoading(true);
-          setErrMsg("");
+          setLoadError("");
         }
         const qsWs = ws ? "?workspace=" + encodeURIComponent(ws) : "";
         const qsGraph =
@@ -401,6 +406,7 @@
         ])
           .then(function (res) {
             if (sequence !== loadSequence.current) return;
+            setLoadError("");
             setSummary(res[0]);
             setGraph(res[1]);
             if (!background) setSymList((res[2] && res[2].symbols) || []);
@@ -412,7 +418,7 @@
           })
           .catch(function (err) {
             if (sequence !== loadSequence.current) return;
-            setErrMsg(String((err && err.message) || err || "Failed to load Locus API"));
+            setLoadError(String((err && err.message) || err || "Failed to load Locus API"));
             setLoading(false);
           })
           .finally(function () {
@@ -436,12 +442,16 @@
     );
 
     useEffect(function () {
+      mutationGeneration.current++;
       setFocus("");
       setSymDetail(null);
       setSymQuery("");
+      setBusyScan(false);
+      setErrMsg("");
       symbolSearchSequence.current++;
       symbolDetailSequence.current++;
       return function () {
+        mutationGeneration.current++;
         symbolSearchSequence.current++;
         symbolDetailSequence.current++;
       };
@@ -465,6 +475,8 @@
     function handleInspectSymbol(name) {
       const sequence = ++symbolDetailSequence.current;
       setActivePanel("symbols");
+      setSymDetail(null);
+      setErrMsg("");
       const qs =
         "?name=" +
         encodeURIComponent(name) +
@@ -473,12 +485,18 @@
         .then(function (d) {
           if (sequence !== symbolDetailSequence.current) return;
           if (d && d.ok) setSymDetail(d);
+          else setErrMsg((d && d.error) || "Symbol could not be found in the current index.");
         })
-        .catch(function () {});
+        .catch(function (err) {
+          if (sequence === symbolDetailSequence.current) setErrMsg(String((err && err.message) || err));
+        });
     }
 
     function handleReindex() {
+      const generation = mutationGeneration.current;
       setBusyScan(true);
+      setErrMsg("");
+      setScanNotice(null);
       const targetWs = wsInput.trim() || workspace;
       SDK.fetchJSON("/api/plugins/locus-codegraph/reindex", {
         method: "POST",
@@ -486,25 +504,42 @@
         body: JSON.stringify({ workspace: targetWs, force: true }),
       })
         .then(function (res) {
+          if (generation !== mutationGeneration.current) return;
           setBusyScan(false);
+          if (!res || !res.ok) throw new Error((res && res.error) || "Workspace scan failed.");
+          const notices = [];
+          if (res.parse_errors && res.parse_errors.length) {
+            notices.push(res.parse_errors.length + " source file(s) could not be parsed; any previously indexed version was retained. " +
+              res.parse_errors.slice(0, 3).map(function (item) { return item.path + ": " + item.error; }).join(" · "));
+          }
+          if (res.truncated) notices.push("Scan reached the " + res.max_files + " file limit; the graph is incomplete.");
+          setScanNotice({ workspace: res.root_path, text: notices.join(" ") });
           if (res && res.root_path) {
             setWorkspace(res.root_path);
-            loadAll(res.root_path, focus);
+            setWsInput(res.root_path);
+            loadAll(res.root_path, currentView.current.focus);
           }
         })
         .catch(function (err) {
+          if (generation !== mutationGeneration.current) return;
           setBusyScan(false);
           setErrMsg(String((err && err.message) || err));
         });
     }
 
     function handleResolveDrift(alertId) {
+      const generation = mutationGeneration.current;
+      setErrMsg("");
       SDK.fetchJSON("/api/plugins/locus-codegraph/resolve-drift", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ alert_id: alertId }),
-      }).then(function () {
-        loadAll(workspace, focus);
+        body: JSON.stringify({ alert_id: alertId, workspace: workspace }),
+      }).then(function (res) {
+        if (generation !== mutationGeneration.current) return;
+        if (!res || !res.ok) throw new Error((res && res.error) || "Drift alert could not be dismissed.");
+        loadAll(currentView.current.workspace, currentView.current.focus);
+      }).catch(function (err) {
+        if (generation === mutationGeneration.current) setErrMsg(String((err && err.message) || err));
       });
     }
 
@@ -595,12 +630,15 @@
         )
       ),
 
-      errMsg &&
+      (errMsg || loadError) &&
         h(
           Card,
           null,
-          h(CardContent, { className: "py-2.5 px-4 text-xs text-red-400" }, "Locus API notice: " + errMsg)
+          h(CardContent, { className: "py-2.5 px-4 text-xs text-red-400" }, "Locus API notice: " + (errMsg || loadError))
         ),
+
+      scanNotice && scanNotice.workspace === workspace && scanNotice.text && h(Card, null,
+        h(CardContent, { className: "py-2.5 px-4 text-xs", role: "status" }, scanNotice.text)),
 
       /* KPI Strip */
       summary &&

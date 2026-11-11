@@ -118,6 +118,7 @@ Locus is a navigation and refactoring aid. Its results have these boundaries:
 - **Risk scores:** the 0–100 score combines dependency counts, inferred test gaps, and drift alerts. It is a prioritization heuristic, not a failure probability.
 - **Edit feedback:** hooks respond to supported Hermes editing tools and recognized paths. Locus is not a filesystem watcher; after external editor or shell changes, use `/locus reindex` to refresh the graph.
 - **Indexing:** supported source files are bounded by size and file count. Root-level `.gitignore` patterns are supported on a best-effort basis; nested ignore files and negation are not implemented.
+- **Incomplete edits:** invalid Python retains the last valid graph and produces an indexing warning. Repair the syntax and reindex before treating that file's graph as current. Scans report when the file cap leaves the repository partially indexed.
 - **Performance:** unchanged files are cached using modification time, size, and SHA-256. An edited file is reparsed, then dependency links and rankings are refreshed. Timings depend on workspace size and hardware; the demo prints measurements for its own small fixture.
 
 ## Configuration
@@ -171,9 +172,11 @@ hermes plugins doctor . --ci
 
 See [the submission runbook](docs/submission.md) for the real-session demonstration and evidence checklist.
 
+For a reproducible larger-workspace trial, see [performance observations and the benchmark command](docs/performance.md). A 2,500-file Hermes checkout subset was indexed in 4.24 seconds, with a cached scan taking 0.26 seconds on an Apple M4; those measurements are not a latency guarantee.
+
 ## Verified behavior
 
-The release passes 42 tests in the Hermes environment. A real GPT-5.4 mini session received the drift warning, repaired both callers, and passed the fixture tests. Version 0.1.2 gives this project the distinct installation identity `locus-codegraph`; the recorded refactor used version 0.1.1. See [verification evidence and the full transcript](docs/verification.md) for commands, results, and limits.
+The release passes 63 tests in the Hermes environment. A real GPT-5.4 mini session received the drift warning, repaired both callers, and passed the fixture tests. Version 0.1.2 gives this project the distinct installation identity `locus-codegraph`; the recorded refactor used version 0.1.1. See [verification evidence and the full transcript](docs/verification.md) for commands, results, and limits.
 
 [Watch the 77-second working demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4) · [Download captions](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.srt)
 

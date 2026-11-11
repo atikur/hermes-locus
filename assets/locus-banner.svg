@@ -36,7 +36,7 @@
   <g transform="translate(72, 86)">
     <rect x="0" y="0" width="268" height="32" rx="16" fill="#0f2942" stroke="#38bdf8" stroke-opacity="0.45"/>
     <circle cx="18" cy="16" r="5" fill="#38bdf8"/>
-    <text x="32" y="21" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#bae6fd" letter-spacing="0.8">HERMES AGENT PLUGIN · v0.1.2</text>
+    <text x="32" y="21" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#bae6fd" letter-spacing="0.8">HERMES AGENT PLUGIN · v0.1.3</text>
 
     <text x="0" y="106" font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="56" font-weight="800" fill="#f8fafc" letter-spacing="-1.2">Locus Codegraph</text>
     <circle cx="478" cy="87" r="6" fill="#38bdf8"/>

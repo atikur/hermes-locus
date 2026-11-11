@@ -124,7 +124,7 @@ def _load_dependency_maps(
 
 
 def find_cycles_in_graph(out_deps: dict[str, set[str]]) -> list[list[str]]:
-    """Find all non-trivial import/dependency cycles via Tarjan's SCC algorithm."""
+    """Find non-trivial dependency cycles without consuming Python call-stack depth."""
     index = 0
     indices: dict[str, int] = {}
     lowlink: dict[str, int] = {}
@@ -132,39 +132,45 @@ def find_cycles_in_graph(out_deps: dict[str, set[str]]) -> list[list[str]]:
     on_stack: set[str] = set()
     cycles: list[list[str]] = []
 
-    def strongconnect(v: str) -> None:
-        nonlocal index
-        indices[v] = index
-        lowlink[v] = index
+    for node in sorted(out_deps.keys()):
+        if node in indices:
+            continue
+        indices[node] = lowlink[node] = index
         index += 1
-        stack.append(v)
-        on_stack.add(v)
+        stack.append(node)
+        on_stack.add(node)
+        # Explicit DFS frames preserve Tarjan's return-to-parent step even for
+        # chains longer than Python's recursion limit (the file cap is 2,500).
+        frames = [(node, iter(sorted(out_deps.get(node, ()))))]
+        while frames:
+            v, neighbors = frames[-1]
+            try:
+                w = next(neighbors)
+            except StopIteration:
+                frames.pop()
+                if lowlink[v] == indices[v]:
+                    scc: list[str] = []
+                    while True:
+                        member = stack.pop()
+                        on_stack.remove(member)
+                        scc.append(member)
+                        if member == v:
+                            break
+                    if len(scc) > 1:
+                        cycles.append(_extract_cycle_path(min(scc), out_deps, set(scc)))
+                if frames:
+                    parent = frames[-1][0]
+                    lowlink[parent] = min(lowlink[parent], lowlink[v])
+                continue
 
-        for w in sorted(out_deps.get(v, ())):
             if w not in indices:
-                strongconnect(w)
-                lowlink[v] = min(lowlink[v], lowlink[w])
+                indices[w] = lowlink[w] = index
+                index += 1
+                stack.append(w)
+                on_stack.add(w)
+                frames.append((w, iter(sorted(out_deps.get(w, ())))))
             elif w in on_stack:
                 lowlink[v] = min(lowlink[v], indices[w])
-
-        if lowlink[v] == indices[v]:
-            scc: list[str] = []
-            while True:
-                w = stack.pop()
-                on_stack.remove(w)
-                scc.append(w)
-                if w == v:
-                    break
-            if len(scc) > 1:
-                scc_set = set(scc)
-                # Reconstruct an explicit readable cycle path inside the SCC
-                start = min(scc)
-                cycle_path = _extract_cycle_path(start, out_deps, scc_set)
-                cycles.append(cycle_path)
-
-    for node in sorted(out_deps.keys()):
-        if node not in indices:
-            strongconnect(node)
     return cycles
 
 
@@ -172,7 +178,7 @@ def _extract_cycle_path(
     start: str, out_deps: dict[str, set[str]], scc_set: set[str]
 ) -> list[str]:
     queue: deque[tuple[str, list[str]]] = deque([(start, [start])])
-    visited: set[str] = set()
+    visited: set[str] = {start}
     while queue:
         curr, path = queue.popleft()
         for nxt in sorted(out_deps.get(curr, ())):

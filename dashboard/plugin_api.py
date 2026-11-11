@@ -27,9 +27,17 @@ from locus_core import (  # noqa: E402
     open_locus_db,
     search_symbols,
     validate_safe_workspace_root,
+    workspace_id_for,
 )
 
 router = APIRouter()
+
+
+def _body_workspace(payload: dict[str, Any]) -> str:
+    workspace = payload.get("workspace", "")
+    if not isinstance(workspace, str):
+        raise HTTPException(status_code=400, detail="workspace must be a directory path string")
+    return workspace
 
 
 def _list_known_workspaces() -> list[dict[str, Any]]:
@@ -201,8 +209,10 @@ async def api_hotspots(workspace: str = Query(default="")) -> dict[str, Any]:
 @router.post("/reindex")
 async def api_reindex(body: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     payload = body or {}
-    ws_arg = str(payload.get("workspace") or "")
-    force = bool(payload.get("force", True))
+    ws_arg = _body_workspace(payload)
+    force = payload.get("force", True)
+    if not isinstance(force, bool):
+        raise HTTPException(status_code=400, detail="force must be a boolean")
 
     def _run() -> dict[str, Any]:
         root = _resolve_api_workspace(ws_arg)
@@ -216,13 +226,24 @@ async def api_reindex(body: Optional[dict[str, Any]] = None) -> dict[str, Any]:
 @router.post("/resolve-drift")
 async def api_resolve_drift(body: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     payload = body or {}
-    alert_id = int(payload.get("alert_id") or 0)
-    if alert_id <= 0:
-        raise HTTPException(status_code=400, detail="Valid alert_id is required")
+    alert_id = payload.get("alert_id")
+    if type(alert_id) is not int or not 1 <= alert_id <= (1 << 63) - 1:
+        raise HTTPException(status_code=400, detail="alert_id must be a positive 64-bit integer")
+    workspace = _body_workspace(payload)
 
     def _run() -> dict[str, Any]:
+        scope = workspace_id_for(_resolve_api_workspace(workspace)) if workspace.strip() else None
         with open_locus_db() as conn:
+            row = conn.execute(
+                """SELECT w.root_path FROM drift_alerts d
+                   JOIN workspaces w ON w.workspace_id = d.workspace_id
+                   WHERE d.id = ? AND (? IS NULL OR d.workspace_id = ?)""",
+                (alert_id, scope, scope),
+            ).fetchone()
+            if row is None:
+                raise HTTPException(status_code=404, detail="Drift alert not found in this workspace")
             conn.execute("UPDATE drift_alerts SET resolved = 1 WHERE id = ?", (alert_id,))
+        _notify_desktop(Path(row["root_path"]), "drift_dismissed")
         return {"ok": True, "resolved_id": alert_id}
 
     return await asyncio.to_thread(_run)

@@ -156,6 +156,27 @@ def _matches_gitignore(rel_posix: str, name: str, patterns: list[str]) -> bool:
     return False
 
 
+def _path_exclusion_reason(
+    rel_posix: str, patterns: list[str], *, is_dir: bool = False,
+    parents_checked: bool = False,
+) -> str:
+    """Apply the same lightweight path filters to scans and edit notifications."""
+    parts = rel_posix.split("/")
+    # A scan already prunes excluded parents before descending. Individual
+    # edit notifications have no such guarantee and must inspect every part.
+    start = len(parts) - 1 if parents_checked else 0
+    for i in range(start, len(parts)):
+        part = parts[i]
+        if part.startswith("."):
+            return "hidden_path"
+        if (is_dir or i < len(parts) - 1) and part in SKIP_DIR_NAMES:
+            return "excluded_directory"
+        prefix = rel_posix if i == len(parts) - 1 else "/".join(parts[: i + 1])
+        if _matches_gitignore(prefix, part, patterns):
+            return "gitignored"
+    return ""
+
+
 def _iter_workspace_source_files(
     root: Path,
     max_files: int = DEFAULT_MAX_FILES,
@@ -179,20 +200,16 @@ def _iter_workspace_source_files(
         # Prune dot-directories, build/vendor folders, symlinks, and gitignored dirs in-place
         kept_dirs: list[str] = []
         for d in sorted(dirnames):
-            if d.startswith(".") or d in SKIP_DIR_NAMES:
+            d_rel = f"{rel_dir}/{d}".lstrip("/")
+            if _path_exclusion_reason(d_rel, gi_patterns, is_dir=True, parents_checked=True):
                 continue
             d_full = cur_dir / d
             if d_full.is_symlink():
-                continue
-            d_rel = f"{rel_dir}/{d}".lstrip("/")
-            if _matches_gitignore(d_rel, d, gi_patterns):
                 continue
             kept_dirs.append(d)
         dirnames[:] = kept_dirs
 
         for fname in sorted(filenames):
-            if fname.startswith("."):
-                continue
             ext = os.path.splitext(fname)[1].lower()
             if ext not in LANGUAGE_BY_EXT:
                 continue
@@ -200,7 +217,7 @@ def _iter_workspace_source_files(
             if f_full.is_symlink():
                 continue
             rel_posix = f"{rel_dir}/{fname}".lstrip("/")
-            if _matches_gitignore(rel_posix, fname, gi_patterns):
+            if _path_exclusion_reason(rel_posix, gi_patterns, parents_checked=True):
                 continue
             try:
                 st = f_full.stat()
@@ -567,7 +584,10 @@ def index_workspace(
     root = Path(root_path).expanduser().resolve()
 
     ws_id = workspace_id_for(root)
-    discovered = _iter_workspace_source_files(root, max_files=max_files)
+    max_files = max(1, int(max_files))
+    discovered = _iter_workspace_source_files(root, max_files=max_files + 1)
+    truncated = len(discovered) > max_files
+    discovered = discovered[:max_files]
 
     with open_locus_db(db_path=db_path) as conn:
         existing_rows = conn.execute(
@@ -587,6 +607,7 @@ def index_workspace(
             conn.execute("DELETE FROM calls WHERE workspace_id = ? AND caller_path = ?", (ws_id, dead))
 
         updated_files = 0
+        parse_errors: list[dict[str, str]] = []
         for full_path, rel_posix, st in discovered:
             prev = existing_by_path.get(rel_posix)
             if not force and prev is not None and abs(prev[0] - st.st_mtime) < 1e-4 and prev[1] == st.st_size:
@@ -609,6 +630,9 @@ def index_workspace(
             parsed = parse_source_file(rel_posix, source)
             if parsed is None:
                 continue
+            if parsed.parse_error:
+                parse_errors.append({"path": rel_posix, "error": parsed.parse_error})
+                continue
             _store_parsed_file(conn, ws_id, parsed, st.st_mtime, st.st_size, digest)
             updated_files += 1
 
@@ -627,7 +651,9 @@ def index_workspace(
                 "SELECT COUNT(*) AS c FROM symbols WHERE workspace_id = ?", (ws_id,)
             ).fetchone()["c"]
         )
-        file_count = len(discovered_paths)
+        file_count = int(
+            conn.execute("SELECT COUNT(*) AS c FROM files WHERE workspace_id = ?", (ws_id,)).fetchone()["c"]
+        )
         elapsed_ms = round((time.perf_counter() - t0) * 1000.0, 2)
 
         conn.execute(
@@ -670,6 +696,9 @@ def index_workspace(
         "edge_count": edge_count,
         "updated_files": updated_files,
         "removed_files": len(removed_paths),
+        "parse_errors": parse_errors,
+        "truncated": truncated,
+        "max_files": max_files,
         "scan_ms": elapsed_ms,
     }
 
@@ -692,8 +721,11 @@ def reindex_edited_file(
     raw_target = Path(edited_file)
     if not raw_target.is_absolute():
         raw_target = root / raw_target
-    if raw_target.is_symlink():
-        return {"ok": False, "skipped": True, "reason": "symlink"}
+    probe = raw_target
+    while probe != root and root in probe.parents:
+        if probe.is_symlink():
+            return {"ok": False, "skipped": True, "reason": "symlink"}
+        probe = probe.parent
     target = raw_target.resolve()
 
     try:
@@ -704,6 +736,13 @@ def reindex_edited_file(
     if detect_language(rel_posix) is None:
         return {"ok": True, "skipped": True, "reason": "unsupported_extension"}
 
+    # Deletions still remove an earlier index entry, even when the path has
+    # since become excluded. No source content is read for those notifications.
+    if target.exists():
+        exclusion = _path_exclusion_reason(rel_posix, _load_gitignore_patterns(root))
+        if exclusion:
+            return {"ok": True, "skipped": True, "reason": exclusion}
+
     with open_locus_db(db_path=db_path) as conn:
         # Ensure workspace baseline exists first
         ws_exists = conn.execute(
@@ -711,8 +750,18 @@ def reindex_edited_file(
         ).fetchone()
 
     if not ws_exists:
-        index_workspace(root, db_path=db_path)
-        return {"ok": True, "rel_path": rel_posix, "drift_alerts": [], "initial_scan": True}
+        scan = index_workspace(root, db_path=db_path)
+        for parse_error in scan.get("parse_errors", []):
+            if parse_error["path"] == rel_posix:
+                return {
+                    "ok": True, "skipped": True, "reason": "parse_error",
+                    "rel_path": rel_posix, "error": parse_error["error"],
+                    "initial_scan": True,
+                }
+        return {
+            "ok": True, "rel_path": rel_posix, "drift_alerts": [], "initial_scan": True,
+            "parse_errors": scan.get("parse_errors", []),
+        }
 
     with open_locus_db(db_path=db_path) as conn:
         old_rows = conn.execute(
@@ -768,6 +817,11 @@ def reindex_edited_file(
             parsed = parse_source_file(rel_posix, raw_bytes.decode("utf-8", errors="replace"))
             if parsed is None:
                 return {"ok": True, "skipped": True}
+            if parsed.parse_error:
+                return {
+                    "ok": True, "skipped": True, "reason": "parse_error",
+                    "rel_path": rel_posix, "error": parsed.parse_error,
+                }
             new_symbols = {s.qualified_name: s for s in parsed.symbols}
             detect_and_record_drift(conn, ws_id, rel_posix, old_symbols, new_symbols)
             _store_parsed_file(conn, ws_id, parsed, st.st_mtime, st.st_size, digest)

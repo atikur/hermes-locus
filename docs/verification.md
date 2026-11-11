@@ -2,6 +2,10 @@
 
 Verified on 11 November 2026 on macOS (Darwin 25.4.0, arm64).
 
+The local checks below cover **0.1.3** after the reliability changes. The
+[GitHub workflow](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
+separately runs the standalone suite on Python 3.11, 3.12, and 3.14.
+
 Version 0.1.2 uses the distinct plugin identity `locus-codegraph` to coexist with
 an unrelated plugin named Locus. The recorded model session below used 0.1.1;
 its event transcript is preserved unchanged. The refactoring engine is unchanged
@@ -11,8 +15,8 @@ by the identity update.
 
 | Check | Observed result |
 | --- | --- |
-| Standalone Python 3.11.16, `requirements-dev.txt` | 42 tests run: 39 passed, 3 Hermes-specific checks skipped |
-| Installed Hermes, Python 3.14.7 | 42 tests passed, no skips |
+| Standalone Python 3.11.16, `requirements-dev.txt` | 63 tests run: 60 passed, 3 Hermes-specific checks skipped |
+| Installed Hermes, Python 3.14.7 | 63 tests passed, no skips |
 | `hermes plugins validate . --install-deps` | Passed; security scan safe; declarations match registrations |
 | `hermes plugins doctor . --ci` | Passed; 4 tools and 3 hooks registered |
 | Hermes payload scanner | Passed |
@@ -57,6 +61,28 @@ A separate deterministic integration run used real Hermes plugin discovery,
 lifecycle dispatch and actual file tools, with no mocked execution. It verified
 that a warning persists through a body-only edit and clears after a multi-file
 caller repair. The unit suite independently covers that lifecycle regression.
+
+## Version 0.1.3 reliability checks
+
+- Incomplete Python edits keep the last valid signatures and call graph. Both
+  scan responses and editing-tool results report the parse failure separately.
+  A fresh real-Hermes run verified invalid syntax → indexing warning → syntax
+  repair → caller repair → passing tests, with no model call or mocked execution.
+- Editing hooks obey the same ignore, hidden-directory, generated-directory,
+  and symlink rules as full scans. Deletion still removes old indexed entries.
+- Scans explicitly report when the configured file cap truncates the workspace.
+- Cycle detection handles 2,500-node chains and cycles without Python recursion.
+  An independent reachability oracle matched 9,096 small exhaustive/random graphs.
+- Invalid alert mutations return client errors; workspace-scoped dismissal does
+  not resolve another workspace's alert. Browser warnings, mutation failures,
+  and stale workspace responses are handled explicitly.
+- Browser verification confirmed that a failed parse preserves all five fixture
+  files and nine symbols, shows the [syntax warning](evidence/syntax-warning.jpg),
+  and clears it after syntax repair and a successful rescan.
+
+See the [larger-workspace trial](performance.md) for measured performance and
+the reproducible benchmark command. Native Desktop interaction remains an
+explicit verification gap; its admission, syntax, and shared API checks pass.
 
 ## Raw check output
 
