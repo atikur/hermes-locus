@@ -6,6 +6,7 @@ All synchronous AST/SQLite operations execute off the gateway event loop via ``a
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import sys
 from pathlib import Path
@@ -121,6 +122,28 @@ def _build_summary_sync(workspace: str) -> dict[str, Any]:
     repo = get_repo_map(root, max_files=12)
     hotspots = get_hotspots_report(root)
     workspaces = _list_known_workspaces()
+    with open_locus_db() as conn:
+        ws_id = workspace_id_for(root)
+        counts = conn.execute(
+            "SELECT resolved, COUNT(*) AS count FROM drift_alerts WHERE workspace_id = ? GROUP BY resolved",
+            (ws_id,),
+        ).fetchall()
+        drift_counts = {int(row["resolved"]): int(row["count"]) for row in counts}
+        closed = conn.execute(
+            """SELECT id, created_at, edited_path, symbol_name, reason
+               FROM drift_alerts WHERE workspace_id = ? AND resolved = 1 ORDER BY id DESC LIMIT 10""",
+            (ws_id,),
+        ).fetchall()
+        ws_row = conn.execute("SELECT * FROM workspaces WHERE workspace_id = ?", (ws_id,)).fetchone()
+        scan_status = {}
+        if ws_row is not None and "scan_status_json" in ws_row.keys():
+            try:
+                scan_status = json.loads(ws_row["scan_status_json"] or "{}")
+            except (TypeError, ValueError):
+                pass
+        if not isinstance(scan_status, dict):
+            scan_status = {}
+    alerts = hotspots.get("open_drift_alerts") or []
     return {
         "ok": True,
         "workspace": str(root),
@@ -132,8 +155,13 @@ def _build_summary_sync(workspace: str) -> dict[str, Any]:
         "languages": repo.get("languages", {}),
         "cycle_count": len(hotspots.get("cycles") or []),
         "cycles": (hotspots.get("cycles") or [])[:8],
-        "open_drift_count": len(hotspots.get("open_drift_alerts") or []),
-        "drift_alerts": hotspots.get("open_drift_alerts") or [],
+        "open_drift_count": drift_counts.get(0, 0),
+        "drift_alerts": alerts,
+        "drift_alerts_truncated": drift_counts.get(0, 0) > len(alerts),
+        "closed_drift_count": drift_counts.get(1, 0),
+        "closed_drift_alerts": [dict(row) for row in closed],
+        "scan_status": scan_status,
+        "last_indexed_at": float(ws_row["last_indexed_at"]) if ws_row else None,
         "top_modules": repo.get("modules") or [],
         "untested_core": hotspots.get("untested_core") or [],
         "recent_activity": hotspots.get("recent_activity") or [],
@@ -216,7 +244,20 @@ async def api_reindex(body: Optional[dict[str, Any]] = None) -> dict[str, Any]:
 
     def _run() -> dict[str, Any]:
         root = _resolve_api_workspace(ws_arg)
-        res = index_workspace(root, force=force)
+        # Keep the scope of the last session/CLI scan. A UI refresh must not
+        # silently shrink a workspace that was indexed with a larger configured cap.
+        scan_options: dict[str, Any] = {}
+        with open_locus_db() as conn:
+            row = conn.execute("SELECT scan_status_json FROM workspaces WHERE workspace_id = ?",
+                               (workspace_id_for(root),)).fetchone()
+            try:
+                status = json.loads(row["scan_status_json"] or "{}") if row else {}
+            except (TypeError, ValueError):
+                status = {}
+            cap = status.get("max_files") if isinstance(status, dict) else None
+            if type(cap) is int and cap > 0:
+                scan_options["max_files"] = cap
+        res = index_workspace(root, force=force, **scan_options)
         _notify_desktop(root, "dashboard_reindex")
         return res
 

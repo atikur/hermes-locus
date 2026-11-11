@@ -11,10 +11,50 @@ from pathlib import Path
 from typing import Any, Optional
 
 from .drift import list_open_drift_alerts
-from .indexer import index_workspace, validate_safe_workspace_root
+from .indexer import DEFAULT_MAX_FILE_BYTES, index_workspace, validate_safe_workspace_root
 from .storage import open_locus_db, workspace_id_for
 
 DEFAULT_IMPACT_DEPTH = 3
+
+
+def _scan_status(conn: sqlite3.Connection, ws_id: str) -> dict[str, Any]:
+    row = conn.execute("SELECT * FROM workspaces WHERE workspace_id = ?", (ws_id,)).fetchone()
+    if row is None or "scan_status_json" not in row.keys():
+        return {}
+    try:
+        status = json.loads(row["scan_status_json"] or "{}")
+        return status if isinstance(status, dict) else {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _drift_count(conn: sqlite3.Connection, ws_id: str) -> int:
+    return int(conn.execute(
+        "SELECT COUNT(*) FROM drift_alerts WHERE workspace_id = ? AND resolved = 0", (ws_id,)
+    ).fetchone()[0])
+
+
+def _symbol_choices(root: Path, target: str, db_path: Optional[str | Path]) -> list[dict[str, Any]]:
+    """Prefer exact names, and support the unambiguous path::qualified_name form."""
+    path, separator, name = target.partition("::")
+    ws_id = workspace_id_for(root)
+    with open_locus_db(db_path=db_path) as conn:
+        predicate = "s.rel_path = ? AND s.qualified_name = ?" if separator else "(s.name = ? OR s.qualified_name = ?)"
+        values = (path, name) if separator else (target, target)
+        rows = conn.execute(
+            f"""SELECT s.*, f.pagerank FROM symbols s JOIN files f
+                ON f.workspace_id = s.workspace_id AND f.rel_path = s.rel_path
+                WHERE s.workspace_id = ? AND {predicate}
+                ORDER BY s.rel_path, s.line_start""", (ws_id, *values),
+        ).fetchall()
+    if rows or separator:
+        return [dict(row) for row in rows]
+    return search_symbols(root, target, limit=100, db_path=db_path)
+
+
+def _ambiguous_target(target: str, choices: list[str]) -> dict[str, Any]:
+    return {"ok": False, "error": f"Target '{target}' is ambiguous. Use one of the exact targets below.",
+            "candidates": sorted(set(choices))[:20]}
 
 
 def _reverse_neighborhood(
@@ -215,7 +255,8 @@ def get_repo_map(
         ).fetchone()
         out_deps, _, meta = _load_dependency_maps(conn, ws_id)
         cycles = find_cycles_in_graph(out_deps)
-        drifts = list_open_drift_alerts(conn, ws_id, limit=10)
+        drift_count = _drift_count(conn, ws_id)
+        scan_status = _scan_status(conn, ws_id)
 
         candidates = list(meta.values())
         if prefix:
@@ -271,7 +312,8 @@ def get_repo_map(
         "languages": {r["lang"]: int(r["c"]) for r in lang_counts_rows},
         "modules": modules,
         "cycles": cycles[:10],
-        "open_drift_count": len(drifts),
+        "open_drift_count": drift_count,
+        "scan_status": scan_status,
     }
 
 
@@ -354,24 +396,26 @@ def lookup_symbol_details(
     if not is_safe:
         return {"ok": False, "error": reason}
     root, ws_id = _ensure_indexed(root_path, db_path=db_path)
-    matches = search_symbols(root, target, limit=5, db_path=db_path)
+    matches = _symbol_choices(root, target, db_path)
     if not matches:
         return {"ok": False, "error": f"No symbol matching '{target}' found in workspace."}
+    if len(matches) > 1:
+        return _ambiguous_target(target, [m["symbol_id"] for m in matches])
 
     primary = matches[0]
     sym_name = primary["name"]
     rel_path = primary["rel_path"]
 
     with open_locus_db(db_path=db_path) as conn:
+        scan_status = _scan_status(conn, ws_id)
         caller_rows = conn.execute(
             """
             SELECT caller_path, caller_symbol, line_no, arg_count
             FROM calls
             WHERE workspace_id = ?
               AND callee_name = ?
-              AND (resolved_path = ? OR resolved_path = '')
+              AND resolved_path = ?
             ORDER BY CASE WHEN caller_path = ? THEN 1 ELSE 0 END, caller_path, line_no
-            LIMIT 25
             """,
             (ws_id, sym_name, rel_path, rel_path),
         ).fetchall()
@@ -384,7 +428,6 @@ def lookup_symbol_details(
               AND caller_path = ?
               AND (caller_symbol = ? OR line_no BETWEEN ? AND ?)
             ORDER BY line_no
-            LIMIT 25
             """,
             (
                 ws_id,
@@ -397,10 +440,16 @@ def lookup_symbol_details(
 
     snippet = ""
     full_file = root / rel_path
-    if not full_file.is_symlink() and full_file.is_file():
+    unavailable = [*(scan_status.get("stale_files") or []), *(scan_status.get("parse_errors") or [])]
+    stale_source = any((item.get("path") or item.get("rel_path")) == rel_path for item in unavailable)
+    if not stale_source and not full_file.is_symlink() and full_file.is_file():
         try:
             full_file.resolve().relative_to(root.resolve())
-            lines = full_file.read_text(encoding="utf-8", errors="replace").splitlines()
+            # A cached source can grow before its next scan. Bound the read too,
+            # rather than using old line metadata to read an arbitrarily large file.
+            with full_file.open("rb") as stream:
+                source = stream.read(DEFAULT_MAX_FILE_BYTES + 1)
+            lines = source.decode("utf-8", errors="replace").splitlines() if len(source) <= DEFAULT_MAX_FILE_BYTES else []
             s_idx = max(0, primary["line_start"] - 1)
             e_idx = min(len(lines), min(primary["line_end"], primary["line_start"] + 24))
             snippet = "\n".join(
@@ -413,6 +462,8 @@ def lookup_symbol_details(
         "ok": True,
         "symbol": primary,
         "other_matches": matches[1:],
+        "caller_count": len(caller_rows),
+        "callee_count": len(callee_rows),
         "callers": [
             {
                 "path": r["caller_path"],
@@ -420,7 +471,7 @@ def lookup_symbol_details(
                 "line": int(r["line_no"]),
                 "arg_count": int(r["arg_count"]),
             }
-            for r in caller_rows
+            for r in caller_rows[:25]
         ],
         "callees": [
             {
@@ -428,9 +479,10 @@ def lookup_symbol_details(
                 "resolved_path": r["resolved_path"],
                 "line": int(r["line_no"]),
             }
-            for r in callee_rows
+            for r in callee_rows[:25]
         ],
         "snippet": snippet,
+        "scan_status": scan_status,
     }
 
 
@@ -450,6 +502,7 @@ def analyze_impact(
 
     with open_locus_db(db_path=db_path) as conn:
         _, rev_deps, meta = _load_dependency_maps(conn, ws_id)
+        scan_status = _scan_status(conn, ws_id)
 
         resolved_file = ""
         matched_symbol: Optional[dict[str, Any]] = None
@@ -464,11 +517,13 @@ def analyze_impact(
             if len(suffix_hits) == 1:
                 resolved_file = suffix_hits[0]
             elif len(suffix_hits) > 1:
-                resolved_file = sorted(suffix_hits, key=lambda p: meta[p]["pagerank"], reverse=True)[0]
+                return _ambiguous_target(target, suffix_hits)
 
         # 2. Symbol match if not a file path
         if not resolved_file:
-            sym_hits = search_symbols(root, clean_target, limit=3, db_path=db_path)
+            sym_hits = _symbol_choices(root, clean_target, db_path)
+            if len(sym_hits) > 1:
+                return _ambiguous_target(target, [m["symbol_id"] for m in sym_hits])
             if sym_hits:
                 matched_symbol = sym_hits[0]
                 resolved_file = matched_symbol["rel_path"]
@@ -499,10 +554,10 @@ def analyze_impact(
                 """
                 SELECT caller_path, caller_symbol, line_no, arg_count
                 FROM calls
-                WHERE workspace_id = ? AND callee_name = ? AND caller_path != ?
-                ORDER BY caller_path, line_no LIMIT 25
+                WHERE workspace_id = ? AND callee_name = ? AND resolved_path = ? AND caller_path != ?
+                ORDER BY caller_path, line_no
                 """,
-                (ws_id, matched_symbol["name"], resolved_file),
+                (ws_id, matched_symbol["name"], resolved_file, resolved_file),
             ).fetchall()
         else:
             call_rows = conn.execute(
@@ -510,14 +565,14 @@ def analyze_impact(
                 SELECT caller_path, caller_symbol, callee_name, line_no, arg_count
                 FROM calls
                 WHERE workspace_id = ? AND resolved_path = ? AND caller_path != ?
-                ORDER BY caller_path, line_no LIMIT 25
+                ORDER BY caller_path, line_no
                 """,
                 (ws_id, resolved_file, resolved_file),
             ).fetchall()
 
         drifts = [
             d
-            for d in list_open_drift_alerts(conn, ws_id, limit=20)
+            for d in list_open_drift_alerts(conn, ws_id, limit=-1)
             if d["edited_path"] == resolved_file
         ]
 
@@ -551,8 +606,10 @@ def analyze_impact(
         "direct_dependents": direct_dependents,
         "transitive_dependents": transitive_dependents,
         "covering_tests": covering_tests,
-        "external_call_sites": [dict(r) for r in call_rows],
+        "external_call_count": len(call_rows),
+        "external_call_sites": [dict(r) for r in call_rows[:25]],
         "open_drift_alerts": drifts,
+        "scan_status": scan_status,
     }
 
 
@@ -570,6 +627,8 @@ def get_hotspots_report(
         out_deps, rev_deps, meta = _load_dependency_maps(conn, ws_id)
         cycles = find_cycles_in_graph(out_deps)
         drifts = list_open_drift_alerts(conn, ws_id, limit=20)
+        drift_count = _drift_count(conn, ws_id)
+        scan_status = _scan_status(conn, ws_id)
 
         non_tests = [m for m in meta.values() if not m["is_test"]]
 
@@ -610,6 +669,8 @@ def get_hotspots_report(
         "god_modules": coupled,
         "untested_core": untested_core,
         "open_drift_alerts": drifts,
+        "open_drift_count": drift_count,
+        "scan_status": scan_status,
         "recent_activity": [
             {
                 "id": int(r["id"]),

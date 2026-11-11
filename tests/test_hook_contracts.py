@@ -48,7 +48,7 @@ class TestHookContracts(unittest.TestCase):
     def test_transform_before_post_injects_once_and_indexes_once(self) -> None:
         self.break_signature()
         call = self.call()
-        with patch.object(self.plugin, "reindex_edited_file", wraps=self.plugin.reindex_edited_file) as reindex:
+        with patch.object(self.plugin, "reindex_edited_files", wraps=self.plugin.reindex_edited_files) as reindex:
             result = self.ctx.hooks["transform_tool_result"](**call)
             self.ctx.hooks["post_tool_call"](**call)
             repeated = self.ctx.hooks["transform_tool_result"](**call)
@@ -61,10 +61,10 @@ class TestHookContracts(unittest.TestCase):
         (self.workspace / "app.py").write_text("from lib import calc\ndef run():\n    return calc(1, 2)\n")
         args = {"mode": "patch", "patch": "*** Begin Patch\n*** Update File: lib.py\n@@\n*** Update File: app.py\n@@\n*** End Patch"}
         call = self.call(args=args, result=json.dumps({"success": True}))
-        with patch.object(self.plugin, "reindex_edited_file", wraps=self.plugin.reindex_edited_file) as reindex:
+        with patch.object(self.plugin, "reindex_edited_files", wraps=self.plugin.reindex_edited_files) as reindex:
             self.ctx.hooks["post_tool_call"](**call)
             result = self.ctx.hooks["transform_tool_result"](**call)
-        self.assertEqual(reindex.call_count, 2)
+        self.assertEqual(reindex.call_count, 1)
         self.assertIsNone(result)
         self.assertEqual(self.plugin.get_hotspots_report(self.workspace)["open_drift_alerts"], [])
 
@@ -88,14 +88,14 @@ class TestHookContracts(unittest.TestCase):
         self.break_signature()
         result = {"success": False, "error": "Apply phase failed", "files_modified": ["lib.py"]}
         args = {"mode": "patch", "patch": "*** Update File: lib.py\n*** Update File: untouched.py"}
-        with patch.object(self.plugin, "reindex_edited_file", wraps=self.plugin.reindex_edited_file) as reindex:
+        with patch.object(self.plugin, "reindex_edited_files", wraps=self.plugin.reindex_edited_files) as reindex:
             output = self.ctx.hooks["transform_tool_result"](**self.call(args=args, result=json.dumps(result), status="error"))
         self.assertIn("Locus Signature Drift Alert", output)
         self.assertEqual(reindex.call_count, 1)
 
     def test_failed_and_cancelled_calls_do_not_index(self) -> None:
         for status, result in (("error", {"success": False}), ("cancelled", {"files_modified": ["lib.py"]})):
-            with self.subTest(status=status), patch.object(self.plugin, "reindex_edited_file") as reindex:
+            with self.subTest(status=status), patch.object(self.plugin, "reindex_edited_files") as reindex:
                 self.ctx.hooks["post_tool_call"](**self.call(result=result, status=status))
                 self.assertIsNone(self.ctx.hooks["transform_tool_result"](**self.call(result=result, status=status)))
                 reindex.assert_not_called()
@@ -115,9 +115,19 @@ class TestHookContracts(unittest.TestCase):
         self.assertTrue(decoded["success"])
         self.assertEqual(decoded["locus_index_warnings"][0]["path"], "lib.py")
         self.assertIn("[Locus Indexing Warning]", decoded["output"])
-        self.assertNotIn("locus_drift_alert", decoded)
-        self.assertEqual(len(self.plugin.get_hotspots_report(self.workspace)["open_drift_alerts"]), 1)
+        self.assertIn("WARNING", decoded["locus_drift_alert"])
+        self.assertIn("Inspect `app.py:3`", decoded["locus_drift_alert"])
+        self.assertNotIn("Update caller", decoded["locus_drift_alert"])
+        alerts = self.plugin.get_hotspots_report(self.workspace)["open_drift_alerts"]
+        self.assertEqual(len(alerts), 1)
+        self.assertEqual(alerts[0]["severity"], "warning")
+        self.assertEqual(alerts[0]["affected_callers"][0]["analysis_status"], "needs_verification")
+        self.assertNotIn("suggestion", alerts[0]["affected_callers"][0])
         self.assertIn("factor", self.plugin.lookup_symbol_details(self.workspace, "calc")["symbol"]["signature"])
+        self.break_signature()
+        recovered = self.ctx.hooks["transform_tool_result"](**self.call(tool_call_id="recovered-edit"))
+        self.assertIn("CRITICAL", json.loads(recovered)["locus_drift_alert"])
+        self.assertEqual(self.plugin.get_hotspots_report(self.workspace)["open_drift_alerts"][0]["severity"], "critical")
 
     def test_multi_file_patch_reports_drift_and_parse_diagnostics_together(self) -> None:
         self.break_signature()
@@ -127,6 +137,19 @@ class TestHookContracts(unittest.TestCase):
         decoded = json.loads(transformed)
         self.assertIn("app.py:3", decoded["locus_drift_alert"])
         self.assertEqual(decoded["locus_index_warnings"][0]["path"], "new.py")
+
+    def test_oversized_edit_warns_even_without_an_existing_caller_alert(self) -> None:
+        caller = self.workspace / "app.py"
+        caller.write_text(caller.read_text() + "#" + "x" * (512 * 1024) + "\n")
+        call = self.call(args={"path": "app.py"}, result={"success": True, "output": "Patched app.py",
+                                                        "files_modified": ["app.py"]})
+        transformed = self.ctx.hooks["transform_tool_result"](**call)
+        decoded = json.loads(transformed)
+        self.assertTrue(decoded["success"])
+        self.assertEqual(decoded["locus_index_warnings"][0]["path"], "app.py")
+        self.assertIn("last-valid", decoded["locus_index_warnings"][0]["error"])
+        self.assertIn("Resolve the reported indexing issue", decoded["output"])
+        self.assertEqual(self.plugin.get_hotspots_report(self.workspace)["open_drift_alerts"], [])
 
     def test_real_hermes_dispatch_with_suppressed_post_hook(self) -> None:
         try:
@@ -151,7 +174,7 @@ class TestHookContracts(unittest.TestCase):
              patch.object(lifecycle, "invoke_hook", side_effect=invoke), \
              patch.object(model_tools, "_execute_tool", side_effect=execute), \
              patch.object(model_tools, "_pre_dispatch_guards", return_value=(args, None)), \
-             patch.object(self.plugin, "reindex_edited_file", wraps=self.plugin.reindex_edited_file) as reindex:
+             patch.object(self.plugin, "reindex_edited_files", wraps=self.plugin.reindex_edited_files) as reindex:
             # This is the sequential registry path in agent/tool_executor.py:
             # dispatch transforms under suppression, then the executor emits post.
             with model_tools.suppress_post_tool_call_hook():

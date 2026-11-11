@@ -4,6 +4,44 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-width: 0;
+}
+
+.locus-codegraph-root > *, .locus-codegraph-main-grid > * { min-width: 0; }
+.locus-codegraph-muted { font-size: 0.75rem; line-height: 1.5; opacity: 0.75; }
+.locus-codegraph-inbox-heading, .locus-codegraph-alert-actions, .locus-codegraph-graph-toolbar {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem;
+}
+.locus-codegraph-alert-actions, .locus-codegraph-graph-toolbar { justify-content: flex-start; }
+.locus-codegraph-graph-toolbar { margin-bottom: 0.7rem; }
+.locus-codegraph-alert-list { display: grid; gap: 0.75rem; max-height: 540px; overflow-y: auto; }
+.locus-codegraph-alert {
+  border: 1px solid var(--color-border, rgba(148,163,184,.25));
+  border-left: 3px solid var(--color-warning, #d97706);
+  border-radius: var(--radius, .5rem); padding: 0.85rem; font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.locus-codegraph-alert p { margin: .45rem 0; }
+.locus-codegraph-signature { padding: .5rem .65rem; border-radius: .35rem; background: color-mix(in srgb, currentColor 5%, transparent); }
+.locus-codegraph-callers { list-style: decimal; margin: .7rem 0 .8rem; padding-left: 1.4rem; max-height: 260px; overflow-y: auto; }
+.locus-codegraph-callers li { padding: .45rem .2rem; border-bottom: 1px solid var(--color-border, rgba(148,163,184,.18)); }
+.locus-codegraph-location { display: inline; text-align: left; font-family: var(--font-mono, ui-monospace, monospace); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.locus-codegraph-suggestion { margin-top: .25rem; }
+.locus-codegraph-closed { margin-top: .75rem; padding-top: .65rem; border-top: 1px solid var(--color-border, rgba(148,163,184,.2)); font-size: .8rem; }
+.locus-codegraph-closed summary, .locus-codegraph-coverage summary { cursor: pointer; }
+.locus-codegraph-closed li { padding: .25rem 0; overflow-wrap: anywhere; }
+.locus-codegraph-coverage, .locus-codegraph-notice, .locus-codegraph-empty {
+  font-size: .78rem; line-height: 1.55; padding: .65rem .85rem;
+  border: 1px solid var(--color-border, rgba(148,163,184,.25)); border-radius: var(--radius, .5rem); overflow-wrap: anywhere;
+}
+.locus-codegraph-coverage ul { padding-left: 1.2rem; margin-top: .4rem; }
+.locus-codegraph-root :is(button, input, select, summary, [role="button"]):focus-visible {
+  outline: 2px solid var(--color-primary, #38bdf8); outline-offset: 3px;
+}
+.locus-codegraph-node-group:focus-visible .locus-codegraph-node-circle { stroke-width: 4px; stroke: currentColor; }
+@media (prefers-reduced-motion: reduce) {
+  .locus-codegraph-pulse-ring, .locus-codegraph-edge-cycle { animation: none !important; }
+  .locus-codegraph-node-group, .locus-codegraph-row-btn { transition: none !important; }
 }
 
 .locus-codegraph-kpi-grid {
@@ -160,4 +198,11 @@
   background: color-mix(in srgb, var(--color-card, #0f172a) 88%, black);
   overflow-x: auto;
   white-space: pre;
+}
+
+@media (max-width: 560px) {
+  .locus-codegraph-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .locus-codegraph-alert { padding: .65rem; }
+  .locus-codegraph-alert-list { max-height: 65vh; }
+  .locus-codegraph-root input { max-width: 100%; }
 }

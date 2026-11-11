@@ -18,7 +18,7 @@ from .graph import (
     lookup_symbol_details,
     search_symbols,
 )
-from .indexer import index_workspace, reindex_edited_file, validate_safe_workspace_root
+from .indexer import index_workspace, reindex_edited_file, reindex_edited_files, validate_safe_workspace_root
 from .parsers import detect_language, parse_source_file
 from .storage import open_locus_db, workspace_id_for
 
@@ -43,6 +43,7 @@ __all__ = [
     "open_locus_db",
     "parse_source_file",
     "reindex_edited_file",
+    "reindex_edited_files",
     "search_symbols",
     "validate_safe_workspace_root",
     "workspace_id_for",

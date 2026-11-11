@@ -21,6 +21,8 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            python-version: "3.10"
+          - os: ubuntu-latest
             python-version: "3.11"
           - os: ubuntu-latest
             python-version: "3.12"
@@ -49,6 +51,23 @@ jobs:
         run: python -m unittest -v tests.test_python_call_shapes tests.test_large_graphs tests.test_storage_migration
       - name: Engine demonstration
         run: python scripts/run_demo.py
+
+  interface-and-evaluator:
+    name: Shipped UI and evaluation validity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: node --test tests/ui.test.cjs
+      - run: python -B -m unittest discover -s tests/integration -p test_evaluation_protocol.py -v
 
   hermes-integration:
     name: Pinned Hermes install and edit replay
@@ -95,6 +114,11 @@ jobs:
           "$HERMES_PYTHON" tests/integration/verify_signature_corpus.py \
             --source "$GITHUB_WORKSPACE/hermes-host" --runtime "$HERMES_RUNTIME_DIR" \
             --candidate-ref HEAD --check-supported --output "$RUNNER_TEMP/locus-signature-corpus.json"
+      - name: Check module resolution and ambiguity controls
+        run: |
+          "$HERMES_PYTHON" tests/integration/verify_resolution_corpus.py \
+            --source "$GITHUB_WORKSPACE/hermes-host" --runtime "$HERMES_RUNTIME_DIR" \
+            --plugin-ref HEAD --check-cross-file --output "$RUNNER_TEMP/locus-resolution-corpus.json"
       - name: Upload Hermes integration evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -103,5 +127,6 @@ jobs:
           path: |
             ${{ runner.temp }}/locus-hermes-replay.json
             ${{ runner.temp }}/locus-signature-corpus.json
+            ${{ runner.temp }}/locus-resolution-corpus.json
           if-no-files-found: ignore
           retention-days: 14

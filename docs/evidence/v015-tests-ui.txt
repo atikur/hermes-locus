@@ -1,0 +1,17 @@
+✔ both shipped inboxes preserve every caller, reason and repair suggestion (7.064792ms)
+✔ caller navigation uses the source path, and dismissal passes only the alert id (1.095916ms)
+✔ empty, unavailable, closed and truncated states do not imply verified repair (14.882083ms)
+✔ scan incompleteness and retained parse errors survive into both views (2.549459ms)
+✔ graph nodes are keyboard-operable on both surfaces (0.909417ms)
+✔ repair drafts include the complete evidence and request verification (1.485541ms)
+✔ uncertain callers stay visibly distinct from proven binding failures (0.643625ms)
+✔ native cache keys isolate profiles and gateway connections sharing the same workspace (1.819542ms)
+✔ identically named symbol rows inspect distinct exact targets and copyable references (0.442541ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 101.210083

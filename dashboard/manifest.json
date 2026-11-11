@@ -1,9 +1,9 @@
 {
   "name": "locus-codegraph",
   "label": "Locus Codegraph",
-  "description": "Live AST codebase dependency graph, transitive blast-radius visualizer & signature drift guard",
+  "description": "Caller alerts, repair context and local code navigation for Hermes edits",
   "icon": "Code",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "tab": {
     "path": "/locus-codegraph",
     "position": "after:skills"

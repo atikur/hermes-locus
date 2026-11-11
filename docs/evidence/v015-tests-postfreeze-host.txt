@@ -1,0 +1,20 @@
+<LOCAL_HOME>/.gemini/antigravity/brain/418e923d-2a07-4ed6-9549-643c2565e54e/scratch/hermes-agent/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+hermes: install state is not writable by this user (<LOCAL_HOME>/.hermes/installs/34cdf6ed6e47f4ba/.install.lock); run as the install owner or grant write access
+<LOCAL_HOME>/Develop/hermes-locus/.submission/hermes-agent/hermes_cli/plugins_manifest.py:475: DeprecationWarning: 'maxsplit' is passed as positional argument
+  parts = re.split(r"[-+]", str(v).strip().lstrip("v"), 1)[0].split(".")
+hermes: install state is not writable by this user (<LOCAL_HOME>/.hermes/installs/34cdf6ed6e47f4ba/.install.lock); run as the install owner or grant write access
+<LOCAL_HOME>/.local/share/uv/python/cpython-3.14.7-macos-aarch64-none/lib/python3.14/ast.py:46: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x10eca22f0>
+  return compile(source, filename, mode, flags,
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+hermes: install state is not writable by this user (<LOCAL_HOME>/.hermes/installs/34cdf6ed6e47f4ba/.install.lock); run as the install owner or grant write access
+<LOCAL_HOME>/.local/share/uv/python/cpython-3.14.7-macos-aarch64-none/lib/python3.14/json/decoder.py:361: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x10f267d30>
+  obj, end = self.scan_once(s, idx)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+<LOCAL_HOME>/.local/share/uv/python/cpython-3.14.7-macos-aarch64-none/lib/python3.14/json/decoder.py:361: ResourceWarning: unclosed database in <sqlite3.Connection object at 0x10f55c5e0>
+  obj, end = self.scan_once(s, idx)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+----------------------------------------------------------------------
+Ran 109 tests in 9.461s
+
+OK

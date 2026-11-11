@@ -1,0 +1,256 @@
+{
+  "description": "Private v0.1.5 deterministic evidence. Historical evidence files are unchanged.",
+  "model_study_frozen_snapshot_sha256": "0de949210326e6810aca269a7ca4f9c7cfd949cf0561213c6c52588fc03417e8",
+  "model_outcomes": "pending; no model outcome artifacts included here",
+  "artifacts": [
+    {
+      "file": "v015-signature-corpus.json",
+      "source_file": "model-study-v015-20261111/signature-corpus-final.json",
+      "original_sha256": "bd36b0ccfbfc79becb878d5bad5a81c1ea472bbe7a749ec55259c9fc3e7014fb",
+      "packaged_sha256": "bd36b0ccfbfc79becb878d5bad5a81c1ea472bbe7a749ec55259c9fc3e7014fb",
+      "redactions": []
+    },
+    {
+      "file": "v015-resolution-corpus.json",
+      "source_file": "model-study-v015-20261111/resolution-corpus-final.json",
+      "original_sha256": "790ccd424faf56be705faf6ebb5f8357e45a701cb9bd95fb863717f2cda0e2fa",
+      "packaged_sha256": "790ccd424faf56be705faf6ebb5f8357e45a701cb9bd95fb863717f2cda0e2fa",
+      "redactions": []
+    },
+    {
+      "file": "v015-performance.json",
+      "source_file": "evidence/performance-v015.json",
+      "original_sha256": "bef12f0e4aa5b3df5c080abf1999aa5458521a201e90eaa76df717912d41ee24",
+      "packaged_sha256": "bef12f0e4aa5b3df5c080abf1999aa5458521a201e90eaa76df717912d41ee24",
+      "redactions": []
+    },
+    {
+      "file": "v015-tests-host.txt",
+      "source_file": "evidence/tests-v015-final-host.log",
+      "original_sha256": "6a83346b4be4f52c1b6c4519073dc2079859d3f815345b18026b725a20682fd3",
+      "packaged_sha256": "00e746046ad4594ea92ef8bbecc387d70a375f98a9347cf03187726481654858",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ]
+    },
+    {
+      "file": "v015-tests-ui.txt",
+      "command": "node --test tests/ui.test.cjs",
+      "packaged_sha256": "b2a53345b850514d80343bdfd6580a34f36e47b2b8cbad78670ece22c38b58d2",
+      "redactions": []
+    },
+    {
+      "file": "v015-tests-evaluator.txt",
+      "command": "python -B -m unittest discover -s tests/integration -p test_evaluation_protocol.py -v",
+      "packaged_sha256": "04aca543e9175cc41172c729f3afe28991bb68d8cf3a2bd2e79bc4c4c07337de",
+      "redactions": []
+    },
+    {
+      "file": "v015-tests-postfreeze-host.txt",
+      "source_file": "evidence/tests-v015-postfreeze-host.log",
+      "original_sha256": "b242a7a3c3dc182170beac2c96ca2f47054c5a5a4ed93ea8b2bb7bccb234bd4d",
+      "packaged_sha256": "087b80eb9871756a2f110f8d9fb118e45bf883b49ebb2155b054204fbc5ac41b",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ]
+    },
+    {
+      "file": "v015-postfreeze-integrity.json",
+      "source_file": "evidence/postfreeze-integrity-v015.json",
+      "original_sha256": "67b31aa24510a4c5825774099bad243a1f0fd6df7488317e299af5f3175ddb33",
+      "packaged_sha256": "67b31aa24510a4c5825774099bad243a1f0fd6df7488317e299af5f3175ddb33",
+      "redactions": []
+    },
+    {
+      "file": "v015-native-artifact.json",
+      "source_file": "native-v015/verified-artifact.json",
+      "original_sha256": "c4e6e9988bb2a53d78aa2fb1d1b746305591b2f2d5874fd18c0ac1a1ea262391",
+      "packaged_sha256": "c4e6e9988bb2a53d78aa2fb1d1b746305591b2f2d5874fd18c0ac1a1ea262391",
+      "redactions": []
+    },
+    {
+      "file": "v015-native-edit-seed.json",
+      "source_file": "evidence/native-edit-seed.json",
+      "original_sha256": "1c90fddf2b7d956604c1f83c0f9e307a53c7c36db4526ae092dcc02f91320b25",
+      "packaged_sha256": "92971eddb8264aff42ec40e53d1856ea4a5ad35c2e8ad8e286f1d17496b7dda4",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ]
+    },
+    {
+      "file": "v015-native-edit-repair.json",
+      "source_file": "evidence/native-edit-repair.json",
+      "original_sha256": "afc2fcfe285d084608cf155a3742b92968420902b62381d1ed9ba17f713ebfac",
+      "packaged_sha256": "f9eb6bb9a312cd5ab5e593c17187c4777ae19454c6301eeeb075e9ce9bb43497",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ]
+    },
+    {
+      "file": "v015-native-dismiss-seed.json",
+      "source_file": "evidence/native-dismiss-seed.json",
+      "original_sha256": "15f3a1b8527210ceb12a83f97478b70a53f7caaddc892dac80b09b3613660977",
+      "packaged_sha256": "4fa30a2c7c9989ecc34d780f658e13d3d65b983487cc92fa93bd0e71fe46365d",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ]
+    },
+    {
+      "file": "v015-native-verification.md",
+      "source": "Recorded from parent verification agent observations",
+      "redactions": [],
+      "packaged_sha256": "dbcc8e479574f550554198b29e082674b286b6cf23c1ef10e67977be95adbf11"
+    },
+    {
+      "file": "v015-native-verification.json",
+      "source": "Recorded from parent verification agent observations",
+      "redactions": [],
+      "packaged_sha256": "65350c412b9e9dde2e15939fb092475bad06eb7e776e5434c78a3ecb8d931de9"
+    },
+    {
+      "file": "v015-tests-python310.txt",
+      "source_file": "evidence/tests-v015-python310.log",
+      "original_sha256": "026b5ab5886aedfda9537d012fa96562ac43ec30fc14f3abc3b302702e515167",
+      "packaged_sha256": "026b5ab5886aedfda9537d012fa96562ac43ec30fc14f3abc3b302702e515167",
+      "redactions": [],
+      "python_version": "3.10.22",
+      "tests_discovered": 109,
+      "tests_passed": 106,
+      "tests_skipped": 3,
+      "skip_scope": "Hermes-runtime-only checks"
+    },
+    {
+      "file": "v015-admission.json",
+      "source_file": "evidence/validate-v015.json",
+      "original_sha256": "7c88503b82e050abf317e2f698d20e3688487179fd658b9a75f6b0a1626200d2",
+      "packaged_sha256": "7c88503b82e050abf317e2f698d20e3688487179fd658b9a75f6b0a1626200d2",
+      "redactions": []
+    },
+    {
+      "file": "v015-doctor.txt",
+      "source_file": "evidence/doctor-v015.log",
+      "original_sha256": "e89ffa2757f5d16091059b15083099de1d1ad2a56ad842e90f002c8c7bb7c87c",
+      "packaged_sha256": "2820612743607e97e84cc2fe87669301ea6acfec311e25582443baaf80b03afc",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ]
+    },
+    {
+      "file": "v015-tests-stale-api.txt",
+      "source_file": "evidence/tests-v015-stale-api.log",
+      "original_sha256": "fe2bd942c1f9ec107e7429355344a3bff4e925e7ddcbfe9a5901feb10349e53f",
+      "packaged_sha256": "fe2bd942c1f9ec107e7429355344a3bff4e925e7ddcbfe9a5901feb10349e53f",
+      "redactions": [],
+      "checks_passed": 10,
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v015-tests-stale-ui.txt",
+      "source_file": "evidence/tests-v015-stale-ui.log",
+      "original_sha256": "e8ab6e07b5d529dec0bc251fa9d13a51af0852bf513ba8ef18e8adef0a8fae12",
+      "packaged_sha256": "e8ab6e07b5d529dec0bc251fa9d13a51af0852bf513ba8ef18e8adef0a8fae12",
+      "redactions": [],
+      "checks_passed": 10,
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v015-tests-release-host.txt",
+      "source_file": "evidence/tests-v015-release-host.log",
+      "original_sha256": "138d88f04178ac0a28703cfa87b9faed85fff3447348e52ae4255400daf76199",
+      "packaged_sha256": "019a945befb25a79952b98f33f0671d566351301f614496c73af8f7fb162af5e",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "tests_discovered": 123,
+      "tests_passed": 123,
+      "tests_skipped": 0,
+      "python_version": "3.14.7"
+    },
+    {
+      "file": "v015-tests-release-python310.txt",
+      "source_file": "evidence/tests-v015-release-python310.log",
+      "original_sha256": "afe61b2114faed024620e679e34e12d6e6941850f137c104e38ae11022a55dde",
+      "packaged_sha256": "afe61b2114faed024620e679e34e12d6e6941850f137c104e38ae11022a55dde",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "tests_discovered": 123,
+      "tests_passed": 120,
+      "tests_skipped": 3,
+      "python_version": "3.10.22",
+      "skip_scope": "Hermes-runtime-only checks"
+    },
+    {
+      "file": "v015-admission-release.json",
+      "source_file": "evidence/validate-v015-release.json",
+      "original_sha256": "7c88503b82e050abf317e2f698d20e3688487179fd658b9a75f6b0a1626200d2",
+      "packaged_sha256": "7c88503b82e050abf317e2f698d20e3688487179fd658b9a75f6b0a1626200d2",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v015-admission-release-stderr.txt",
+      "source_file": "evidence/validate-v015-release.stderr",
+      "original_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "packaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v015-doctor-release.txt",
+      "source_file": "evidence/doctor-v015-release.log",
+      "original_sha256": "e89ffa2757f5d16091059b15083099de1d1ad2a56ad842e90f002c8c7bb7c87c",
+      "packaged_sha256": "2820612743607e97e84cc2fe87669301ea6acfec311e25582443baaf80b03afc",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v015-tests-evaluator-release.txt",
+      "source_file": "evidence/tests-v015-evaluator-final.log",
+      "original_sha256": "76538cc23d44750435e0cae2e479975d94bf5ddc5a26855771aa546ebec24d0c",
+      "packaged_sha256": "76538cc23d44750435e0cae2e479975d94bf5ddc5a26855771aa546ebec24d0c",
+      "checks_passed": 7,
+      "redactions": []
+    },
+    {
+      "file": "v015-native-stale-seed.json",
+      "source_file": "evidence/native-stale-seed.json",
+      "original_sha256": "0ce6c9a926d65ac45857930642d6b5120a735170ddbf959a1d455e5a566d44df",
+      "packaged_sha256": "06d21c7d0da11e7b4e2640bb74dbb4f3866d4f91ee5f7192ec5aed523e640027",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v015-native-stale-after-rescan.json",
+      "source_file": "evidence/native-stale-after-rescan.json",
+      "original_sha256": "c3ce6aa4b8bbde27a1cd4ab04f8e9eb099ef50220a817740ef2714225009bf2b",
+      "packaged_sha256": "c3ce6aa4b8bbde27a1cd4ab04f8e9eb099ef50220a817740ef2714225009bf2b",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v015-native-stale-cleanup.json",
+      "source_file": "evidence/native-stale-cleanup.json",
+      "original_sha256": "3f8a02f858b4b8365c51bf7379e87706e61ea1746e8b5514d37a03c696fb2cee",
+      "packaged_sha256": "e7397d38e04d49527df12431646b8058700fd96ef038b63f00a78198f45a214e",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v015-native-stale-verification.md",
+      "source": "Recorded from parent verification agent observations",
+      "packaged_sha256": "0a4951e3b346aa2e0318eaddda611b52a9d82fd8bc846ce9356c2f428a236e12",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    }
+  ],
+  "frozen_corpus_engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
+  "current_candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+  "postfreeze_note": "The current candidate preserves established warnings through caller confidence loss and skipped or unparseable source, exposes persistent stale coverage, and bounds source excerpts. The model study retains its original engine and snapshot. Full deterministic corpus reruns for the final candidate remain pending."
+}

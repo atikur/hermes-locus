@@ -2,7 +2,8 @@
 
 Verified on 11 November 2026 on macOS (Darwin 25.4.0, arm64).
 
-The local checks below cover **0.1.4** with Python call binding. The
+The current private candidate is **0.1.5**. Its status is separated below from
+the preserved **0.1.4** evidence. The
 [GitHub workflow](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
 defines standalone jobs on Linux and macOS, a portable Windows smoke test,
 and a fresh plugin install and edit replay on pinned Hermes. The model
@@ -12,7 +13,119 @@ Since version 0.1.2, this project uses the distinct plugin identity
 `locus-codegraph` to coexist with an unrelated plugin named Locus. The earlier
 fixture session used 0.1.1; its event transcript is preserved.
 
-## Reproducible checks
+## Version 0.1.5 candidate
+
+This candidate extends supported Python resolution to module-qualified calls,
+import aliases, relative imports, static re-exports, and independently scoped
+function-local imports. Ambiguous symbol queries return exact
+`path::qualified_name` candidates. Dynamic bindings and same-file drift remain
+outside the precise cross-file guard; no-alert results are not a proof of safety.
+
+Both interfaces now place caller evidence first: locations, binding errors,
+available repair suggestions, and draft repair context. Stored alerts retain
+all detected caller locations. Tool-result text remains bounded and explicitly
+points to the complete stored alert when it omits locations. Persistent scan
+coverage, parse failures, and previously indexed files that are now skipped
+accompany reports and the UI. Stale sources retain established caller evidence as
+**Needs verification** until current source can be checked; the UI shows up to
+20 stale paths with the full count disclosed. A dismissal is an
+acknowledgment, and closed history does not imply passing tests.
+
+| Candidate check | Status |
+| --- | --- |
+| Hermes catalog admission | [`plugins validate --install-deps` passed](evidence/v015-admission-release.json), with zero warnings, safe security scan, matching registrations, and accepted Desktop SDK surface; [stderr is empty](evidence/v015-admission-release-stderr.txt). This local check does not establish catalog eligibility or acceptance |
+| Hermes runtime doctor | [`plugins doctor --ci` passed](evidence/v015-doctor-release.txt), with four tools and three hooks |
+| Dashboard API regressions | [10 local checks passed](evidence/v015-tests-stale-api.txt), including exact totals, workspace-scoped mutations, persistent parse/cap/stale warnings, retained scan caps, and stale → rechecked-but-broken → repaired alert transitions |
+| Shipped Web/Desktop component contracts | [10 local Node checks passed](evidence/v015-tests-stale-ui.txt): all stored caller rows, repair context, exact symbol selection, incomplete/error states, explicit uncertainty, bounded stale-path rendering with total disclosure, keyboard navigation, and profile/connection cache isolation |
+| JavaScript syntax | Both shipped bundles pass `node --check` |
+| Complete Python suite in Hermes, Python 3.14.7 | [123 checks passed, no skips](evidence/v015-tests-release-host.txt); the earlier [109-check](evidence/v015-tests-postfreeze-host.txt) and [106-check](evidence/v015-tests-host.txt) runs are preserved. Logs retain environment/deprecation/resource diagnostics |
+| Minimum supported Python 3.10.22, standalone with pinned development requirements | [120 passed and 3 Hermes-runtime-only checks skipped](evidence/v015-tests-release-python310.txt), out of 123 discovered tests; the [earlier 106-pass/3-skip record](evidence/v015-tests-python310.txt) is preserved. Python 3.10 is included in the Ubuntu CI matrix |
+| Evaluation-protocol validity | [7 checks passed](evidence/v015-tests-evaluator-release.txt), including paired input control, source-integrity oracle, multi-path file boundary, stopping rules, and excluding interrupted pairs from comparisons |
+| Pinned source and resolution corpora | Completed against the frozen engine below; results include same-file misses. Full reruns on the final post-freeze engine remain pending |
+| Matched model study | 24-session study in progress against a separate frozen plugin snapshot; outcomes pending |
+| Actual Web and native Desktop interaction | Passed the [synthetic-fixture interaction checklist](evidence/v015-native-verification.md), including eight callers, complete unsent repair draft, keyboard navigation, live parse warnings, repair, and dismissal; [structured record](evidence/v015-native-verification.json) |
+| Actual stale-source Web/Desktop follow-up on the final engine | Passed the [oversized-caller workflow](evidence/v015-native-stale-verification.md): six stale caller records retained alongside two confirmed failures, persistent warnings after Web reload, recheck without false clearance, and cleanup with three passing fixture tests |
+
+Native setup exposed a host limitation in the packaged Desktop 0.22 build:
+a plugin installed and enabled only in a selected named profile rendered its
+pane, but the shared backend launched in `default` returned `Plugin not found`.
+The bundled server discovers API plugins and applies its middleware enablement
+gate using the process launch profile. Installing and enabling the same plugin
+for that launch profile made the API available. The subsequent native flow
+passed in that setup. Upstream host source was not modified.
+
+The final candidate engine is
+`c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c`.
+After the model-study freeze, review found that an already broken caller could
+lose static confidence after a conditional import or dynamic scope change and
+be incorrectly cleared. The candidate now keeps that established risk as
+**Needs verification** until a supported repair or removal. [Four explicit
+regression fixtures](evidence/v015-postfreeze-integrity.json) retain the alert
+through confidence loss and a forced scan, then clear it after supported repair.
+That earlier fix was covered by the preserved 109-check host run. Further
+review found that an existing source becoming oversized, excluded, or otherwise
+unavailable could be mistaken for a removed caller. The candidate now retains
+its last-valid index, reports persistent stale coverage, and prevents stale
+caller or target data from proving a repair. Source excerpts are omitted for
+stale or unparseable paths and bounded to the source-size limit. The current
+123-check host suite includes these [skipped-source regressions](../tests/test_skipped_sources.py)
+and the API transition check. This is separate evidence from the frozen model
+study; its engine and observations have not been replaced.
+
+The deterministic corpora below executed through real Hermes editing hooks with
+zero model calls. Their frozen engine SHA-256 is
+`efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac`.
+The recorded Git revision is the snapshot's base commit, not a claim that the
+working changes were committed. [Artifact checksums and sanitization record](evidence/v015-evidence-manifest.json).
+
+| Selected corpus | Cases | Incompatible call instances named | Compatible call instances named |
+| --- | ---: | ---: | ---: |
+| [Pinned Hermes / HTTPX / Requests signature edits](evidence/v015-signature-corpus.json) | 19 | 42 / 42 | 0 / 34 |
+| [Additional pinned real-source resolution edits](evidence/v015-resolution-corpus.json) | 12 | 22 / 24 | 0 / 28 |
+| [Separately authored executable resolution controls](evidence/v015-resolution-corpus.json) | 25 | 16 / 16 | 0 / 13 |
+
+The two missed instances are the same source location,
+`agent/retry_utils.py:167`, under two different mutations. That call is in the
+edited file, outside the external-caller guard. All 22 cross-file incompatible
+instances in that corpus were named. Counts repeat source calls across edits;
+they are not counts of independent repositories or agent tasks. The original
+19-case rerun includes one compatible module-qualified call in its all-case
+denominator; the preserved direct-import comparison below has 33 compatible
+instances. No historical result file was overwritten.
+
+The new [resolution corpus](../tests/integration/verify_resolution_corpus.py)
+uses pinned source projections and separately authored executable controls.
+It reports missed same-file calls separately instead of excluding them from
+the overall result. These targeted regression cases were selected during
+development; they are not a representative or blind benchmark.
+
+The [current model evaluator](../tests/integration/evaluate_refactor_feedback.py)
+freezes source inputs, writes a protocol before model calls, randomizes paired
+order with a recorded seed, and uses the same pre-applied helper edit in each
+arm. Independent checks require the intended repairs, retained assertions,
+no unexpected file edits, and passing upstream tests. Both arms compute Locus
+drift; only delivery of its warning differs. This is not an overhead comparison
+against running without Locus. Final outcomes must include every run, failures,
+protocol checks, and source digests; no success-rate uplift is claimed here.
+
+To prepare a current study without model calls, use new empty output and scratch
+directories:
+
+```bash
+/path/to/hermes/python tests/integration/evaluate_refactor_feedback.py \
+  --source /path/to/hermes-agent --runtime /path/to/hermes-runtime \
+  --pytest-deps /path/to/test-deps --scratch /path/to/scratch \
+  --plugin-ref WORKTREE --repeats 3 --seed 20261111 \
+  --output candidate-model-study
+```
+
+`--run-models` explicitly enables the API requests with a configured key.
+Four tasks, three repeats and two warning conditions schedule 24 sessions;
+scheduled sessions are not completed evidence. The evaluator records token and
+infrastructure stopping limits. Small selected samples do not establish a
+general repair-success improvement.
+
+## Historical v0.1.4 reproducible checks
 
 | Check | Observed result |
 | --- | --- |
@@ -24,7 +137,7 @@ fixture session used 0.1.1; its event transcript is preserved.
 | Hermes payload scanner | Passed |
 | `python scripts/run_demo.py` | Scripted engine example completed |
 | Web Dashboard | Built the real Hermes UI; verified graph focus, impact, symbol search and signature detail in a browser |
-| Desktop | SDK surface admission and JavaScript syntax checked; native desktop interaction has not been manually verified |
+| Desktop | SDK surface admission and JavaScript syntax checked; native desktop interaction was not manually verified for this historical release |
 
 Host source used for integration: `NousResearch/hermes-agent` checkout
 `01672831e48c1224bc003f834dd9b8c1cfc96a57` (includes the original local catalog
@@ -134,7 +247,7 @@ labels which original calls still bind after each edit.
 
 The same source call can appear in several edits. These counts measure call
 binding for the selected edits, including one module-qualified Requests case
-that Locus does not resolve precisely. They do not estimate accuracy across
+that v0.1.4 did not resolve precisely. They do not estimate accuracy across
 entire repositories or verify runtime behavior. No model calls are involved.
 
 [Pinned source revisions, oracle labels and actual patch results](evidence/signature-corpus.json) ·
@@ -199,7 +312,7 @@ the original results alongside that correction.
 
 All **12 named locations** were correct and arrived before the model looked
 outside the helper. The missing accounting call uses a repeated local import
-that the resolver treats as ambiguous. Hermes found it during its search.
+that the v0.1.4 resolver treated as ambiguous. Hermes found it during its search.
 The display warning-off run also rewrote unrelated helper logic in its initial
 patch, before a warning could have appeared. These three pairs show observed
 outcomes, with variation in the model's first edit and no estimate of general
@@ -225,18 +338,20 @@ repair outcome in this pair.
 [Identical pre-applied patch and control](evidence/refactor-pairs/replayed-helper) ·
 [Evaluation runner](../tests/integration/evaluate_refactor_feedback.py)
 
-With `OPENAI_API_KEY` configured, the following command repeats the six staged
-sessions. Each gets a fresh profile and workspace and makes its own model
-API requests.
+The current evaluator has evolved since these historical sessions. To run the
+legacy staged mode with the current candidate, explicitly select the three
+historical tasks; this is a new run, not a replay of the original model outputs.
+With `OPENAI_API_KEY` configured, `--run-models` makes model API requests:
 
 ```bash
 /path/to/hermes/python tests/integration/evaluate_refactor_feedback.py \
   --source /path/to/hermes-agent --runtime /path/to/hermes-runtime \
   --pytest-deps /path/to/test-deps --scratch /path/to/scratch \
-  --output paired-results
+  --task display --task replay --task accounting --staged-edit \
+  --plugin-ref WORKTREE --run-models --output paired-results
 ```
 
-Add `--task display --replay-helper-edit` to repeat the final two-session
+Use only `--task display` and omit `--staged-edit` for a new two-session
 control with a pre-applied edit.
 
 ## Real model-assisted refactor
@@ -287,8 +402,9 @@ caller repair. The unit suite independently covers that lifecycle regression.
   and clears it after syntax repair and a successful rescan.
 
 See the [larger-workspace trial](performance.md) for measured performance and
-the reproducible benchmark command. Native Desktop interaction remains an
-explicit verification gap; its admission, syntax, and shared API checks pass.
+the reproducible benchmark command. Native Desktop interaction was an explicit
+gap in these earlier checks; the v0.1.5 interaction record above closes that gap
+for its selected synthetic workflow.
 
 ## Raw check output
 

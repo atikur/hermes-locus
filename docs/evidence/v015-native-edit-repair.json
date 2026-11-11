@@ -1,0 +1,38 @@
+{
+  "action": "repair",
+  "model_calls": 0,
+  "synthetic_fixture": true,
+  "python": "3.14.7",
+  "workspace": "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace",
+  "profile": "<LOCAL_HOME>/.hermes/profiles/locus-verification",
+  "engine_sha256": "11f27f7730280de389e6d73b358b9ee6e0e291eece064cb92d0dd3162f3c551e",
+  "hermes_host_commit": "01672831e48c1224bc003f834dd9b8c1cfc96a57",
+  "plugin_hooks": 3,
+  "patch": "*** Begin Patch\n*** Update File: services/checkout.py\n@@\n from auth.tokens import verify_token\n \n def settle_order(token: str, amount_cents: int) -> dict:\n-    if not verify_token(token):\n+    if not verify_token(token, audience=\"checkout\"):\n         raise PermissionError(\"invalid token\")\n     return {\"status\": \"settled\", \"amount_cents\": amount_cents}\n*** Update File: services/receipts.py\n@@\n from auth.tokens import verify_token\n \n def get_receipt(token: str, order_id: str) -> dict:\n-    if not verify_token(token):\n+    if not verify_token(token, audience=\"checkout\"):\n         raise PermissionError(\"invalid token\")\n     return {\"order_id\": order_id, \"status\": \"paid\"}\n*** Update File: services/audits.py\n@@\n \"\"\"Additional synthetic callers used only for the native verification fixture.\"\"\"\n \n from auth.tokens import verify_token\n \n \n def authorize_refund(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_shipment(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_subscription(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_inventory(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_discount(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_support(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n*** End Patch",
+  "elapsed_seconds": 0.8602,
+  "tool_result": {
+    "success": true,
+    "diff": "--- a/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/checkout.py\n+++ b/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/checkout.py\n@@ -1,6 +1,6 @@\n from auth.tokens import verify_token\n \n def settle_order(token: str, amount_cents: int) -> dict:\n-    if not verify_token(token):\n+    if not verify_token(token, audience=\"checkout\"):\n         raise PermissionError(\"invalid token\")\n     return {\"status\": \"settled\", \"amount_cents\": amount_cents}\n\n--- a/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/receipts.py\n+++ b/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/receipts.py\n@@ -1,6 +1,6 @@\n from auth.tokens import verify_token\n \n def get_receipt(token: str, order_id: str) -> dict:\n-    if not verify_token(token):\n+    if not verify_token(token, audience=\"checkout\"):\n         raise PermissionError(\"invalid token\")\n     return {\"order_id\": order_id, \"status\": \"paid\"}\n\n--- a/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/audits.py\n+++ b/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/audits.py\n@@ -4,24 +4,24 @@\n \n \n def authorize_refund(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_shipment(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_subscription(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_inventory(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_discount(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n \n \n def authorize_support(token: str) -> bool:\n-    return verify_token(token)\n+    return verify_token(token, audience=\"checkout\")\n",
+    "files_modified": [
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/checkout.py",
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/receipts.py",
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/audits.py"
+    ],
+    "lint": {
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/checkout.py": {
+        "status": "ok",
+        "output": ""
+      },
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/receipts.py": {
+        "status": "ok",
+        "output": ""
+      },
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/services/audits.py": {
+        "status": "ok",
+        "output": ""
+      }
+    }
+  },
+  "open_alerts": [],
+  "status": "PASS"
+}

@@ -1,0 +1,60 @@
+{
+  "date": "2026-11-11",
+  "status": "PASS",
+  "method": "Agent-operated interaction with the actual native app and Web Dashboard; UI state and screenshots inspected in the conversation. No pixel assertion suite and no standalone image files archived.",
+  "app": {
+    "version": "0.22.0",
+    "platform": "macOS arm64",
+    "variant": "bundled",
+    "build_commit": "e06df9c2eae6901f4c88f464e0ae6e753c0428b8",
+    "artifact_sha256": "8a3b64b4e2b10b88912937f883a2c616ea902f3b5c683d3cdffc459de7fa8f73",
+    "sha256_matches_vendor_stable_manifest": true,
+    "codesign_verify": "passed"
+  },
+  "candidate_engine_sha256": "11f27f7730280de389e6d73b358b9ee6e0e291eece064cb92d0dd3162f3c551e",
+  "fixture": "synthetic six-file project; eight cross-file caller locations",
+  "fixture_edit_model_calls": 0,
+  "native_observations": {
+    "all_eight_caller_rows": true,
+    "caller_click_focus": true,
+    "graph_tab_return_navigation": true,
+    "graph_labels_readable_at_360px": true,
+    "complete_eight_caller_repair_draft": true,
+    "draft_submitted": false,
+    "draft_cleared_after_check": true,
+    "dismissal_open_alert_count": 0,
+    "dismissal_closed_record_count": 2,
+    "tests_after_dismissal": "failed as expected; missing issuer remained"
+  },
+  "web_observations": {
+    "all_eight_rows_reachable_by_list_scroll": true,
+    "caller_navigation": true,
+    "copy_context_success_toast": true,
+    "parse_warning_survives_reload": true
+  },
+  "shared_observations": {
+    "automatic_clear_after_actual_repair": true,
+    "fixture_tests_after_repair": {
+      "passed": 3
+    },
+    "invalid_python_warning_visible": true,
+    "generic_rescan_notice_rechecked": true,
+    "empty_text": "No unresolved caller alerts are recorded. Run tests to verify behavior."
+  },
+  "final_state": {
+    "files": 6,
+    "symbols": 15,
+    "open_alerts": 0,
+    "closed_records": 2,
+    "coverage": "complete",
+    "fixture_tests_after_cleanup": {
+      "passed": 3
+    }
+  },
+  "host_installation_limit": "A named-profile-only plugin rendered while its REST API was blocked by a shared backend launched in default. Enabling/installing in the launch profile restored the API; upstream host code was not modified.",
+  "limits": [
+    "Selected synthetic workflow, not general native compatibility or agent-performance evidence.",
+    "The complete unsent draft was checked in Desktop; the Web copy check observed its success toast.",
+    "Selected edit receipts are retained, not a complete recording of every action."
+  ]
+}

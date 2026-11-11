@@ -6,10 +6,40 @@ import json
 from typing import Any
 
 
+def _error_detail(data: dict[str, Any], default: str) -> str:
+    message = str(data.get("error", default))
+    choices = data.get("candidates") or []
+    return message + ("\n" + "\n".join(f"- `{choice}`" for choice in choices) if choices else "")
+
+
+def _coverage_lines(data: dict[str, Any]) -> list[str]:
+    status = data.get("scan_status") or {}
+    lines = []
+    if not status:
+        lines.append("- Index coverage has not been recorded; run `/locus reindex` before relying on this report.")
+    if status.get("truncated"):
+        lines.append(f"- **Partial index:** the {status.get('max_files', '?')}-file scan limit was reached. "
+                     "Unindexed callers and tests are absent from this report.")
+    errors = status.get("parse_errors") or []
+    if errors:
+        paths = ", ".join(f"`{item.get('path') or item.get('rel_path') or '?'}`" for item in errors[:5])
+        lines.append(f"- **Incomplete Python analysis:** {len(errors)} file(s) could not be parsed: {paths}. "
+                     "Any retained graph for those files may be stale; repair and reindex.")
+    stale = status.get("stale_files") or []
+    if stale:
+        details = "; ".join(f"`{item.get('path') or '?'}` ({item.get('reason') or 'not scanned'})"
+                            for item in stale[:5])
+        omitted = f"; {len(stale) - 5} more" if len(stale) > 5 else ""
+        lines.append(f"- **Stale index:** retained prior analysis for {len(stale)} file(s) unavailable to the scan: "
+                     f"{details}{omitted}. Existing caller warnings remain unresolved; "
+                     "restore scan access and reindex before relying on this graph.")
+    return lines
+
+
 def format_repo_map_markdown(data: dict[str, Any]) -> str:
     """Render a compact, high-signal architectural map for LLM context or slash commands."""
     if not data.get("ok"):
-        return f"Locus Codegraph RepoMap Error: {data.get('error', 'unknown error')}"
+        return "Locus Codegraph RepoMap Error: " + _error_detail(data, "unknown error")
 
     langs = ", ".join(f"{k}: {v}" for k, v in data.get("languages", {}).items()) or "none"
     lines: list[str] = [
@@ -17,6 +47,7 @@ def format_repo_map_markdown(data: dict[str, Any]) -> str:
         f"`{data.get('symbol_count', 0)}` symbols, `{data.get('edge_count', 0)}` dependency edges)",
         f"- Languages: {langs}",
     ]
+    lines.extend(_coverage_lines(data))
     if data.get("open_drift_count", 0):
         lines.append(f"- ⚠️ Open signature drift alerts: **{data['open_drift_count']}**")
 
@@ -42,7 +73,7 @@ def format_repo_map_markdown(data: dict[str, Any]) -> str:
 def format_symbol_markdown(data: dict[str, Any]) -> str:
     """Render symbol definition, callers, callees, and bounded source snippet."""
     if not data.get("ok"):
-        return f"Locus Codegraph Symbol Lookup: {data.get('error', 'not found')}"
+        return "Locus Codegraph Symbol Lookup: " + _error_detail(data, "not found")
 
     sym = data["symbol"]
     lines: list[str] = [
@@ -50,24 +81,31 @@ def format_symbol_markdown(data: dict[str, Any]) -> str:
         f"- Defined at: `{sym['rel_path']}:{sym['line_start']}-{sym['line_end']}`",
         f"- Signature: `{sym['signature']}`",
     ]
+    lines.extend(_coverage_lines(data))
     if sym.get("docstring"):
         lines.append(f"- Doc: {sym['docstring']}")
 
     callers = data.get("callers") or []
-    lines.append(f"\n### Call Sites ({len(callers)})")
+    caller_count = data.get("caller_count", len(callers))
+    lines.append(f"\n### Call Sites ({caller_count})")
     if callers:
         for c in callers[:15]:
             arg_note = f" ({c['arg_count']} args)" if c.get("arg_count", -1) >= 0 else ""
             lines.append(f"- `{c['path']}:{c['line']}` in `{c['caller_symbol']}`{arg_note}")
+        if caller_count > min(15, len(callers)):
+            lines.append(f"- Showing {min(15, len(callers))} of {caller_count} confirmed call sites.")
     else:
         lines.append("- _(no indexed workspace call sites)_")
 
     callees = data.get("callees") or []
     if callees:
-        lines.append(f"\n### Outgoing Calls ({len(callees)})")
+        callee_count = data.get("callee_count", len(callees))
+        lines.append(f"\n### Outgoing Calls ({callee_count})")
         for cal in callees[:12]:
             target_loc = f" -> `{cal['resolved_path']}`" if cal.get("resolved_path") else ""
             lines.append(f"- `L{cal['line']}` `{cal['callee_name']}()`{target_loc}")
+        if callee_count > min(12, len(callees)):
+            lines.append(f"- Showing {min(12, len(callees))} of {callee_count} outgoing calls.")
 
     snippet = data.get("snippet") or ""
     if snippet:
@@ -87,7 +125,7 @@ def format_symbol_markdown(data: dict[str, Any]) -> str:
 def format_impact_markdown(data: dict[str, Any]) -> str:
     """Render transitive blast-radius analysis, call sites, covering tests, and drift warnings."""
     if not data.get("ok"):
-        return f"Locus Codegraph Impact Analysis: {data.get('error', 'target not found')}"
+        return "Locus Codegraph Impact Analysis: " + _error_detail(data, "target not found")
 
     sym_part = (
         f" · symbol `{data['matched_symbol']['qualified_name']}`"
@@ -96,11 +134,12 @@ def format_impact_markdown(data: dict[str, Any]) -> str:
     )
     lines: list[str] = [
         f"## Blast-Radius Report: `{data['resolved_file']}`{sym_part}",
-        f"- **Risk Level**: **{data['risk_level']}** (score `{data['impact_score']}/100`)",
+        f"- **Risk Level**: **{data['risk_level']}** (heuristic score `{data['impact_score']}/100`, not a failure probability)",
         f"- **Direct Dependents**: `{len(data['direct_dependents'])}` · "
         f"**Transitive Dependents**: `{len(data['transitive_dependents'])}` · "
-        f"**Covering Tests**: `{len(data['covering_tests'])}`",
+        f"**Suggested Tests**: `{len(data['covering_tests'])}` (inferred, not execution coverage)",
     ]
+    lines.extend(_coverage_lines(data))
 
     drifts = data.get("open_drift_alerts") or []
     if drifts:
@@ -127,13 +166,16 @@ def format_impact_markdown(data: dict[str, Any]) -> str:
 
     calls = data.get("external_call_sites") or []
     if calls:
-        lines.append("\n### External Call Sites to Inspect")
+        call_count = data.get("external_call_count", len(calls))
+        lines.append(f"\n### External Call Sites to Inspect ({call_count})")
         for c in calls[:15]:
             cname = c.get("callee_name") or (
                 data["matched_symbol"]["name"] if data.get("matched_symbol") else ""
             )
             arg_str = f"{c['arg_count']} args" if c.get("arg_count", -1) >= 0 else "varargs"
             lines.append(f"- `{c['caller_path']}:{c['line_no']}` (`{c['caller_symbol']}` calls `{cname}` with {arg_str})")
+        if call_count > min(15, len(calls)):
+            lines.append(f"- Showing {min(15, len(calls))} of {call_count} confirmed external call sites.")
 
     tests = data.get("covering_tests") or []
     lines.append("\n### Recommended Verification Tests")
@@ -141,7 +183,7 @@ def format_impact_markdown(data: dict[str, Any]) -> str:
         for t in tests[:10]:
             lines.append(f"- `{t['rel_path']}`")
     else:
-        lines.append("- ⚠️ **No covering test files detected** in reverse dependency graph — add targeted tests!")
+        lines.append("- No related test files were inferred from the indexed graph; inspect the project's test suite.")
 
     return "\n".join(lines)
 
@@ -152,9 +194,11 @@ def format_hotspots_markdown(data: dict[str, Any]) -> str:
         return f"Locus Codegraph Hotspots Error: {data.get('error', 'unknown error')}"
 
     lines: list[str] = ["## Locus Codegraph Architectural Hotspots & Health"]
+    lines.extend(_coverage_lines(data))
 
     drifts = data.get("open_drift_alerts") or []
-    lines.append(f"\n### Open Signature Drift Alerts ({len(drifts)})")
+    count = data.get("open_drift_count", len(drifts))
+    lines.append(f"\n### Open Signature Drift Alerts ({count})")
     if drifts:
         for d in drifts[:10]:
             lines.append(f"- 🚨 **`{d['edited_path']}` · `{d['symbol_name']}`**: {d['reason']}")
@@ -162,8 +206,10 @@ def format_hotspots_markdown(data: dict[str, Any]) -> str:
                 detail = caller.get("incompatibility")
                 suffix = f" — {detail}" if detail else ""
                 lines.append(f"  - `{caller['path']}:{caller['line']}` (`{caller['caller']}`){suffix}")
+        if count > min(10, len(drifts)):
+            lines.append(f"- Showing {min(10, len(drifts))} of {count} alerts. Inspect affected files with `locus_impact`.")
     else:
-        lines.append("- ✅ Zero unresolved signature drift alerts.")
+        lines.append("- No unresolved signature drift alerts in the indexed graph. Runtime correctness still requires tests.")
 
     cycles = data.get("cycles") or []
     lines.append(f"\n### Circular Dependencies ({len(cycles)})")
@@ -183,9 +229,9 @@ def format_hotspots_markdown(data: dict[str, Any]) -> str:
 
     untested = data.get("untested_core") or []
     if untested:
-        lines.append("\n### Untested High-Centrality Modules")
+        lines.append("\n### Central Modules Without Inferred Test Links")
         for u in untested[:8]:
-            lines.append(f"- ⚠️ `{u['rel_path']}` (fan-in `{u['fan_in']}`, `{u['line_count']}` lines, 0 covering tests)")
+            lines.append(f"- `{u['rel_path']}` (fan-in `{u['fan_in']}`, `{u['line_count']}` lines, no inferred test links)")
 
     return "\n".join(lines)
 
@@ -211,6 +257,17 @@ def format_drift_banner(alerts: list[dict[str, Any]]) -> str:
             lines.append(f"  -> {action} `{c['path']}:{c['line']}` (`{c['caller']}`): {detail}")
             if c.get("suggestion"):
                 lines.append(f"     {c['suggestion']}")
+        # Keep detailed reasons for the first six, then compact locations. This
+        # preserves useful reach without repeating a shared error dozens of times.
+        extra_callers = a.get("affected_callers", [])[6:30]
+        if extra_callers:
+            locations = ", ".join(f"`{c['path']}:{c['line']}`" for c in extra_callers)
+            lines.append(f"  -> Additional affected caller locations: {locations}")
+        remaining = len(a.get("affected_callers", [])) - 30
+        if remaining > 0:
+            lines.append(f"  -> {remaining} additional affected caller(s) omitted. Request `locus_impact` for `{a['edited_path']}` to inspect the full alert.")
+    if len(alerts) > 5:
+        lines.append(f"{len(alerts) - 5} additional alert(s) omitted here; inspect `locus_hotspots`.")
     lines.append("Inspect and update the affected call sites above before concluding your task.")
     return "\n".join(lines)
 

@@ -17,7 +17,7 @@ from typing import Iterator, Optional
 
 PLUGIN_NAME = "locus-codegraph"
 DB_FILENAME = "locus.db"
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS workspaces (
@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS workspaces (
     file_count INTEGER NOT NULL DEFAULT 0,
     symbol_count INTEGER NOT NULL DEFAULT 0,
     edge_count INTEGER NOT NULL DEFAULT 0,
-    scan_ms REAL NOT NULL DEFAULT 0
+    scan_ms REAL NOT NULL DEFAULT 0,
+    scan_status_json TEXT NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS files (
@@ -43,6 +44,7 @@ CREATE TABLE IF NOT EXISTS files (
     fan_out INTEGER NOT NULL DEFAULT 0,
     is_test INTEGER NOT NULL DEFAULT 0,
     parser_revision INTEGER NOT NULL DEFAULT 0,
+    python_module_json TEXT,
     PRIMARY KEY (workspace_id, rel_path)
 );
 
@@ -129,6 +131,8 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
     conn.execute("BEGIN IMMEDIATE")
     if conn.execute("PRAGMA user_version").fetchone()[0] < _SCHEMA_VERSION:
         for table, column, declaration in (
+            ("workspaces", "scan_status_json", "TEXT NOT NULL DEFAULT '{}'"),
+            ("files", "python_module_json", "TEXT"),
             ("files", "parser_revision", "INTEGER NOT NULL DEFAULT 0"),
             ("symbols", "python_signature_json", "TEXT"),
             ("calls", "python_call_json", "TEXT"),

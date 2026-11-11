@@ -27,6 +27,7 @@ from .locus_core import (
     merge_drift_into_tool_result,
     open_locus_db,
     reindex_edited_file,
+    reindex_edited_files,
     search_symbols,
     validate_safe_workspace_root,
     workspace_id_for,
@@ -125,7 +126,7 @@ LOCUS_IMPACT_SCHEMA: dict[str, Any] = {
     "name": "locus_impact",
     "description": (
         "Compute the pre-refactor blast radius of editing a file or symbol: direct dependents (hop 1), "
-        "transitive dependents (hops 2-3), external call sites, covering test files to run, open "
+        "transitive dependents (hops 2-3), external call sites, suggested test files to run, open "
         "signature drift alerts, and a 0-100 risk score (LOW / MEDIUM / HIGH / CRITICAL)."
     ),
     "parameters": {
@@ -291,13 +292,13 @@ def _tool_result_failed(result: Any, kwargs: dict[str, Any]) -> bool:
 
 
 def _append_index_warnings(result: Any, warnings: list[dict[str, str]]) -> str:
-    """Keep parse diagnostics separate from caller-contract drift in host results."""
+    """Keep unavailable-source diagnostics separate from caller-contract drift."""
     shown = warnings[:5]
     lines = ["[Locus Indexing Warning]", "These edited files could not be indexed:"]
     lines.extend(f"- `{item['path']}`: {item['error']}" for item in shown)
     if len(warnings) > len(shown):
         lines.append(f"- {len(warnings) - len(shown)} more file(s) could not be indexed.")
-    lines.append("Graph results may reflect the last valid version. Fix the syntax and re-index before relying on them.")
+    lines.append("Graph results may reflect the last valid version. Resolve the reported indexing issue and re-index before relying on them.")
     banner = "\n".join(lines)
     payload: Any = result
     if isinstance(result, str):
@@ -335,7 +336,7 @@ class LocusSymbolReferenceProvider(ContextReferenceProvider):
         hits = await asyncio.to_thread(search_symbols, root, query, limit=max(1, min(limit, 20)))
         return [
             ContextCompletionItem(
-                text=h["qualified_name"],
+                text=h["symbol_id"],
                 display=f"{h['qualified_name']} ({h['kind']})",
                 meta=f"{h['rel_path']}:{h['line_start']}",
             )
@@ -349,12 +350,12 @@ class LocusSymbolReferenceProvider(ContextReferenceProvider):
         root = _resolve_workspace_root(self._ctx)
         details = await asyncio.to_thread(lookup_symbol_details, root, clean)
         if not details.get("ok"):
-            return None
+            return format_symbol_markdown(details) if details.get("candidates") else None
         return format_symbol_markdown(details)
 
 
 class LocusImpactReferenceProvider(ContextReferenceProvider):
-    """Inline transitive blast-radius & covering test report via ``@impact:<file-or-symbol>``."""
+    """Inline transitive blast-radius & suggested test report via ``@impact:<file-or-symbol>``."""
 
     prefix = "impact"
     description = "Inline transitive blast radius, callers & suggested tests (Locus Codegraph)"
@@ -384,7 +385,7 @@ class LocusImpactReferenceProvider(ContextReferenceProvider):
         for s in sym_hits:
             items.append(
                 ContextCompletionItem(
-                    text=s["qualified_name"],
+                    text=s["symbol_id"],
                     display=f"{s['qualified_name']} (symbol)",
                     meta=f"{s['rel_path']}:{s['line_start']}",
                 )
@@ -398,7 +399,7 @@ class LocusImpactReferenceProvider(ContextReferenceProvider):
         root = _resolve_workspace_root(self._ctx)
         impact = await asyncio.to_thread(analyze_impact, root, clean, max_depth=3)
         if not impact.get("ok"):
-            return None
+            return format_impact_markdown(impact) if impact.get("candidates") else None
         return format_impact_markdown(impact)
 
 
@@ -606,8 +607,8 @@ def register(ctx: PluginContext) -> None:
                     "ok": True,
                     "report": format_symbol_markdown(data),
                     "symbol": data["symbol"],
-                    "caller_count": len(data.get("callers") or []),
-                    "callee_count": len(data.get("callees") or []),
+                    "caller_count": data.get("caller_count", len(data.get("callers") or [])),
+                    "callee_count": data.get("callee_count", len(data.get("callees") or [])),
                 },
                 ensure_ascii=False,
             )
@@ -652,7 +653,7 @@ def register(ctx: PluginContext) -> None:
                     "ok": data.get("ok", False),
                     "report": format_hotspots_markdown(data),
                     "cycle_count": len(data.get("cycles") or []),
-                    "open_drift_count": len(data.get("open_drift_alerts") or []),
+                    "open_drift_count": data.get("open_drift_count", len(data.get("open_drift_alerts") or [])),
                     "untested_core_count": len(data.get("untested_core") or []),
                 },
                 ensure_ascii=False,
@@ -681,7 +682,7 @@ def register(ctx: PluginContext) -> None:
         toolset=PLUGIN_NAME,
         schema=LOCUS_IMPACT_SCHEMA,
         handler=handle_locus_impact,
-        description="Pre-refactor transitive blast radius, external callers & covering tests",
+        description="Pre-refactor transitive blast radius, external callers & suggested tests",
         emoji="💥",
     )
     ctx.register_tool(
@@ -730,27 +731,13 @@ def register(ctx: PluginContext) -> None:
             with drift_lock:
                 if key not in inspected_calls:
                     _record_active_workspace(ctx, root)
-                    candidates: set[tuple[str, str]] = set()
-                    changed: list[str] = []
-                    index_warnings: list[dict[str, str]] = []
-                    for edited_path in edited_paths:
-                        outcome = reindex_edited_file(root, edited_path, tool_name=tool_name)
-                        if outcome.get("reason") == "parse_error":
-                            index_warnings.append({
-                                "path": outcome.get("rel_path", edited_path),
-                                "error": str(outcome.get("error") or "Source could not be parsed"),
-                            })
-                        if outcome.get("ok") and not outcome.get("skipped"):
-                            changed.append(outcome.get("rel_path", edited_path))
-                            candidates.update((a["edited_path"], a["symbol_name"])
-                                              for a in outcome.get("drift_alerts") or [])
-                    # A single patch may change both a definition and its callers.
-                    # Report only alerts still open after every changed file is indexed.
-                    alerts: list[dict[str, Any]] = []
-                    if candidates:
-                        with open_locus_db() as conn:
-                            alerts = [a for a in list_open_drift_alerts(conn, workspace_id_for(root), limit=-1)
-                                      if (a["edited_path"], a["symbol_name"]) in candidates]
+                    batch = reindex_edited_files(root, edited_paths, tool_name=tool_name)
+                    changed = batch.get("edited_paths", [])
+                    index_warnings = [*batch.get("parse_errors", []), *(
+                        {"path": item["path"], "error": item["reason"]}
+                        for item in batch.get("stale_files", [])
+                    )]
+                    alerts = batch.get("drift_alerts", [])
                     banner = format_drift_banner(alerts) if bool(ctx.get_config("drift_guard", True)) else ""
                     if len(inspected_calls) >= _MAX_PENDING_DRIFT:
                         inspected_calls.pop(next(iter(inspected_calls)))

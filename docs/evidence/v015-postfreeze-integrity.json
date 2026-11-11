@@ -1,0 +1,42 @@
+{
+  "candidate_engine_sha256": "11f27f7730280de389e6d73b358b9ee6e0e291eece064cb92d0dd3162f3c551e",
+  "frozen_model_study_engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
+  "model_calls": 0,
+  "method": "Direct index/reindex API in fresh temporary workspaces; these are regression fixtures, not model outcomes.",
+  "cases": [
+    {
+      "name": "conditional-direct",
+      "initial_open": 1,
+      "after_confidence_loss_open": 1,
+      "after_confidence_loss_severity": "warning",
+      "after_forced_scan_open": 1,
+      "after_supported_repair_open": 0
+    },
+    {
+      "name": "dynamic-direct",
+      "initial_open": 1,
+      "after_confidence_loss_open": 1,
+      "after_confidence_loss_severity": "warning",
+      "after_forced_scan_open": 1,
+      "after_supported_repair_open": 0
+    },
+    {
+      "name": "conditional-alias",
+      "initial_open": 1,
+      "after_confidence_loss_open": 1,
+      "after_confidence_loss_severity": "warning",
+      "after_forced_scan_open": 1,
+      "after_supported_repair_open": 0
+    },
+    {
+      "name": "dynamic-module",
+      "initial_open": 1,
+      "after_confidence_loss_open": 1,
+      "after_confidence_loss_severity": "warning",
+      "after_forced_scan_open": 1,
+      "after_supported_repair_open": 0
+    }
+  ],
+  "status": "PASS",
+  "host_test_count": 109
+}

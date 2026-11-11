@@ -17,12 +17,14 @@ import json
 import os
 import platform
 import re
+import shutil
 import sqlite3
 import subprocess
 import sys
 import tarfile
 import tempfile
 import urllib.request
+from verify_hermes_refactor import engine_digest
 from contextlib import closing
 from pathlib import Path
 
@@ -195,18 +197,29 @@ def patch_text(path: str, before: str, after: str) -> str:
 def run_variant(args: argparse.Namespace) -> dict:
     plugin = Path(__file__).resolve().parents[2]
     revision = BASELINE if args.variant == "baseline" else args.candidate_ref
-    commit = git(plugin, "rev-parse", revision).decode().strip()
+    commit = git(plugin, "rev-parse", "HEAD" if revision == "WORKTREE" else revision).decode().strip()
     sources = pinned_sources(args.source, args.cache)
     with tempfile.TemporaryDirectory(prefix="locus-signature-corpus-") as folder:
         root = Path(folder).resolve()
         home = root / "hermes-home"
         install = home / "plugins" / PLUGIN
         install.mkdir(parents=True)
-        with tempfile.TemporaryFile() as archive:
-            subprocess.run(["git", "-C", str(plugin), "archive", commit], stdout=archive, check=True)
-            archive.seek(0)
-            with tarfile.open(fileobj=archive) as contents:
-                contents.extractall(install, filter="data")
+        if args.candidate_snapshot and args.variant == "candidate":
+            shutil.copytree(args.candidate_snapshot, install, dirs_exist_ok=True)
+        elif revision == "WORKTREE":
+            files = git(plugin, "ls-files", "-z", "--cached", "--others", "--exclude-standard").decode().split("\0")
+            for filename in filter(None, files):
+                source = plugin / filename
+                if source.is_file():
+                    target = install / filename
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(source, target)
+        else:
+            with tempfile.TemporaryFile() as archive:
+                subprocess.run(["git", "-C", str(plugin), "archive", commit], stdout=archive, check=True)
+                archive.seek(0)
+                with tarfile.open(fileobj=archive) as contents:
+                    contents.extractall(install, filter="data")
         (home / "config.yaml").write_text(
             f"plugins:\n  enabled: [{PLUGIN}]\n  hook_callback_timeout: 120\n"
             f"  entries:\n    {PLUGIN}:\n      settings:\n"
@@ -275,7 +288,8 @@ def run_variant(args: argparse.Namespace) -> dict:
                           "named", len(named), flush=True)
         finally:
             os.chdir(original_cwd)
-        output = {"plugin_commit": commit, "plugin_version": active["version"], "cases": results}
+        output = {"plugin_commit": commit, "plugin_source": "frozen-snapshot" if args.candidate_snapshot and args.variant == "candidate" else revision,
+                  "plugin_engine_sha256": engine_digest(install), "plugin_version": active["version"], "cases": results}
         encoded = json.dumps(output, ensure_ascii=False)
         for path, label in ((root, "<scratch>"), (args.source, "<host>"), (args.runtime, "<runtime>"), (Path.home(), "<user-home>")):
             encoded = encoded.replace(json.dumps(str(path), ensure_ascii=False)[1:-1], label)
@@ -313,13 +327,17 @@ def main() -> None:
     parser.add_argument("--source", type=Path, required=True, help="unchanged Hermes host Git checkout")
     parser.add_argument("--runtime", type=Path, required=True, help="Hermes runtime directory")
     parser.add_argument("--cache", type=Path, help="optional external source files under httpx/ and requests/; otherwise fetch pinned raw blobs")
-    parser.add_argument("--candidate-ref", required=True, help="Git revision of the v0.1.4 plugin to evaluate")
+    parser.add_argument("--candidate-ref", required=True, help="Git revision or WORKTREE for a hashed local snapshot")
+    parser.add_argument("--candidate-snapshot", type=Path, help="Already frozen candidate plugin tree; baseline remains the archived release.")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--check-supported", action="store_true", help="fail if the candidate misses supported calls or warns on compatible calls")
     parser.add_argument("--variant", choices=("both", "baseline", "candidate"), default="both", help=argparse.SUPPRESS)
     args = parser.parse_args()
     args.source, args.runtime, args.output = (path.resolve() for path in (args.source, args.runtime, args.output))
     args.cache = args.cache.resolve() if args.cache is not None else None
+    args.candidate_snapshot = args.candidate_snapshot.resolve() if args.candidate_snapshot is not None else None
+    if args.output.exists():
+        parser.error("Refusing to overwrite prior evidence; choose a new --output path.")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     if args.variant != "both":
         report = run_variant(args)

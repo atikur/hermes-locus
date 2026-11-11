@@ -1,27 +1,103 @@
-# Locus Codegraph — submission and demonstration
+# Locus Codegraph — caller feedback when Hermes edits
 
-**Locus Codegraph shows Hermes what a change could break, then flags incompatible callers while it works.**
+**Locus Codegraph puts precise caller feedback inside Hermes's edit results.**
 
-[60-second demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) · [Installation](../README.md#install) · [Transcript and verification](verification.md#live-keyword-refactor-on-hermes-agent)
+[Current evidence](verification.md#version-015-candidate) · [Actual Desktop/Web checks](evidence/v015-native-verification.md) · [Historical v0.1.4 demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) · [Installation](../README.md#install)
 
-It adds a local structural code graph to Hermes Agent. Before a refactor, `@sym:`
-and `@impact:` expose definitions, callers, dependent modules, and suggested tests.
-After supported edits, its signature-drift guard puts actionable caller warnings
-in tool results so Hermes can repair them. Python receives AST analysis and
-checks positional and keyword binding for supported direct imports. TypeScript,
-JavaScript, Go, and Rust receive lighter structural indexing.
-The same index powers four agent tools, commands, a Web Dashboard, and a Desktop
-pane. The analysis core uses Python's standard library and requires no hosted
-index or additional model call.
+**Private v0.1.5 draft; not submitted.** The 24-session model study is in progress.
+
+A Python keyword rename can break a caller without changing the number of
+arguments. Locus checks supported cross-file bindings after an edit and puts
+the caller's file, line, binding error, and available repair suggestion directly
+in the editing tool's result. Hermes can act on that evidence before its next
+search. The plugin supplies the evidence; the agent repairs code and runs tests.
+
+One local index also powers four agent tools, `@sym:` / `@impact:` references,
+and a caller inbox in Web and Desktop. Its Python standard-library engine needs
+no hosted index, API key, or extra model call.
+
+The frozen v0.1.5 corpus named **42/42 incompatible call instances and 0/34
+compatible instances** across 19 selected Hermes, HTTPX, and Requests edits.
+An additional real-source corpus found **22/24**, with both misses explicitly
+retained as same-file calls. Actual Desktop and Web checks exercised eight
+callers, a complete unsent repair draft, repair, and dismissal. The final
+candidate passes **123 Hermes-host tests, 10 UI checks, and 7 evaluator checks**.
+These are targeted checks, not a claim of general agent-success improvement;
+snapshot differences and remaining limits are recorded below.
 
 ## What makes it a plugin
 
 Locus Codegraph persists a workspace index, subscribes to Hermes lifecycle hooks,
 transforms tool results, registers context-reference providers, and exposes web
-and desktop interfaces. The distinctive capability is structural feedback arriving
-inside the editing loop. The plugin supplies evidence; Hermes performs repairs.
+and desktop interfaces. These capabilities require maintained code and host
+integration beyond a prompt or skill. The product focuses on actionable
+cross-file caller evidence at the moment an edit returns. The plugin supplies
+evidence; Hermes performs repairs.
 
-## Live keyword refactor
+Python analysis supports direct imports, module-qualified calls, import aliases,
+and static re-exports of undecorated functions. TypeScript, JavaScript, Go,
+and Rust receive lighter structural indexing. The precise signature guard is
+bounded to supported external Python callers.
+
+## What changes in v0.1.5
+
+- Broader static Python resolution, with explicit ambiguity instead of
+  selecting an unrelated same-name definition. Same-file calls and dynamic
+  bindings remain limitations.
+- A caller inbox in Web and Desktop: full stored locations for each displayed
+  alert, binding reasons, available suggestions, and repair context to copy or
+  add to a draft. The UI distinguishes unavailable, partial, open, and closed
+  states; dismissal does not assert that code was repaired.
+- Persistent parse, file-limit, and stale-source warnings, exact open-alert totals, workspace
+  and profile isolation, and rescans that preserve the previous scan cap.
+- Additional targeted resolution controls and a paired model-study protocol
+  with frozen inputs, randomized order, and independent repair checks. Results
+  are reported separately from the earlier studies below.
+
+The graph's suggested tests are inferred from imports and names, not execution
+coverage. Locus does not run tests, edit source, or add its own model call. Its
+analysis is local and uses Python's standard library. Reports placed in Hermes
+context are visible to the model configured by the user.
+
+## Current deterministic evidence
+
+The frozen v0.1.5 engine named 42 of 42 incompatible call instances in the
+19-edit Hermes/HTTPX/Requests corpus and none of 34 compatible instances.
+An additional 12-case real-source corpus named 22 of 24 incompatible instances
+and none of 28 compatible instances. All 22 external calls were found; the two
+misses were same-file calls at one source location under two mutations. A
+separate 25-case set of authored controls named 16 of 16 incompatible instances
+and none of 13 compatible instances. These are targeted binding regressions,
+not a representative accuracy or agent-success benchmark.
+[Raw results, exact engine digest, and limits](verification.md#version-015-candidate).
+
+The final candidate's local suite records 123 passing Python checks in Hermes, 10 UI contract
+checks, and 7 evaluator-validity checks. On the minimum supported Python 3.10.22,
+120 checks passed and 3 Hermes-runtime-only checks were skipped. A full 17,025-file performance trial
+took 73.65 seconds for a fresh index and 2.72 seconds cached; real edit/repair
+dispatches took 9.42 and 5.88 seconds, including host work. The performance
+snapshot precedes the report-count, caller-confidence, and stale-source corrections and was
+measured once.
+[Method and raw measurements](performance.md).
+
+The final candidate also preserves an established caller warning if subsequent
+edits make its binding uncertain or a previously indexed source becomes
+unavailable to the scanner. Stale sources remain explicit **Needs verification**
+evidence rather than proving a repair. These fixes have separate regression
+evidence and postdate the frozen corpus/model engine; full corpus reruns
+for the final candidate remain pending. Actual Web and Desktop checks exercised all eight fixture
+callers, a complete unsent repair draft, keyboard navigation, persisted parse
+warnings, automatic clearance after repair and passing tests, and dismissal
+while the underlying code remained broken. [Observed interaction record](evidence/v015-native-verification.md).
+A [separate final-engine follow-up](evidence/v015-native-stale-verification.md)
+verified persistent oversized-source warnings, retained caller evidence, a
+successful recheck that kept still-broken callers open, and cleanup with passing tests.
+
+The 24-session paired model study is in progress. Its results will describe
+the executed frozen snapshot and all observed outcomes; no aggregate improvement
+is claimed before completion.
+
+## Historical v0.1.4 live keyword refactor
 
 Hermes with OpenAI `gpt-5.4-mini` renamed a keyword-only parameter in Hermes
 Agent's own code. Locus 0.1.4 reported all five incompatible call sites in the
@@ -97,19 +173,25 @@ rehearsal; it is not the recorded LLM-driven demonstration.
 
 ## Entry links and status
 
-- [Public repository](https://github.com/atikur/hermes-locus)
+- [Source repository — private during preparation](https://github.com/atikur/hermes-locus)
 - [Release CI](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
 - [Catalog PR search](https://github.com/NousResearch/hermes-agent/pulls?q=is%3Apr+author%3Aatikur+locus-codegraph)
 - [Official entry form](https://form.typeform.com/to/FwJLvOln)
 - [Organizer announcement](https://x.com/NousResearch/status/2118094256438936062)
 - [Catalog admission rules](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins/catalog-submission)
 
-The catalog entry must pin the published plugin's exact 40-character commit SHA.
+The repository must remain private until its owner authorizes publication.
+Links above do not establish public availability, catalog acceptance, or entry
+form completion. The catalog entry must pin the published plugin's exact
+40-character commit SHA.
 Catalog submission and hackathon registration are separate: the repository and
-PR do not establish that the entry form was submitted. The author will publish
-the video on X tagging `@NousResearch`, then provide that post and the catalog PR
-in the official form. Catalog listing remains subject to maintainer review.
+PR do not establish that the entry form was submitted. If publication is
+authorized, the submission checklist includes posting the video on X tagging
+`@NousResearch` and supplying the post and catalog PR in the official form.
+Catalog listing remains subject to maintainer review.
 
 ## Suggested X post
+
+Draft only; the numbers describe the preserved v0.1.4 recording:
 
 > Hermes renamed a Python keyword. Locus Codegraph flagged 5 broken calls in the patch result, before caller search. Hermes fixed them and passed 26 tests. Built for the @NousResearch Plugin Hackathon. AI voiceover. https://github.com/atikur/hermes-locus

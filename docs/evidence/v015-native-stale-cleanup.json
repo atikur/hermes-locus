@@ -1,0 +1,41 @@
+{
+  "action": "cleanup",
+  "model_calls": 0,
+  "synthetic_fixture": true,
+  "python": "3.14.7",
+  "workspace": "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace",
+  "profile": "<LOCAL_HOME>/.hermes/profiles/locus-verification",
+  "engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+  "patch": "*** Begin Patch\n*** Update File: auth/tokens.py\n@@\n \"\"\"Synthetic demo tokens; this fixture is not an authentication library.\"\"\"\n \n-def verify_token(token: str, *, audience: str, issuer: str) -> bool:\n+def verify_token(token: str, *, audience: str) -> bool:\n     \"\"\"Accept the synthetic demo token.\"\"\"\n-    return token == \"demo_valid\" and audience == \"checkout\" and issuer == \"native-fixture\"\n+    return token == \"demo_valid\" and audience == \"checkout\"\n*** End Patch",
+  "elapsed_seconds": 0.6513,
+  "tool_result": {
+    "success": true,
+    "diff": "--- a/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py\n+++ b/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py\n@@ -1,5 +1,5 @@\n \"\"\"Synthetic demo tokens; this fixture is not an authentication library.\"\"\"\n \n-def verify_token(token: str, *, audience: str, issuer: str) -> bool:\n+def verify_token(token: str, *, audience: str) -> bool:\n     \"\"\"Accept the synthetic demo token.\"\"\"\n-    return token == \"demo_valid\" and audience == \"checkout\" and issuer == \"native-fixture\"\n+    return token == \"demo_valid\" and audience == \"checkout\"\n",
+    "files_modified": [
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py"
+    ],
+    "lint": {
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py": {
+        "status": "ok",
+        "output": ""
+      }
+    },
+    "resolved_path": "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py"
+  },
+  "open_alerts": [],
+  "closed_alerts": 3,
+  "scan_status": {
+    "truncated": false,
+    "max_files": 2500,
+    "parse_errors": [],
+    "stale_files": [],
+    "last_indexed_at": 1794402235.21646,
+    "indexed_files": 6
+  },
+  "fixture_tests": {
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n"
+  },
+  "status": "PASS"
+}

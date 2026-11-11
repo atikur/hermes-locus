@@ -33,8 +33,111 @@
         setTimeout(function () {
           setCopied("");
         }, 1800);
-      });
-    }
+      }).catch(function () { setCopied("Copy unavailable — select the text instead"); });
+    } else setCopied("Copy unavailable — select the text instead");
+  }
+
+  function repairContext(alert, workspace) {
+    return (workspace ? ["Workspace: " + workspace] : []).concat([
+      "Review the caller alert for " + alert.symbol_name + " in " + alert.edited_path + ".",
+      "Signature: " + alert.old_signature + " → " + alert.new_signature,
+      alert.reason].concat((alert.affected_callers || []).map(function (caller) {
+        return caller.path + ":" + caller.line + " — " + (caller.incompatibility || "Check against the new signature") +
+          (caller.suggestion ? "\n" + caller.suggestion : "");
+      })).concat(["Check the suggested repairs, run the relevant tests, and rescan to verify the alerts clear."])).join("\n");
+  }
+
+  function symbolTarget(symbol) {
+    return symbol.symbol_id || symbol.rel_path + "::" + symbol.qualified_name;
+  }
+
+  function scanNoticeText(result) {
+    if (!result || !result.ok) throw new Error((result && result.error) || "Workspace scan failed");
+    return "Rescan finished. See Index coverage for current diagnostics; run tests to verify behavior.";
+  }
+
+  function LocusSymbolRow({ symbol, onInspect }) {
+    return h("button", { type: "button", className: "locus-codegraph-row-btn",
+      onClick: function () { onInspect(symbolTarget(symbol)); } },
+      h("div", { className: "flex items-center justify-between" },
+        h("span", { className: "font-mono font-semibold" }, symbol.qualified_name),
+        h("span", { className: "opacity-65" }, symbol.kind)),
+      h("div", { className: "opacity-70 font-mono truncate" }, symbol.rel_path + ":" + symbol.line_start));
+  }
+
+  function LocusDriftInbox(props) {
+    const summary = props.summary;
+    if (!summary) return h("div", { className: "locus-codegraph-empty", role: "status" },
+      props.error ? "Drift status is unavailable. Retry loading the workspace." : "Loading caller checks…");
+    const alerts = summary.drift_alerts || [];
+    const count = summary.open_drift_count || 0;
+    const closed = summary.closed_drift_alerts || [];
+    return h(Card, { className: "locus-codegraph-inbox" },
+      h(CardHeader, { className: "pb-2" },
+        h("div", { className: "locus-codegraph-inbox-heading" },
+          h(CardTitle, { className: "text-sm font-semibold" }, "Caller checks"),
+          h(Badge, { variant: count ? "destructive" : "outline" }, count ? count + " open" : "No open alerts")),
+        h("p", { className: "locus-codegraph-muted" }, count
+          ? "Review these call sites before continuing. Repair the source, then rescan to check the new calls."
+          : "No unresolved caller alerts are recorded. Run tests to verify behavior.")),
+      h(CardContent, null,
+        props.stale && h("div", { className: "locus-codegraph-notice", role: "status" }, "Showing the last loaded results; refresh failed."),
+        count > alerts.length && h("p", { className: "locus-codegraph-notice" },
+          "Showing the newest " + alerts.length + " of " + count + " open alerts. Earlier alerts appear as these are repaired or dismissed."),
+        h("div", { className: "locus-codegraph-alert-list" }, alerts.map(function (d) {
+          const callers = d.affected_callers || [];
+          return h("article", { key: d.id, className: "locus-codegraph-alert", "aria-label": "Open caller alert for " + d.symbol_name },
+            h("div", { className: "locus-codegraph-inbox-heading" },
+              h("div", null, h("strong", { className: "font-mono" }, d.symbol_name),
+                h("div", { className: "locus-codegraph-muted font-mono" }, d.edited_path)),
+              h(Badge, { variant: "outline" }, callers.length + " affected call" + (callers.length === 1 ? "" : "s"))),
+            d.severity === "warning" && h(Badge, { variant: "outline" }, "Needs verification"),
+            h("p", null, d.reason),
+            h("div", { className: "locus-codegraph-signature" },
+              h("div", null, h("span", { className: "locus-codegraph-muted" }, "Before "), h("code", null, d.old_signature)),
+              h("div", null, h("span", { className: "locus-codegraph-muted" }, "After  "), h("code", null, d.new_signature))),
+            h("ol", { className: "locus-codegraph-callers", "aria-label": "Affected call sites" }, callers.map(function (caller, index) {
+              return h("li", { key: caller.path + ":" + caller.line + ":" + index },
+                h("button", { type: "button", className: "locus-codegraph-location", onClick: function () { props.onFocus(caller.path); },
+                  title: "Inspect dependencies for " + caller.path }, caller.path + ":" + caller.line),
+                h("div", null, caller.incompatibility || "Review this call against the new signature."),
+                caller.suggestion && h("div", { className: "locus-codegraph-suggestion" },
+                  h("span", { className: "locus-codegraph-muted" }, "Suggested repair: "), caller.suggestion));
+            })),
+            !callers.length && h("p", { className: "locus-codegraph-muted" }, "Caller details are unavailable; inspect the changed symbol before dismissing."),
+            h("div", { className: "locus-codegraph-alert-actions" },
+              h(Button, { size: "sm", variant: "outline", onClick: function () { copyChip(repairContext(d, summary.workspace), props.onCopied); } }, "Copy repair context"),
+              h(Button, { size: "sm", variant: "ghost", disabled: Boolean(props.dismissing[d.id]),
+                onClick: function () { props.onDismiss(d.id); } }, props.dismissing[d.id] ? "Dismissing…" : "Dismiss alert")),
+            h("p", { className: "locus-codegraph-muted" }, "Dismiss only hides this alert; it does not repair code or verify tests."));
+        })),
+        closed.length > 0 && h("details", { className: "locus-codegraph-closed" },
+          h("summary", null, "Closed alerts · " + summary.closed_drift_count),
+          h("p", { className: "locus-codegraph-muted" }, "Closed means automatically cleared or manually dismissed. It does not mean tests passed."),
+          summary.closed_drift_count > closed.length && h("p", { className: "locus-codegraph-muted" }, "Showing the newest " + closed.length + " closed records."),
+          h("ul", null, closed.map(function (d) { return h("li", { key: d.id },
+            h("strong", { className: "font-mono" }, d.symbol_name), " · ", h("code", null, d.edited_path)); })))));
+  }
+
+  function LocusCoverage({ summary }) {
+    if (!summary) return null;
+    const scan = summary.scan_status || {};
+    const errors = scan.parse_errors || [];
+    const staleFiles = scan.stale_files || [];
+    return h("div", { className: "locus-codegraph-coverage", role: "status" },
+      h("span", null, "Index coverage: " + summary.file_count + " source files. "),
+      scan.truncated && h("strong", null, "File limit reached (" + scan.max_files + "); results are incomplete. "),
+      !scan.last_indexed_at && h("span", null, "Coverage details unavailable; rescan to refresh. "),
+      scan.last_indexed_at && h("span", { className: "locus-codegraph-muted" }, "Last scan " + new Date(scan.last_indexed_at * 1000).toLocaleString() + ". "),
+      h("span", { className: "locus-codegraph-muted" }, "Python gets call-binding checks; other languages use structural indexing."),
+      errors.length > 0 && h("details", null,
+        h("summary", null, errors.length + " file(s) could not be parsed; previous valid symbols may be retained"),
+        h("ul", null, errors.map(function (item) { return h("li", { key: item.path }, h("code", null, item.path), ": ", item.error); }))),
+      staleFiles.length > 0 && h("details", { open: true },
+        h("summary", null, staleFiles.length + " previously indexed file(s) could not be checked; coverage is incomplete"),
+        h("p", null, "Retained symbols and caller evidence are stale. Skipping a file does not mean its callers are repaired."),
+        staleFiles.length > 20 && h("p", null, "Showing 20 of " + staleFiles.length + " stale files."),
+        h("ul", null, staleFiles.slice(0, 20).map(function (item) { return h("li", { key: item.path }, h("code", null, item.path), ": ", item.reason); }))));
   }
 
   /* Page-scoped slot on /sessions: surfaces open signature drift alerts right where sessions live */
@@ -112,7 +215,7 @@
         {
           viewBox: "0 0 880 520",
           className: "locus-codegraph-svg",
-          role: "img",
+          role: "group",
           "aria-label": "Locus interactive codebase dependency and blast-radius graph",
         },
         h(
@@ -202,7 +305,7 @@
                 fontSize: "10",
                 fill: "currentColor",
               },
-              "HOPS 2–3 · TRANSITIVE BLAST RADIUS & COVERING TESTS"
+              "HOPS 2–3 · TRANSITIVE BLAST RADIUS & SUGGESTED TESTS"
             )
           ),
 
@@ -271,6 +374,13 @@
                 key: n.id,
                 transform: "translate(" + n.x + "," + n.y + ")",
                 className: "locus-codegraph-node-group",
+                tabIndex: 0,
+                role: "button",
+                "aria-label": "Inspect " + n.id + (n.has_drift ? "; open drift alert" : ""),
+                "aria-pressed": Boolean(isSelected),
+                onKeyDown: function (event) {
+                  if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelectNode(n.id); }
+                },
                 onClick: function () {
                   onSelectNode(n.id);
                 },
@@ -343,7 +453,7 @@
           "span",
           { className: "locus-codegraph-legend-item" },
           h("span", { className: "locus-codegraph-dot", style: { background: "var(--color-success, #10b981)" } }),
-          "Covering Test"
+          "Suggested Test"
         ),
         h(
           "span",
@@ -354,7 +464,7 @@
         h(
           "span",
           { className: "ml-auto opacity-75" },
-          "Click any module node to compute live transitive blast radius"
+          "Select a file to inspect dependencies; the file list offers the same navigation"
         )
       )
     );
@@ -370,12 +480,15 @@
     const [symQuery, setSymQuery] = useState("");
     const [symList, setSymList] = useState([]);
     const [symDetail, setSymDetail] = useState(null);
+    const [symbolChoices, setSymbolChoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [busyScan, setBusyScan] = useState(false);
     const [copied, setCopied] = useState("");
     const [errMsg, setErrMsg] = useState("");
     const [loadError, setLoadError] = useState("");
     const [scanNotice, setScanNotice] = useState(null);
+    const [dismissing, setDismissing] = useState({});
+    const [graphView, setGraphView] = useState("graph");
     const loadSequence = useRef(0);
     const loadInFlight = useRef(false);
     const symbolSearchSequence = useRef(0);
@@ -445,8 +558,12 @@
       mutationGeneration.current++;
       setFocus("");
       setSymDetail(null);
+      setSymbolChoices([]);
       setSymQuery("");
       setBusyScan(false);
+      setDismissing({});
+      setSummary(null);
+      setGraph(null);
       setErrMsg("");
       symbolSearchSequence.current++;
       symbolDetailSequence.current++;
@@ -460,6 +577,7 @@
     function handleSearchSymbols(q) {
       const sequence = ++symbolSearchSequence.current;
       setSymQuery(q);
+      setSymbolChoices([]);
       const qs =
         "?limit=25&q=" +
         encodeURIComponent(q) +
@@ -469,13 +587,16 @@
           if (sequence !== symbolSearchSequence.current) return;
           setSymList((d && d.symbols) || []);
         })
-        .catch(function () {});
+        .catch(function (err) {
+          if (sequence === symbolSearchSequence.current) setErrMsg("Symbol search failed: " + String((err && err.message) || err));
+        });
     }
 
     function handleInspectSymbol(name) {
       const sequence = ++symbolDetailSequence.current;
       setActivePanel("symbols");
       setSymDetail(null);
+      setSymbolChoices([]);
       setErrMsg("");
       const qs =
         "?name=" +
@@ -485,6 +606,7 @@
         .then(function (d) {
           if (sequence !== symbolDetailSequence.current) return;
           if (d && d.ok) setSymDetail(d);
+          else if (d && d.candidates && d.candidates.length) setSymbolChoices(d.candidates);
           else setErrMsg((d && d.error) || "Symbol could not be found in the current index.");
         })
         .catch(function (err) {
@@ -506,14 +628,7 @@
         .then(function (res) {
           if (generation !== mutationGeneration.current) return;
           setBusyScan(false);
-          if (!res || !res.ok) throw new Error((res && res.error) || "Workspace scan failed.");
-          const notices = [];
-          if (res.parse_errors && res.parse_errors.length) {
-            notices.push(res.parse_errors.length + " source file(s) could not be parsed; any previously indexed version was retained. " +
-              res.parse_errors.slice(0, 3).map(function (item) { return item.path + ": " + item.error; }).join(" · "));
-          }
-          if (res.truncated) notices.push("Scan reached the " + res.max_files + " file limit; the graph is incomplete.");
-          setScanNotice({ workspace: res.root_path, text: notices.join(" ") });
+          setScanNotice({ workspace: res && res.root_path, text: scanNoticeText(res) });
           if (res && res.root_path) {
             setWorkspace(res.root_path);
             setWsInput(res.root_path);
@@ -529,6 +644,8 @@
 
     function handleResolveDrift(alertId) {
       const generation = mutationGeneration.current;
+      if (dismissing[alertId]) return;
+      setDismissing(function (current) { return Object.assign({}, current, { [alertId]: true }); });
       setErrMsg("");
       SDK.fetchJSON("/api/plugins/locus-codegraph/resolve-drift", {
         method: "POST",
@@ -540,6 +657,8 @@
         loadAll(currentView.current.workspace, currentView.current.focus);
       }).catch(function (err) {
         if (generation === mutationGeneration.current) setErrMsg(String((err && err.message) || err));
+      }).finally(function () {
+        if (generation === mutationGeneration.current) setDismissing(function (current) { const next = Object.assign({}, current); delete next[alertId]; return next; });
       });
     }
 
@@ -563,13 +682,13 @@
               "div",
               { className: "flex items-center gap-2" },
               h("span", { className: "text-base font-bold" }, "Locus Codegraph"),
-              h(Badge, { variant: "outline" }, "AST + Blast Radius + Drift Guard"),
-              copied && h(Badge, { variant: "secondary" }, "Copied " + copied)
+              h(Badge, { variant: "outline" }, "Caller checks · Dependency map"),
+              copied && h(Badge, { variant: "secondary", role: "status" }, copied.indexOf("Copy unavailable") === 0 ? copied : "Copied " + copied)
             ),
             h(
               "span",
               { className: "text-xs opacity-75" },
-              "Click any module node to trace reverse dependencies & covering tests, or copy @sym: / @impact: prompt chips."
+              "Catch incompatible callers while Hermes edits. Inspect the evidence, repair the source, and verify."
             )
           ),
           h(
@@ -582,6 +701,7 @@
                 "select",
                 {
                   className: "text-xs px-2 py-1.5 rounded border bg-transparent",
+                  "aria-label": "Indexed workspace",
                   value: workspace || summary.workspace || "",
                   onChange: function (ev) {
                     setFocus("");
@@ -603,6 +723,7 @@
                 setWsInput(ev.target.value);
               },
               placeholder: "Workspace path…",
+              "aria-label": "Workspace path to scan",
               className: "w-64 text-xs h-8",
             }),
             h(
@@ -634,11 +755,18 @@
         h(
           Card,
           null,
-          h(CardContent, { className: "py-2.5 px-4 text-xs text-red-400" }, "Locus API notice: " + (errMsg || loadError))
+          h(CardContent, { className: "py-2.5 px-4 text-xs", role: "alert" },
+            errMsg || "Could not refresh the workspace: " + loadError, " ",
+            h(Button, { size: "sm", variant: "outline", onClick: function () { setErrMsg(""); loadAll(workspace, focus); } }, "Retry"))
         ),
 
       scanNotice && scanNotice.workspace === workspace && scanNotice.text && h(Card, null,
         h(CardContent, { className: "py-2.5 px-4 text-xs", role: "status" }, scanNotice.text)),
+
+      h(LocusDriftInbox, { summary: summary, error: loadError, stale: Boolean(loadError), dismissing: dismissing,
+        onDismiss: handleResolveDrift, onCopied: function (value) { setCopied(value ? (value.indexOf("Copy unavailable") === 0 ? value : "repair context") : ""); },
+        onFocus: function (path) { setFocus(path); setActivePanel("impact"); } }),
+      h(LocusCoverage, { summary: summary }),
 
       /* KPI Strip */
       summary &&
@@ -655,7 +783,7 @@
             "div",
             { className: "locus-codegraph-kpi-card" },
             h("div", { className: "locus-codegraph-kpi-value" }, summary.symbol_count),
-            h("div", { className: "locus-codegraph-kpi-label" }, "AST Symbols & Signatures")
+            h("div", { className: "locus-codegraph-kpi-label" }, "Indexed Symbols & Signatures")
           ),
           h(
             "div",
@@ -702,8 +830,8 @@
               CardTitle,
               { className: "text-sm font-semibold" },
               impact
-                ? "Blast-Radius Radar · " + impact.resolved_file
-                : "PageRank Dependency Topology (" + ((summary && summary.workspace_name) || "workspace") + ")"
+                ? "Change impact · " + impact.resolved_file
+                : "Dependency map (" + ((summary && summary.workspace_name) || "workspace") + ")"
             ),
             impact &&
               h(
@@ -730,8 +858,20 @@
           h(
             CardContent,
             null,
+            h("div", { className: "locus-codegraph-graph-toolbar", role: "group", "aria-label": "Dependency view" },
+              h(Button, { size: "sm", variant: graphView === "graph" ? "default" : "outline", "aria-pressed": graphView === "graph",
+                onClick: function () { setGraphView("graph"); } }, "Graph"),
+              h(Button, { size: "sm", variant: graphView === "list" ? "default" : "outline", "aria-pressed": graphView === "list",
+                onClick: function () { setGraphView("list"); } }, "File list"),
+              graph && h("span", { className: "locus-codegraph-muted" }, "Showing " + (graph.nodes || []).length + " of " + ((summary && summary.file_count) || 0) + " indexed files")),
             loading && !graph
-              ? h("div", { className: "p-10 text-center text-sm opacity-70" }, "Computing AST topology…")
+              ? h("div", { className: "p-10 text-center text-sm opacity-70", role: "status" }, "Loading dependency graph…")
+              : graphView === "list" && graph ? h("div", { className: "locus-codegraph-scroll-list" },
+                  (graph.nodes || []).map(function (node) { return h("button", { type: "button", key: node.id,
+                    className: "locus-codegraph-row-btn", "aria-pressed": focus === node.id,
+                    onClick: function () { setFocus(node.id); setActivePanel("impact"); } },
+                    h("code", null, node.id), h("div", { className: "locus-codegraph-muted" },
+                      "Incoming " + node.fan_in + " · Outgoing " + node.fan_out + (node.has_drift ? " · Open drift alert" : ""))); }))
               : h(LocusSvgGraph, {
                   graph: graph,
                   focus: focus,
@@ -754,9 +894,9 @@
               "div",
               { className: "flex flex-wrap gap-1.5" },
               [
-                ["impact", "Blast Radius"],
+                ["impact", "Change impact"],
                 ["symbols", "Symbols"],
-                ["health", "Cycles & Drift"],
+                ["health", "Import cycles"],
                 ["activity", "Live Feed"],
               ].map(function (pair) {
                 const id = pair[0];
@@ -766,6 +906,7 @@
                   {
                     key: id,
                     size: "sm",
+                    "aria-pressed": activePanel === id,
                     variant: activePanel === id ? "default" : "outline",
                     onClick: function () {
                       setActivePanel(id);
@@ -803,7 +944,7 @@
                         impact.direct_dependents.length +
                         " · Transitive: " +
                         impact.transitive_dependents.length +
-                        " · Covering Tests: " +
+                        " · Suggested Tests: " +
                         impact.covering_tests.length
                     ),
                     impact.direct_dependents.length > 0 &&
@@ -867,13 +1008,13 @@
                             return h(
                               "div",
                               { key: t.rel_path, className: "font-mono py-0.5 text-emerald-400" },
-                              "✓ " + t.rel_path
+                              t.rel_path
                             );
                           })
                         : h(
                             "div",
                             { className: "opacity-75" },
-                            "No covering test files detected in reverse dependency graph."
+                            "No tests suggested by the dependency graph. This does not establish test coverage."
                           )
                     )
                   )
@@ -883,7 +1024,7 @@
                     h(
                       "div",
                       { className: "opacity-75 mb-1" },
-                      "Top PageRank Hub Modules — click any module to inspect its blast radius:"
+                      "Modules with the most structural influence. Select one to inspect what depends on it:"
                     ),
                     h(
                       "div",
@@ -925,8 +1066,13 @@
                     handleSearchSymbols(ev.target.value);
                   },
                   placeholder: "Search functions, classes, methods…",
+                  "aria-label": "Search symbols",
                   className: "text-xs h-8",
                 }),
+                symbolChoices.length > 0 && h("div", { className: "locus-codegraph-notice" },
+                  h("p", null, "More than one symbol matches. Choose an exact location:"),
+                  symbolChoices.map(function (choice) { return h("button", { type: "button", key: choice,
+                    className: "locus-codegraph-row-btn font-mono", onClick: function () { handleInspectSymbol(choice); } }, choice); })),
                 symDetail &&
                   symDetail.symbol &&
                   h(
@@ -942,7 +1088,7 @@
                           size: "sm",
                           variant: "outline",
                           onClick: function () {
-                            copyChip("@sym:" + symDetail.symbol.qualified_name, setCopied);
+                            copyChip("@sym:" + symbolTarget(symDetail.symbol), setCopied);
                           },
                         },
                         "Copy @sym chip"
@@ -967,25 +1113,10 @@
                   "div",
                   { className: "locus-codegraph-scroll-list" },
                   symList.map(function (s) {
-                    return h(
-                      "button",
-                      {
-                        key: s.symbol_id,
-                        className: "locus-codegraph-row-btn",
-                        onClick: function () {
-                          handleInspectSymbol(s.qualified_name);
-                        },
-                      },
-                      h(
-                        "div",
-                        { className: "flex items-center justify-between" },
-                        h("span", { className: "font-mono font-semibold" }, s.qualified_name),
-                        h("span", { className: "opacity-65" }, s.kind)
-                      ),
-                      h("div", { className: "opacity-70 font-mono truncate" }, s.rel_path + ":" + s.line_start)
-                    );
+                    return h(LocusSymbolRow, { key: s.symbol_id, symbol: s, onInspect: handleInspectSymbol });
                   })
-                )
+                ),
+                symQuery && !symList.length && h("p", { className: "locus-codegraph-muted" }, "No symbols match this search.")
               ),
 
             /* Panel 3: Circular Dependencies & Signature Drift Guard */
@@ -993,51 +1124,7 @@
               h(
                 "div",
                 { className: "flex flex-col gap-3 text-xs locus-codegraph-scroll-list" },
-                h("div", { className: "font-semibold" }, "Open Signature Drift Alerts"),
-                summary && summary.drift_alerts && summary.drift_alerts.length > 0
-                  ? summary.drift_alerts.map(function (d) {
-                      return h(
-                        "div",
-                        { key: d.id, className: "locus-codegraph-row-btn" },
-                        h(
-                          "div",
-                          { className: "flex items-center justify-between gap-2" },
-                          h("span", { className: "font-mono font-bold" }, d.symbol_name),
-                          h(
-                            Button,
-                            {
-                              size: "sm",
-                              variant: "outline",
-                              onClick: function () {
-                                handleResolveDrift(d.id);
-                              },
-                            },
-                            "Dismiss"
-                          )
-                        ),
-                        h("div", { className: "mt-1 opacity-85" }, d.reason),
-                        h(
-                          "div",
-                          { className: "mt-1 font-mono break-words opacity-70" },
-                          d.old_signature + " → " + d.new_signature
-                        ),
-                        d.affected_callers && d.affected_callers.length > 0 && h(
-                          "ul",
-                          { className: "mt-2 space-y-1" },
-                          d.affected_callers.slice(0, 6).map(function (caller, idx) {
-                            return h(
-                              "li",
-                              { key: caller.path + ":" + caller.line + ":" + idx, className: "break-words" },
-                              h("code", { className: "font-mono" }, caller.path + ":" + caller.line),
-                              caller.incompatibility ? " — " + caller.incompatibility : "",
-                              caller.suggestion && h("div", { className: "opacity-80" }, caller.suggestion)
-                            );
-                          })
-                        )
-                      );
-                    })
-                  : h("div", { className: "opacity-75" }, "Zero unresolved signature drift alerts."),
-                h("div", { className: "font-semibold mt-2" }, "Circular Import Chains (Tarjan SCC)"),
+                h("div", { className: "font-semibold mt-2" }, "Circular import chains"),
                 summary && summary.cycles && summary.cycles.length > 0
                   ? summary.cycles.map(function (cyc, idx) {
                       return h(

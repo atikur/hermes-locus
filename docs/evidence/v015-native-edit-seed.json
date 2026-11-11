@@ -1,0 +1,165 @@
+{
+  "action": "seed",
+  "model_calls": 0,
+  "synthetic_fixture": true,
+  "python": "3.14.7",
+  "workspace": "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace",
+  "profile": "<LOCAL_HOME>/.hermes/profiles/locus-verification",
+  "engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
+  "hermes_host_commit": "01672831e48c1224bc003f834dd9b8c1cfc96a57",
+  "plugin_hooks": 3,
+  "baseline_index": {
+    "ok": true,
+    "workspace_id": "1caff644cf8c6a11",
+    "root_path": "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace",
+    "file_count": 6,
+    "symbol_count": 15,
+    "edge_count": 6,
+    "updated_files": 6,
+    "removed_files": 0,
+    "parse_errors": [],
+    "truncated": false,
+    "max_files": 2500,
+    "scan_ms": 5.51
+  },
+  "patch": "*** Begin Patch\n*** Update File: auth/tokens.py\n@@\n-def verify_token(token: str) -> bool:\n+def verify_token(token: str, *, audience: str) -> bool:\n@@\n-    return token == \"demo_valid\"\n+    return token == \"demo_valid\" and audience == \"checkout\"\n*** End Patch",
+  "elapsed_seconds": 0.601,
+  "tool_result": {
+    "success": true,
+    "diff": "--- a/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py\n+++ b/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py\n@@ -1,5 +1,5 @@\n \"\"\"Synthetic demo tokens; this fixture is not an authentication library.\"\"\"\n \n-def verify_token(token: str) -> bool:\n+def verify_token(token: str, *, audience: str) -> bool:\n     \"\"\"Accept the synthetic demo token.\"\"\"\n-    return token == \"demo_valid\"\n+    return token == \"demo_valid\" and audience == \"checkout\"\n",
+    "files_modified": [
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py"
+    ],
+    "lint": {
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py": {
+        "status": "ok",
+        "output": ""
+      }
+    },
+    "resolved_path": "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py",
+    "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `verify_token` in `auth/tokens.py` (`def verify_token(token: str) -> bool` -> `def verify_token(token: str, *, audience: str) -> bool`) \u2014 Signature of 'verify_token' no longer accepts 8 external call site(s). Missing required keyword-only argument 'audience'.\n  -> Update caller `services/audits.py:7` (`authorize_refund`): missing required keyword-only argument 'audience'\n  -> Update caller `services/audits.py:11` (`authorize_shipment`): missing required keyword-only argument 'audience'\n  -> Update caller `services/audits.py:15` (`authorize_subscription`): missing required keyword-only argument 'audience'\n  -> Update caller `services/audits.py:19` (`authorize_inventory`): missing required keyword-only argument 'audience'\n  -> Update caller `services/audits.py:23` (`authorize_discount`): missing required keyword-only argument 'audience'\n  -> Update caller `services/audits.py:27` (`authorize_support`): missing required keyword-only argument 'audience'\n  -> Additional affected caller locations: `services/checkout.py:4`, `services/receipts.py:4`\nInspect and update the affected call sites above before concluding your task."
+  },
+  "open_alerts": [
+    {
+      "edited_path": "auth/tokens.py",
+      "symbol_name": "verify_token",
+      "severity": "critical",
+      "reason": "Signature of 'verify_token' no longer accepts 8 external call site(s). Missing required keyword-only argument 'audience'.",
+      "affected_callers": [
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_refund",
+          "line": 7,
+          "arg_count": 1,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "incompatibility": "missing required keyword-only argument 'audience'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_shipment",
+          "line": 11,
+          "arg_count": 1,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "incompatibility": "missing required keyword-only argument 'audience'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_subscription",
+          "line": 15,
+          "arg_count": 1,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "incompatibility": "missing required keyword-only argument 'audience'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_inventory",
+          "line": 19,
+          "arg_count": 1,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "incompatibility": "missing required keyword-only argument 'audience'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_discount",
+          "line": 23,
+          "arg_count": 1,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "incompatibility": "missing required keyword-only argument 'audience'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_support",
+          "line": 27,
+          "arg_count": 1,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "incompatibility": "missing required keyword-only argument 'audience'"
+        },
+        {
+          "path": "services/checkout.py",
+          "caller": "settle_order",
+          "line": 4,
+          "arg_count": 1,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "incompatibility": "missing required keyword-only argument 'audience'"
+        },
+        {
+          "path": "services/receipts.py",
+          "caller": "get_receipt",
+          "line": 4,
+          "arg_count": 1,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "incompatibility": "missing required keyword-only argument 'audience'"
+        }
+      ]
+    }
+  ],
+  "status": "PASS"
+}

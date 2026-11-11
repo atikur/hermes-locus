@@ -82,7 +82,7 @@ class TestContextReferencesAndCommands(unittest.IsolatedAsyncioTestCase):
 
                 # @sym: autocomplete + expand
                 sym_items = await ctx.refs["sym"].autocomplete("capture")
-                self.assertTrue(any(i.text == "capture_payment" for i in sym_items))
+                self.assertTrue(any(i.text == "payments.py::capture_payment" for i in sym_items))
                 sym_expanded = await ctx.refs["sym"].expand("capture_payment")
                 self.assertIsNotNone(sym_expanded)
                 assert sym_expanded is not None

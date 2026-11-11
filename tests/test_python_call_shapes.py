@@ -94,7 +94,7 @@ def other_scope():
             [(call.callee_name, call.python_call and call.python_call["direct_import"]) for call in module.calls],
             [
                 ("outer", True), ("shadowed", False), ("rebound", False),
-                ("aliased", False), ("conditional", False),
-                ("local", False), ("local", True), ("outer", None), ("local", False),
+                ("aliased", True), ("conditional", False),
+                ("local", False), ("local", True), ("outer", False), ("local", False),
             ],
         )

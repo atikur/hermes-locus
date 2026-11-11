@@ -1,0 +1,198 @@
+{
+  "action": "seed",
+  "model_calls": 0,
+  "synthetic_fixture": true,
+  "python": "3.14.7",
+  "workspace": "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace",
+  "profile": "<LOCAL_HOME>/.hermes/profiles/locus-verification",
+  "engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+  "patch": "*** Begin Patch\n*** Update File: auth/tokens.py\n@@\n \"\"\"Synthetic demo tokens; this fixture is not an authentication library.\"\"\"\n \n-def verify_token(token: str, *, audience: str) -> bool:\n+def verify_token(token: str, *, audience: str, issuer: str) -> bool:\n     \"\"\"Accept the synthetic demo token.\"\"\"\n-    return token == \"demo_valid\" and audience == \"checkout\"\n+    return token == \"demo_valid\" and audience == \"checkout\" and issuer == \"native-fixture\"\n*** End Patch",
+  "baseline_index": {
+    "ok": true,
+    "workspace_id": "1caff644cf8c6a11",
+    "root_path": "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace",
+    "file_count": 6,
+    "symbol_count": 15,
+    "edge_count": 6,
+    "updated_files": 6,
+    "removed_files": 0,
+    "parse_errors": [],
+    "stale_files": [],
+    "truncated": false,
+    "max_files": 2500,
+    "scan_ms": 8.83
+  },
+  "elapsed_seconds": 0.5762,
+  "tool_result": {
+    "success": true,
+    "diff": "--- a/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py\n+++ b/<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py\n@@ -1,5 +1,5 @@\n \"\"\"Synthetic demo tokens; this fixture is not an authentication library.\"\"\"\n \n-def verify_token(token: str, *, audience: str) -> bool:\n+def verify_token(token: str, *, audience: str, issuer: str) -> bool:\n     \"\"\"Accept the synthetic demo token.\"\"\"\n-    return token == \"demo_valid\" and audience == \"checkout\"\n+    return token == \"demo_valid\" and audience == \"checkout\" and issuer == \"native-fixture\"\n",
+    "files_modified": [
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py"
+    ],
+    "lint": {
+      "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py": {
+        "status": "ok",
+        "output": ""
+      }
+    },
+    "resolved_path": "<LOCAL_HOME>/Develop/hermes-locus/.submission/native-v015/workspace/auth/tokens.py",
+    "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `verify_token` in `auth/tokens.py` (`def verify_token(token: str, *, audience: str) -> bool` -> `def verify_token(token: str, *, audience: str, issuer: str) -> bool`) \u2014 Signature of 'verify_token' no longer accepts 8 external call site(s). Missing required keyword-only argument 'issuer'.\n  -> Update caller `services/audits.py:7` (`authorize_refund`): missing required keyword-only argument 'issuer'\n  -> Update caller `services/audits.py:11` (`authorize_shipment`): missing required keyword-only argument 'issuer'\n  -> Update caller `services/audits.py:15` (`authorize_subscription`): missing required keyword-only argument 'issuer'\n  -> Update caller `services/audits.py:19` (`authorize_inventory`): missing required keyword-only argument 'issuer'\n  -> Update caller `services/audits.py:23` (`authorize_discount`): missing required keyword-only argument 'issuer'\n  -> Update caller `services/audits.py:27` (`authorize_support`): missing required keyword-only argument 'issuer'\n  -> Additional affected caller locations: `services/checkout.py:4`, `services/receipts.py:4`\nInspect and update the affected call sites above before concluding your task."
+  },
+  "open_alerts": [
+    {
+      "id": 3,
+      "edited_path": "auth/tokens.py",
+      "symbol_name": "verify_token",
+      "severity": "critical",
+      "reason": "Signature of 'verify_token' no longer accepts 8 external call site(s). Missing required keyword-only argument 'issuer'.",
+      "affected_callers": [
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_refund",
+          "line": 7,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_shipment",
+          "line": 11,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_subscription",
+          "line": 15,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_inventory",
+          "line": 19,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_discount",
+          "line": 23,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_support",
+          "line": 27,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        },
+        {
+          "path": "services/checkout.py",
+          "caller": "settle_order",
+          "line": 4,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        },
+        {
+          "path": "services/receipts.py",
+          "caller": "get_receipt",
+          "line": 4,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        }
+      ]
+    }
+  ],
+  "closed_alerts": 2,
+  "scan_status": {
+    "truncated": false,
+    "max_files": 2500,
+    "parse_errors": [],
+    "stale_files": [],
+    "last_indexed_at": 1794402000.5881422,
+    "indexed_files": 6
+  },
+  "status": "PASS"
+}

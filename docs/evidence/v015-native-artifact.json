@@ -1,0 +1,17 @@
+{
+  "arch": "arm64",
+  "artifact": {
+    "key": "releases/tag/rc.3-v0.22.0/HermesBundled-0.22.0-mac-arm64.zip",
+    "sha256": "8a3b64b4e2b10b88912937f883a2c616ea902f3b5c683d3cdffc459de7fa8f73",
+    "size": 1583117114
+  },
+  "feed": {
+    "channel": "stable",
+    "key": "releases/channel-builds/e1734abd5c6128ecbd4d4b995a392750/darwin/stable-mac.yml"
+  },
+  "identity": "com.nousresearch.hermes-bundled",
+  "platform": "darwin",
+  "teamId": "763K57MW7Z",
+  "variant": "bundled",
+  "version": "0.22.0"
+}

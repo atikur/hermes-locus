@@ -1,0 +1,15 @@
+test_dashboard_rescan_preserves_the_existing_scan_cap (test_api_mutations.TestApiMutations.test_dashboard_rescan_preserves_the_existing_scan_cap) ... ok
+test_dismissal_is_scoped_idempotent_and_refreshes_desktop (test_api_mutations.TestApiMutations.test_dismissal_is_scoped_idempotent_and_refreshes_desktop) ... ok
+test_graph_query_limits_reject_out_of_bounds_values (test_api_mutations.TestApiMutations.test_graph_query_limits_reject_out_of_bounds_values) ... ok
+test_nonexistent_or_wrong_workspace_alert_is_not_successful (test_api_mutations.TestApiMutations.test_nonexistent_or_wrong_workspace_alert_is_not_successful) ... ok
+test_reindex_rejects_truthy_strings_and_non_string_workspaces (test_api_mutations.TestApiMutations.test_reindex_rejects_truthy_strings_and_non_string_workspaces) ... ok
+test_rejects_invalid_alert_ids_without_mutation (test_api_mutations.TestApiMutations.test_rejects_invalid_alert_ids_without_mutation) ... ok
+test_rescan_exposes_parse_diagnostics_without_erasing_valid_graph (test_api_mutations.TestApiMutations.test_rescan_exposes_parse_diagnostics_without_erasing_valid_graph) ... ok
+test_skipped_caller_warning_and_open_alert_survive_api_refresh_until_rechecked (test_api_mutations.TestApiMutations.test_skipped_caller_warning_and_open_alert_survive_api_refresh_until_rechecked) ... ok
+test_summary_counts_all_alerts_and_bounds_history_without_crossing_workspaces (test_api_mutations.TestApiMutations.test_summary_counts_all_alerts_and_bounds_history_without_crossing_workspaces) ... ok
+test_summary_keeps_file_limit_warning_after_refresh (test_api_mutations.TestApiMutations.test_summary_keeps_file_limit_warning_after_refresh) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.217s
+
+OK

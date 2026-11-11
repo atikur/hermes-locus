@@ -1,0 +1,171 @@
+{
+  "engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+  "method": "Actual native Desktop Rescan, then Web reload; manually observed via computer-use accessibility and screenshots.",
+  "synthetic_fixture": true,
+  "model_calls": 0,
+  "scan_status": {
+    "truncated": false,
+    "max_files": 2500,
+    "parse_errors": [],
+    "stale_files": [
+      {
+        "path": "services/audits.py",
+        "reason": "Source exceeds the 512 KiB indexing limit; last-valid indexed source retained."
+      }
+    ],
+    "last_indexed_at": 1794402079.5303302,
+    "indexed_files": 6
+  },
+  "open_alerts": [
+    {
+      "edited_path": "auth/tokens.py",
+      "symbol_name": "verify_token",
+      "severity": "critical",
+      "reason": "Signature of 'verify_token' no longer accepts 2 external call site(s). Missing required keyword-only argument 'issuer'. 6 additional previously affected site(s) need verification after loss of static target confidence.",
+      "affected_callers": [
+        {
+          "path": "services/checkout.py",
+          "caller": "settle_order",
+          "line": 4,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        },
+        {
+          "path": "services/receipts.py",
+          "caller": "get_receipt",
+          "line": 4,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "incompatibility": "missing required keyword-only argument 'issuer'"
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_refund",
+          "line": 7,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "analysis_status": "needs_verification",
+          "incompatibility": "Caller or target source was not reindexed; verify against current files."
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_shipment",
+          "line": 11,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "analysis_status": "needs_verification",
+          "incompatibility": "Caller or target source was not reindexed; verify against current files."
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_subscription",
+          "line": 15,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "analysis_status": "needs_verification",
+          "incompatibility": "Caller or target source was not reindexed; verify against current files."
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_inventory",
+          "line": 19,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "analysis_status": "needs_verification",
+          "incompatibility": "Caller or target source was not reindexed; verify against current files."
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_discount",
+          "line": 23,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "analysis_status": "needs_verification",
+          "incompatibility": "Caller or target source was not reindexed; verify against current files."
+        },
+        {
+          "path": "services/audits.py",
+          "caller": "authorize_support",
+          "line": 27,
+          "arg_count": 2,
+          "kind": "call",
+          "binding_reference": {
+            "import_module": "auth.tokens",
+            "import_name": "verify_token",
+            "import_kind": "from",
+            "attribute_path": []
+          },
+          "callee_expression": [
+            "verify_token"
+          ],
+          "analysis_status": "needs_verification",
+          "incompatibility": "Caller or target source was not reindexed; verify against current files."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "status": "PASS",
+  "python": "3.14.7",
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "workspace_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+  "hermes_host_commit": "01672831e48c1224bc003f834dd9b8c1cfc96a57",
+  "plugin_engine_sha256": "f37ddb1fbc088b7f55df42acba3df6032fa0c105d10078ecfe7d00906b926226",
+  "max_files": 20000,
+  "model_calls": 0,
+  "hook_callback_timeout_seconds": 30,
+  "method": "Single-run, OS caches unchanged. Fresh disposable git-archive workspace and database; actual Hermes patch dispatcher for edits.",
+  "measurements": [
+    {
+      "name": "fresh_database_scan",
+      "elapsed_seconds": 73.654,
+      "ok": true,
+      "file_count": 17025,
+      "symbol_count": 192406,
+      "edge_count": 66779,
+      "updated_files": 17025,
+      "removed_files": 0,
+      "parse_errors": [],
+      "truncated": false
+    },
+    {
+      "name": "cached_scan",
+      "elapsed_seconds": 2.7244,
+      "ok": true,
+      "file_count": 17025,
+      "symbol_count": 192406,
+      "edge_count": 66779,
+      "updated_files": 0,
+      "removed_files": 0,
+      "parse_errors": [],
+      "truncated": false
+    },
+    {
+      "name": "one_file_patch_dispatch",
+      "elapsed_seconds": 9.4249
+    },
+    {
+      "name": "three_file_patch_dispatch",
+      "elapsed_seconds": 5.8845
+    }
+  ],
+  "notes": [
+    "Fresh and cached scans call index_workspace directly; edit timings include actual Hermes patch execution, lint, hook indexing and result transformation.",
+    "The full 20,000-file cap exceeds the default 2,500. Cold scan was measured directly, not as a startup hook.",
+    "Single run; observed latencies, not a distribution or guarantee."
+  ],
+  "plugin_hooks": 3,
+  "rename": {
+    "open_alerts": 1,
+    "affected_sites": 5,
+    "changed_files": [
+      "agent/display.py"
+    ],
+    "feedback_present": true
+  },
+  "repair": {
+    "open_alerts": 0,
+    "affected_sites": 0,
+    "changed_files": [
+      "gateway/platforms/base.py",
+      "gateway/run_turn_progress.py",
+      "tests/agent/test_display.py"
+    ],
+    "feedback_present": false
+  }
+}

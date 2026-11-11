@@ -1,0 +1,2674 @@
+{
+  "protocol_version": 1,
+  "model_calls": 0,
+  "source_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+  "source_blob_pins": {
+    "agent/retry_utils.py": "fc1d702f263b243c4d1c708507a565411f9f6790",
+    "agent/auxiliary_rate_limit_backoff.py": "27a5f0527c396b2b4d1d322e2b7fc6439fea3941",
+    "tests/agent/test_retry_utils.py": "e090364669ea7a0e9d670e88dc8c126a5e32b00f",
+    "agent/chat_completion_wait_notice.py": "5fc15959ccf740ac9b23816f89bbb5bb0012775f",
+    "agent/chat_completion_nonstream.py": "62d5bd7af517815dc47009e2fe73488324bdb847",
+    "tests/agent/test_codex_ttfb_watchdog.py": "7947a13f2f99a958167a22d3a044a6c019c10cb0",
+    "agent/aux_accounting.py": "df0e1b1c6c7e0c7406d2e72960609fac0c66b6ca",
+    "agent/auxiliary_client.py": "c7866a87a03e0283c41ec284ca66f21c96830013",
+    "plugins/image_gen/_common.py": "8af6741ae47138021fec100c3d8f3628138348e1",
+    "tests/hermes_state/test_aux_usage_accounting.py": "1d6a101b414f2d4ba4c90a9627eb2543581f30b5"
+  },
+  "selection": "Targeted extension declared before execution; not a blind held-out accuracy estimate.",
+  "limits": [
+    "Counts repeat source calls across mutations; report distinct locations separately.",
+    "Same-file calls remain in the denominator and are marked separately.",
+    "Constructed controls are separate from untouched real-source projections.",
+    "Original 19-case corpus and historical evidence remain separate and unchanged."
+  ],
+  "planned_cases": 37,
+  "cases": [
+    {
+      "case": "hermes-retry-keyword-rename",
+      "group": "pinned-real-source",
+      "helper": "agent/retry_utils.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/retry_utils.py:167": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "same-file"
+        },
+        "agent/auxiliary_rate_limit_backoff.py:45": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:24": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:15": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:45": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/retry_utils.py\n@@\n     return None\n \n \n-def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float:\n+def jittered_backoff(attempt: int, *, base_delay: float=5.0, renamed_max_delay: float=120.0, jitter_ratio: float=0.5) -> float:\n     \"\"\"min(base * 2^(attempt-1), max_delay) + uniform jitter in\n     [0, jitter_ratio * delay]. ``attempt`` is 1-based.\"\"\"\n     global _jitter_counter\n     with _jitter_lock:\n         _jitter_counter += 1\n         tick = _jitter_counter\n+    exponent = max(0, attempt - 1)\n+    delay = renamed_max_delay if exponent >= 63 or base_delay <= 0 else min(base_delay * 2 ** exponent, renamed_max_delay)\n+    seed = (time.time_ns() ^ tick * 2654435769) & 4294967295\n+    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n \n-    exponent = max(0, attempt - 1)\n-    delay = max_delay if (exponent >= 63 or base_delay <= 0) else min(base_delay * (2 ** exponent), max_delay)\n \n-    # Seed from time + counter so coarse clocks still decorrelate.\n-    seed = (time.time_ns() ^ (tick * 0x9E3779B9)) & 0xFFFFFFFF\n-    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n+\n \n \n def _error_text(error: Any) -> str:\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-retry-keyword-rename/agent/retry_utils.py\n+++ b//private<scratch>/hermes-retry-keyword-rename/agent/retry_utils.py\n@@ -118,20 +118,20 @@\n     return None\n \n \n-def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float:\n+def jittered_backoff(attempt: int, *, base_delay: float=5.0, renamed_max_delay: float=120.0, jitter_ratio: float=0.5) -> float:\n     \"\"\"min(base * 2^(attempt-1), max_delay) + uniform jitter in\n     [0, jitter_ratio * delay]. ``attempt`` is 1-based.\"\"\"\n     global _jitter_counter\n     with _jitter_lock:\n         _jitter_counter += 1\n         tick = _jitter_counter\n+    exponent = max(0, attempt - 1)\n+    delay = renamed_max_delay if exponent >= 63 or base_delay <= 0 else min(base_delay * 2 ** exponent, renamed_max_delay)\n+    seed = (time.time_ns() ^ tick * 2654435769) & 4294967295\n+    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n \n-    exponent = max(0, attempt - 1)\n-    delay = max_delay if (exponent >= 63 or base_delay <= 0) else min(base_delay * (2 ** exponent), max_delay)\n \n-    # Seed from time + counter so coarse clocks still decorrelate.\n-    seed = (time.time_ns() ^ (tick * 0x9E3779B9)) & 0xFFFFFFFF\n-    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n+\n \n \n def _error_text(error: Any) -> str:\n",
+        "files_modified": [
+          "/private<scratch>/hermes-retry-keyword-rename/agent/retry_utils.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-retry-keyword-rename/agent/retry_utils.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-retry-keyword-rename/agent/retry_utils.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `jittered_backoff` in `agent/retry_utils.py` (`def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float` -> `def jittered_backoff(attempt: int, *, base_delay: float = 5.0, renamed_max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float`) \u2014 Signature of 'jittered_backoff' no longer accepts 4 external call site(s). Unexpected keyword argument 'max_delay'.\n  -> Update caller `agent/auxiliary_rate_limit_backoff.py:45` (`rate_limit_wait`): unexpected keyword argument 'max_delay'\n     Review replacing max_delay= with renamed_max_delay=.\n  -> Update caller `tests/agent/test_retry_utils.py:15` (`test_backoff_is_exponential.<comprehension>`): unexpected keyword argument 'max_delay'\n     Review replacing max_delay= with renamed_max_delay=.\n  -> Update caller `tests/agent/test_retry_utils.py:24` (`test_backoff_respects_max_delay`): unexpected keyword argument 'max_delay'\n     Review replacing max_delay= with renamed_max_delay=.\n  -> Update caller `tests/agent/test_retry_utils.py:45` (`test_backoff_thread_safety._call_backoff`): unexpected keyword argument 'max_delay'\n     Review replacing max_delay= with renamed_max_delay=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "agent/auxiliary_rate_limit_backoff.py:45",
+        "tests/agent/test_retry_utils.py:15",
+        "tests/agent/test_retry_utils.py:24",
+        "tests/agent/test_retry_utils.py:45"
+      ],
+      "files_sha256": {
+        "agent/retry_utils.py": "4c643880c012dd536dca08041f1bae93b6a58477186b5cf0b4e27ec3c640014c",
+        "agent/auxiliary_rate_limit_backoff.py": "0f783d8ecf7f96c35cc8d1785927b5d60b675eff917a2ac5f0165e75d78c605e",
+        "tests/agent/test_retry_utils.py": "8eb5d1afac1b7cf39dd71973db3d910ac621d51840e60a48078cd851425956d2"
+      }
+    },
+    {
+      "case": "hermes-retry-required-keyword",
+      "group": "pinned-real-source",
+      "helper": "agent/retry_utils.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/retry_utils.py:167": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "same-file"
+        },
+        "agent/auxiliary_rate_limit_backoff.py:45": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:24": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:15": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:45": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/retry_utils.py\n@@\n     return None\n \n \n-def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float:\n+def jittered_backoff(attempt: int, *, base_delay: float=5.0, max_delay: float=120.0, jitter_ratio: float=0.5, corpus_probe) -> float:\n     \"\"\"min(base * 2^(attempt-1), max_delay) + uniform jitter in\n     [0, jitter_ratio * delay]. ``attempt`` is 1-based.\"\"\"\n     global _jitter_counter\n     with _jitter_lock:\n         _jitter_counter += 1\n         tick = _jitter_counter\n+    exponent = max(0, attempt - 1)\n+    delay = max_delay if exponent >= 63 or base_delay <= 0 else min(base_delay * 2 ** exponent, max_delay)\n+    seed = (time.time_ns() ^ tick * 2654435769) & 4294967295\n+    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n \n-    exponent = max(0, attempt - 1)\n-    delay = max_delay if (exponent >= 63 or base_delay <= 0) else min(base_delay * (2 ** exponent), max_delay)\n \n-    # Seed from time + counter so coarse clocks still decorrelate.\n-    seed = (time.time_ns() ^ (tick * 0x9E3779B9)) & 0xFFFFFFFF\n-    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n+\n \n \n def _error_text(error: Any) -> str:\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-retry-required-keyword/agent/retry_utils.py\n+++ b//private<scratch>/hermes-retry-required-keyword/agent/retry_utils.py\n@@ -118,20 +118,20 @@\n     return None\n \n \n-def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float:\n+def jittered_backoff(attempt: int, *, base_delay: float=5.0, max_delay: float=120.0, jitter_ratio: float=0.5, corpus_probe) -> float:\n     \"\"\"min(base * 2^(attempt-1), max_delay) + uniform jitter in\n     [0, jitter_ratio * delay]. ``attempt`` is 1-based.\"\"\"\n     global _jitter_counter\n     with _jitter_lock:\n         _jitter_counter += 1\n         tick = _jitter_counter\n+    exponent = max(0, attempt - 1)\n+    delay = max_delay if exponent >= 63 or base_delay <= 0 else min(base_delay * 2 ** exponent, max_delay)\n+    seed = (time.time_ns() ^ tick * 2654435769) & 4294967295\n+    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n \n-    exponent = max(0, attempt - 1)\n-    delay = max_delay if (exponent >= 63 or base_delay <= 0) else min(base_delay * (2 ** exponent), max_delay)\n \n-    # Seed from time + counter so coarse clocks still decorrelate.\n-    seed = (time.time_ns() ^ (tick * 0x9E3779B9)) & 0xFFFFFFFF\n-    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n+\n \n \n def _error_text(error: Any) -> str:\n",
+        "files_modified": [
+          "/private<scratch>/hermes-retry-required-keyword/agent/retry_utils.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-retry-required-keyword/agent/retry_utils.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-retry-required-keyword/agent/retry_utils.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `jittered_backoff` in `agent/retry_utils.py` (`def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float` -> `def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5, corpus_probe) -> float`) \u2014 Signature of 'jittered_backoff' no longer accepts 4 external call site(s). Missing required keyword-only argument 'corpus_probe'.\n  -> Update caller `agent/auxiliary_rate_limit_backoff.py:45` (`rate_limit_wait`): missing required keyword-only argument 'corpus_probe'\n  -> Update caller `tests/agent/test_retry_utils.py:15` (`test_backoff_is_exponential.<comprehension>`): missing required keyword-only argument 'corpus_probe'\n  -> Update caller `tests/agent/test_retry_utils.py:24` (`test_backoff_respects_max_delay`): missing required keyword-only argument 'corpus_probe'\n  -> Update caller `tests/agent/test_retry_utils.py:45` (`test_backoff_thread_safety._call_backoff`): missing required keyword-only argument 'corpus_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "agent/auxiliary_rate_limit_backoff.py:45",
+        "tests/agent/test_retry_utils.py:15",
+        "tests/agent/test_retry_utils.py:24",
+        "tests/agent/test_retry_utils.py:45"
+      ],
+      "files_sha256": {
+        "agent/retry_utils.py": "4c643880c012dd536dca08041f1bae93b6a58477186b5cf0b4e27ec3c640014c",
+        "agent/auxiliary_rate_limit_backoff.py": "0f783d8ecf7f96c35cc8d1785927b5d60b675eff917a2ac5f0165e75d78c605e",
+        "tests/agent/test_retry_utils.py": "8eb5d1afac1b7cf39dd71973db3d910ac621d51840e60a48078cd851425956d2"
+      }
+    },
+    {
+      "case": "hermes-retry-optional-keyword",
+      "group": "pinned-real-source",
+      "helper": "agent/retry_utils.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/retry_utils.py:167": {
+          "error": null,
+          "scope": "same-file"
+        },
+        "agent/auxiliary_rate_limit_backoff.py:45": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:24": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:15": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:45": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/retry_utils.py\n@@\n     return None\n \n \n-def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float:\n+def jittered_backoff(attempt: int, *, base_delay: float=5.0, max_delay: float=120.0, jitter_ratio: float=0.5, corpus_probe=None) -> float:\n     \"\"\"min(base * 2^(attempt-1), max_delay) + uniform jitter in\n     [0, jitter_ratio * delay]. ``attempt`` is 1-based.\"\"\"\n     global _jitter_counter\n     with _jitter_lock:\n         _jitter_counter += 1\n         tick = _jitter_counter\n+    exponent = max(0, attempt - 1)\n+    delay = max_delay if exponent >= 63 or base_delay <= 0 else min(base_delay * 2 ** exponent, max_delay)\n+    seed = (time.time_ns() ^ tick * 2654435769) & 4294967295\n+    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n \n-    exponent = max(0, attempt - 1)\n-    delay = max_delay if (exponent >= 63 or base_delay <= 0) else min(base_delay * (2 ** exponent), max_delay)\n \n-    # Seed from time + counter so coarse clocks still decorrelate.\n-    seed = (time.time_ns() ^ (tick * 0x9E3779B9)) & 0xFFFFFFFF\n-    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n+\n \n \n def _error_text(error: Any) -> str:\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-retry-optional-keyword/agent/retry_utils.py\n+++ b//private<scratch>/hermes-retry-optional-keyword/agent/retry_utils.py\n@@ -118,20 +118,20 @@\n     return None\n \n \n-def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float:\n+def jittered_backoff(attempt: int, *, base_delay: float=5.0, max_delay: float=120.0, jitter_ratio: float=0.5, corpus_probe=None) -> float:\n     \"\"\"min(base * 2^(attempt-1), max_delay) + uniform jitter in\n     [0, jitter_ratio * delay]. ``attempt`` is 1-based.\"\"\"\n     global _jitter_counter\n     with _jitter_lock:\n         _jitter_counter += 1\n         tick = _jitter_counter\n+    exponent = max(0, attempt - 1)\n+    delay = max_delay if exponent >= 63 or base_delay <= 0 else min(base_delay * 2 ** exponent, max_delay)\n+    seed = (time.time_ns() ^ tick * 2654435769) & 4294967295\n+    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n \n-    exponent = max(0, attempt - 1)\n-    delay = max_delay if (exponent >= 63 or base_delay <= 0) else min(base_delay * (2 ** exponent), max_delay)\n \n-    # Seed from time + counter so coarse clocks still decorrelate.\n-    seed = (time.time_ns() ^ (tick * 0x9E3779B9)) & 0xFFFFFFFF\n-    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n+\n \n \n def _error_text(error: Any) -> str:\n",
+        "files_modified": [
+          "/private<scratch>/hermes-retry-optional-keyword/agent/retry_utils.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-retry-optional-keyword/agent/retry_utils.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-retry-optional-keyword/agent/retry_utils.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "agent/retry_utils.py": "4c643880c012dd536dca08041f1bae93b6a58477186b5cf0b4e27ec3c640014c",
+        "agent/auxiliary_rate_limit_backoff.py": "0f783d8ecf7f96c35cc8d1785927b5d60b675eff917a2ac5f0165e75d78c605e",
+        "tests/agent/test_retry_utils.py": "8eb5d1afac1b7cf39dd71973db3d910ac621d51840e60a48078cd851425956d2"
+      }
+    },
+    {
+      "case": "hermes-retry-body-only",
+      "group": "pinned-real-source",
+      "helper": "agent/retry_utils.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/retry_utils.py:167": {
+          "error": null,
+          "scope": "same-file"
+        },
+        "agent/auxiliary_rate_limit_backoff.py:45": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:24": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:15": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:45": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/retry_utils.py\n@@\n     return None\n \n \n-def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float:\n+def jittered_backoff(attempt: int, *, base_delay: float=5.0, max_delay: float=120.0, jitter_ratio: float=0.5) -> float:\n     \"\"\"min(base * 2^(attempt-1), max_delay) + uniform jitter in\n     [0, jitter_ratio * delay]. ``attempt`` is 1-based.\"\"\"\n     global _jitter_counter\n     with _jitter_lock:\n         _jitter_counter += 1\n         tick = _jitter_counter\n+    exponent = max(0, attempt - 1)\n+    delay = max_delay if exponent >= 63 or base_delay <= 0 else min(base_delay * 2 ** exponent, max_delay)\n+    seed = (time.time_ns() ^ tick * 2654435769) & 4294967295\n+    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n+    pass\n \n-    exponent = max(0, attempt - 1)\n-    delay = max_delay if (exponent >= 63 or base_delay <= 0) else min(base_delay * (2 ** exponent), max_delay)\n \n-    # Seed from time + counter so coarse clocks still decorrelate.\n-    seed = (time.time_ns() ^ (tick * 0x9E3779B9)) & 0xFFFFFFFF\n-    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n \n \n def _error_text(error: Any) -> str:\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-retry-body-only/agent/retry_utils.py\n+++ b//private<scratch>/hermes-retry-body-only/agent/retry_utils.py\n@@ -118,20 +118,20 @@\n     return None\n \n \n-def jittered_backoff(attempt: int, *, base_delay: float = 5.0, max_delay: float = 120.0, jitter_ratio: float = 0.5) -> float:\n+def jittered_backoff(attempt: int, *, base_delay: float=5.0, max_delay: float=120.0, jitter_ratio: float=0.5) -> float:\n     \"\"\"min(base * 2^(attempt-1), max_delay) + uniform jitter in\n     [0, jitter_ratio * delay]. ``attempt`` is 1-based.\"\"\"\n     global _jitter_counter\n     with _jitter_lock:\n         _jitter_counter += 1\n         tick = _jitter_counter\n+    exponent = max(0, attempt - 1)\n+    delay = max_delay if exponent >= 63 or base_delay <= 0 else min(base_delay * 2 ** exponent, max_delay)\n+    seed = (time.time_ns() ^ tick * 2654435769) & 4294967295\n+    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n+    pass\n \n-    exponent = max(0, attempt - 1)\n-    delay = max_delay if (exponent >= 63 or base_delay <= 0) else min(base_delay * (2 ** exponent), max_delay)\n \n-    # Seed from time + counter so coarse clocks still decorrelate.\n-    seed = (time.time_ns() ^ (tick * 0x9E3779B9)) & 0xFFFFFFFF\n-    return delay + random.Random(seed).uniform(0, jitter_ratio * delay)\n \n \n def _error_text(error: Any) -> str:\n",
+        "files_modified": [
+          "/private<scratch>/hermes-retry-body-only/agent/retry_utils.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-retry-body-only/agent/retry_utils.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-retry-body-only/agent/retry_utils.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "agent/retry_utils.py": "4c643880c012dd536dca08041f1bae93b6a58477186b5cf0b4e27ec3c640014c",
+        "agent/auxiliary_rate_limit_backoff.py": "0f783d8ecf7f96c35cc8d1785927b5d60b675eff917a2ac5f0165e75d78c605e",
+        "tests/agent/test_retry_utils.py": "8eb5d1afac1b7cf39dd71973db3d910ac621d51840e60a48078cd851425956d2"
+      }
+    },
+    {
+      "case": "hermes-watchdog-keyword-rename",
+      "group": "pinned-real-source",
+      "helper": "agent/chat_completion_wait_notice.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/chat_completion_nonstream.py:168": {
+          "error": "missing a required keyword-only argument: 'renamed_stale_timeout'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:335": {
+          "error": "missing a required keyword-only argument: 'renamed_stale_timeout'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:458": {
+          "error": "missing a required keyword-only argument: 'renamed_stale_timeout'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/chat_completion_wait_notice.py\n@@\n     return text\n \n \n-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n-    last_event_ts: Optional[float], last_progress_ts: Optional[float],\n-    retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,\n-    idle_timeout: float, idle_requires_progress: bool, elapsed: float,\n-    progress_timeout: float = 0.0) -> Optional[tuple[str, float]]:\n+def codex_watchdog_deadline(*, renamed_stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float=0.0) -> Optional[tuple[str, float]]:\n     \"\"\"Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when\n     none applies (disabled/infinite, or its deadline already passed).\"\"\"\n     deadlines: list[tuple[str, float]] = []\n-    if math.isfinite(stale_timeout):\n-        deadlines.append((\"wall-clock stale\", stale_timeout))\n+    if math.isfinite(renamed_stale_timeout):\n+        deadlines.append(('wall-clock stale', renamed_stale_timeout))\n     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0\n     if last_event_ts is None:\n         if ttfb_enabled and math.isfinite(ttfb_timeout):\n-            deadlines.append((\"TTFB\", attempt_offset + ttfb_timeout))\n+            deadlines.append(('TTFB', attempt_offset + ttfb_timeout))\n     elif progress_timeout > 0 and last_progress_ts is None:\n-        deadlines.append((\"first progress\", attempt_offset + progress_timeout))\n+        deadlines.append(('first progress', attempt_offset + progress_timeout))\n     elif (not idle_requires_progress or last_progress_ts is not None) and idle_enabled and math.isfinite(idle_timeout):\n-        deadlines.append((\"stream idle\", max(0.0, last_event_ts - call_start) + idle_timeout))\n+        deadlines.append(('stream idle', max(0.0, last_event_ts - call_start) + idle_timeout))\n     if not deadlines:\n         return None\n     label, deadline = min(deadlines, key=lambda d: d[1])\n     if deadline <= elapsed:\n         return None\n-    return label, deadline - elapsed\n+    return (label, deadline - elapsed)\n+\n+\n+\n+\n \n \n class WaitNoticeState:\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-watchdog-keyword-rename/agent/chat_completion_wait_notice.py\n+++ b//private<scratch>/hermes-watchdog-keyword-rename/agent/chat_completion_wait_notice.py\n@@ -41,30 +41,30 @@\n     return text\n \n \n-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n-    last_event_ts: Optional[float], last_progress_ts: Optional[float],\n-    retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,\n-    idle_timeout: float, idle_requires_progress: bool, elapsed: float,\n-    progress_timeout: float = 0.0) -> Optional[tuple[str, float]]:\n+def codex_watchdog_deadline(*, renamed_stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float=0.0) -> Optional[tuple[str, float]]:\n     \"\"\"Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when\n     none applies (disabled/infinite, or its deadline already passed).\"\"\"\n     deadlines: list[tuple[str, float]] = []\n-    if math.isfinite(stale_timeout):\n-        deadlines.append((\"wall-clock stale\", stale_timeout))\n+    if math.isfinite(renamed_stale_timeout):\n+        deadlines.append(('wall-clock stale', renamed_stale_timeout))\n     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0\n     if last_event_ts is None:\n         if ttfb_enabled and math.isfinite(ttfb_timeout):\n-            deadlines.append((\"TTFB\", attempt_offset + ttfb_timeout))\n+            deadlines.append(('TTFB', attempt_offset + ttfb_timeout))\n     elif progress_timeout > 0 and last_progress_ts is None:\n-        deadlines.append((\"first progress\", attempt_offset + progress_timeout))\n+        deadlines.append(('first progress', attempt_offset + progress_timeout))\n     elif (not idle_requires_progress or last_progress_ts is not None) and idle_enabled and math.isfinite(idle_timeout):\n-        deadlines.append((\"stream idle\", max(0.0, last_event_ts - call_start) + idle_timeout))\n+        deadlines.append(('stream idle', max(0.0, last_event_ts - call_start) + idle_timeout))\n     if not deadlines:\n         return None\n     label, deadline = min(deadlines, key=lambda d: d[1])\n     if deadline <= elapsed:\n         return None\n-    return label, deadline - elapsed\n+    return (label, deadline - elapsed)\n+\n+\n+\n+\n \n \n class WaitNoticeState:\n",
+        "files_modified": [
+          "/private<scratch>/hermes-watchdog-keyword-rename/agent/chat_completion_wait_notice.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-watchdog-keyword-rename/agent/chat_completion_wait_notice.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-watchdog-keyword-rename/agent/chat_completion_wait_notice.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `codex_watchdog_deadline` in `agent/chat_completion_wait_notice.py` (`def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float = 0.0) -> Optional[tuple[str, float]]` -> `def codex_watchdog_deadline(*, renamed_stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float = 0.0) -> Optional[tuple[str, float]]`) \u2014 Signature of 'codex_watchdog_deadline' no longer accepts 3 external call site(s). Unexpected keyword argument 'stale_timeout'.\n  -> Update caller `agent/chat_completion_nonstream.py:168` (`_NonStreamRequest._emit_wait_notice`): unexpected keyword argument 'stale_timeout'\n     Review replacing stale_timeout= with renamed_stale_timeout=.\n  -> Update caller `tests/agent/test_codex_ttfb_watchdog.py:335` (`test_lifecycle_event_does_not_restart_first_progress_deadline`): unexpected keyword argument 'stale_timeout'\n     Review replacing stale_timeout= with renamed_stale_timeout=.\n  -> Update caller `tests/agent/test_codex_ttfb_watchdog.py:458` (`test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite`): unexpected keyword argument 'stale_timeout'\n     Review replacing stale_timeout= with renamed_stale_timeout=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "agent/chat_completion_nonstream.py:168",
+        "tests/agent/test_codex_ttfb_watchdog.py:335",
+        "tests/agent/test_codex_ttfb_watchdog.py:458"
+      ],
+      "files_sha256": {
+        "agent/chat_completion_wait_notice.py": "26aa4d603687f365729e4d8108efda7be627ea5482fa10c56f225c2a6cbc8c84",
+        "agent/chat_completion_nonstream.py": "34d4afad0a0c7228a0518eed4a2521ba1a340f509c83784c74abceb56f1becb7",
+        "tests/agent/test_codex_ttfb_watchdog.py": "eb91abc5498264e88543d443680a76f1e871fea50654fb53efec3e43243b4942"
+      }
+    },
+    {
+      "case": "hermes-watchdog-required-keyword",
+      "group": "pinned-real-source",
+      "helper": "agent/chat_completion_wait_notice.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/chat_completion_nonstream.py:168": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:335": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:458": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/chat_completion_wait_notice.py\n@@\n     return text\n \n \n-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n-    last_event_ts: Optional[float], last_progress_ts: Optional[float],\n-    retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,\n-    idle_timeout: float, idle_requires_progress: bool, elapsed: float,\n-    progress_timeout: float = 0.0) -> Optional[tuple[str, float]]:\n+def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float=0.0, corpus_probe) -> Optional[tuple[str, float]]:\n     \"\"\"Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when\n     none applies (disabled/infinite, or its deadline already passed).\"\"\"\n     deadlines: list[tuple[str, float]] = []\n     if math.isfinite(stale_timeout):\n-        deadlines.append((\"wall-clock stale\", stale_timeout))\n+        deadlines.append(('wall-clock stale', stale_timeout))\n     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0\n     if last_event_ts is None:\n         if ttfb_enabled and math.isfinite(ttfb_timeout):\n-            deadlines.append((\"TTFB\", attempt_offset + ttfb_timeout))\n+            deadlines.append(('TTFB', attempt_offset + ttfb_timeout))\n     elif progress_timeout > 0 and last_progress_ts is None:\n-        deadlines.append((\"first progress\", attempt_offset + progress_timeout))\n+        deadlines.append(('first progress', attempt_offset + progress_timeout))\n     elif (not idle_requires_progress or last_progress_ts is not None) and idle_enabled and math.isfinite(idle_timeout):\n-        deadlines.append((\"stream idle\", max(0.0, last_event_ts - call_start) + idle_timeout))\n+        deadlines.append(('stream idle', max(0.0, last_event_ts - call_start) + idle_timeout))\n     if not deadlines:\n         return None\n     label, deadline = min(deadlines, key=lambda d: d[1])\n     if deadline <= elapsed:\n         return None\n-    return label, deadline - elapsed\n+    return (label, deadline - elapsed)\n+\n+\n+\n+\n \n \n class WaitNoticeState:\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-watchdog-required-keyword/agent/chat_completion_wait_notice.py\n+++ b//private<scratch>/hermes-watchdog-required-keyword/agent/chat_completion_wait_notice.py\n@@ -41,30 +41,30 @@\n     return text\n \n \n-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n-    last_event_ts: Optional[float], last_progress_ts: Optional[float],\n-    retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,\n-    idle_timeout: float, idle_requires_progress: bool, elapsed: float,\n-    progress_timeout: float = 0.0) -> Optional[tuple[str, float]]:\n+def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float=0.0, corpus_probe) -> Optional[tuple[str, float]]:\n     \"\"\"Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when\n     none applies (disabled/infinite, or its deadline already passed).\"\"\"\n     deadlines: list[tuple[str, float]] = []\n     if math.isfinite(stale_timeout):\n-        deadlines.append((\"wall-clock stale\", stale_timeout))\n+        deadlines.append(('wall-clock stale', stale_timeout))\n     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0\n     if last_event_ts is None:\n         if ttfb_enabled and math.isfinite(ttfb_timeout):\n-            deadlines.append((\"TTFB\", attempt_offset + ttfb_timeout))\n+            deadlines.append(('TTFB', attempt_offset + ttfb_timeout))\n     elif progress_timeout > 0 and last_progress_ts is None:\n-        deadlines.append((\"first progress\", attempt_offset + progress_timeout))\n+        deadlines.append(('first progress', attempt_offset + progress_timeout))\n     elif (not idle_requires_progress or last_progress_ts is not None) and idle_enabled and math.isfinite(idle_timeout):\n-        deadlines.append((\"stream idle\", max(0.0, last_event_ts - call_start) + idle_timeout))\n+        deadlines.append(('stream idle', max(0.0, last_event_ts - call_start) + idle_timeout))\n     if not deadlines:\n         return None\n     label, deadline = min(deadlines, key=lambda d: d[1])\n     if deadline <= elapsed:\n         return None\n-    return label, deadline - elapsed\n+    return (label, deadline - elapsed)\n+\n+\n+\n+\n \n \n class WaitNoticeState:\n",
+        "files_modified": [
+          "/private<scratch>/hermes-watchdog-required-keyword/agent/chat_completion_wait_notice.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-watchdog-required-keyword/agent/chat_completion_wait_notice.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-watchdog-required-keyword/agent/chat_completion_wait_notice.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `codex_watchdog_deadline` in `agent/chat_completion_wait_notice.py` (`def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float = 0.0) -> Optional[tuple[str, float]]` -> `def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float = 0.0, corpus_probe) -> Optional[tuple[str, float]]`) \u2014 Signature of 'codex_watchdog_deadline' no longer accepts 3 external call site(s). Missing required keyword-only argument 'corpus_probe'.\n  -> Update caller `agent/chat_completion_nonstream.py:168` (`_NonStreamRequest._emit_wait_notice`): missing required keyword-only argument 'corpus_probe'\n  -> Update caller `tests/agent/test_codex_ttfb_watchdog.py:335` (`test_lifecycle_event_does_not_restart_first_progress_deadline`): missing required keyword-only argument 'corpus_probe'\n  -> Update caller `tests/agent/test_codex_ttfb_watchdog.py:458` (`test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite`): missing required keyword-only argument 'corpus_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "agent/chat_completion_nonstream.py:168",
+        "tests/agent/test_codex_ttfb_watchdog.py:335",
+        "tests/agent/test_codex_ttfb_watchdog.py:458"
+      ],
+      "files_sha256": {
+        "agent/chat_completion_wait_notice.py": "26aa4d603687f365729e4d8108efda7be627ea5482fa10c56f225c2a6cbc8c84",
+        "agent/chat_completion_nonstream.py": "34d4afad0a0c7228a0518eed4a2521ba1a340f509c83784c74abceb56f1becb7",
+        "tests/agent/test_codex_ttfb_watchdog.py": "eb91abc5498264e88543d443680a76f1e871fea50654fb53efec3e43243b4942"
+      }
+    },
+    {
+      "case": "hermes-watchdog-optional-keyword",
+      "group": "pinned-real-source",
+      "helper": "agent/chat_completion_wait_notice.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/chat_completion_nonstream.py:168": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:335": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:458": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/chat_completion_wait_notice.py\n@@\n     return text\n \n \n-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n-    last_event_ts: Optional[float], last_progress_ts: Optional[float],\n-    retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,\n-    idle_timeout: float, idle_requires_progress: bool, elapsed: float,\n-    progress_timeout: float = 0.0) -> Optional[tuple[str, float]]:\n+def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float=0.0, corpus_probe=None) -> Optional[tuple[str, float]]:\n     \"\"\"Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when\n     none applies (disabled/infinite, or its deadline already passed).\"\"\"\n     deadlines: list[tuple[str, float]] = []\n     if math.isfinite(stale_timeout):\n-        deadlines.append((\"wall-clock stale\", stale_timeout))\n+        deadlines.append(('wall-clock stale', stale_timeout))\n     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0\n     if last_event_ts is None:\n         if ttfb_enabled and math.isfinite(ttfb_timeout):\n-            deadlines.append((\"TTFB\", attempt_offset + ttfb_timeout))\n+            deadlines.append(('TTFB', attempt_offset + ttfb_timeout))\n     elif progress_timeout > 0 and last_progress_ts is None:\n-        deadlines.append((\"first progress\", attempt_offset + progress_timeout))\n+        deadlines.append(('first progress', attempt_offset + progress_timeout))\n     elif (not idle_requires_progress or last_progress_ts is not None) and idle_enabled and math.isfinite(idle_timeout):\n-        deadlines.append((\"stream idle\", max(0.0, last_event_ts - call_start) + idle_timeout))\n+        deadlines.append(('stream idle', max(0.0, last_event_ts - call_start) + idle_timeout))\n     if not deadlines:\n         return None\n     label, deadline = min(deadlines, key=lambda d: d[1])\n     if deadline <= elapsed:\n         return None\n-    return label, deadline - elapsed\n+    return (label, deadline - elapsed)\n+\n+\n+\n+\n \n \n class WaitNoticeState:\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-watchdog-optional-keyword/agent/chat_completion_wait_notice.py\n+++ b//private<scratch>/hermes-watchdog-optional-keyword/agent/chat_completion_wait_notice.py\n@@ -41,30 +41,30 @@\n     return text\n \n \n-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n-    last_event_ts: Optional[float], last_progress_ts: Optional[float],\n-    retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,\n-    idle_timeout: float, idle_requires_progress: bool, elapsed: float,\n-    progress_timeout: float = 0.0) -> Optional[tuple[str, float]]:\n+def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float=0.0, corpus_probe=None) -> Optional[tuple[str, float]]:\n     \"\"\"Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when\n     none applies (disabled/infinite, or its deadline already passed).\"\"\"\n     deadlines: list[tuple[str, float]] = []\n     if math.isfinite(stale_timeout):\n-        deadlines.append((\"wall-clock stale\", stale_timeout))\n+        deadlines.append(('wall-clock stale', stale_timeout))\n     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0\n     if last_event_ts is None:\n         if ttfb_enabled and math.isfinite(ttfb_timeout):\n-            deadlines.append((\"TTFB\", attempt_offset + ttfb_timeout))\n+            deadlines.append(('TTFB', attempt_offset + ttfb_timeout))\n     elif progress_timeout > 0 and last_progress_ts is None:\n-        deadlines.append((\"first progress\", attempt_offset + progress_timeout))\n+        deadlines.append(('first progress', attempt_offset + progress_timeout))\n     elif (not idle_requires_progress or last_progress_ts is not None) and idle_enabled and math.isfinite(idle_timeout):\n-        deadlines.append((\"stream idle\", max(0.0, last_event_ts - call_start) + idle_timeout))\n+        deadlines.append(('stream idle', max(0.0, last_event_ts - call_start) + idle_timeout))\n     if not deadlines:\n         return None\n     label, deadline = min(deadlines, key=lambda d: d[1])\n     if deadline <= elapsed:\n         return None\n-    return label, deadline - elapsed\n+    return (label, deadline - elapsed)\n+\n+\n+\n+\n \n \n class WaitNoticeState:\n",
+        "files_modified": [
+          "/private<scratch>/hermes-watchdog-optional-keyword/agent/chat_completion_wait_notice.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-watchdog-optional-keyword/agent/chat_completion_wait_notice.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-watchdog-optional-keyword/agent/chat_completion_wait_notice.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "agent/chat_completion_wait_notice.py": "26aa4d603687f365729e4d8108efda7be627ea5482fa10c56f225c2a6cbc8c84",
+        "agent/chat_completion_nonstream.py": "34d4afad0a0c7228a0518eed4a2521ba1a340f509c83784c74abceb56f1becb7",
+        "tests/agent/test_codex_ttfb_watchdog.py": "eb91abc5498264e88543d443680a76f1e871fea50654fb53efec3e43243b4942"
+      }
+    },
+    {
+      "case": "hermes-watchdog-body-only",
+      "group": "pinned-real-source",
+      "helper": "agent/chat_completion_wait_notice.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/chat_completion_nonstream.py:168": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:335": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:458": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/chat_completion_wait_notice.py\n@@\n     return text\n \n \n-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n-    last_event_ts: Optional[float], last_progress_ts: Optional[float],\n-    retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,\n-    idle_timeout: float, idle_requires_progress: bool, elapsed: float,\n-    progress_timeout: float = 0.0) -> Optional[tuple[str, float]]:\n+def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float=0.0) -> Optional[tuple[str, float]]:\n     \"\"\"Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when\n     none applies (disabled/infinite, or its deadline already passed).\"\"\"\n     deadlines: list[tuple[str, float]] = []\n     if math.isfinite(stale_timeout):\n-        deadlines.append((\"wall-clock stale\", stale_timeout))\n+        deadlines.append(('wall-clock stale', stale_timeout))\n     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0\n     if last_event_ts is None:\n         if ttfb_enabled and math.isfinite(ttfb_timeout):\n-            deadlines.append((\"TTFB\", attempt_offset + ttfb_timeout))\n+            deadlines.append(('TTFB', attempt_offset + ttfb_timeout))\n     elif progress_timeout > 0 and last_progress_ts is None:\n-        deadlines.append((\"first progress\", attempt_offset + progress_timeout))\n+        deadlines.append(('first progress', attempt_offset + progress_timeout))\n     elif (not idle_requires_progress or last_progress_ts is not None) and idle_enabled and math.isfinite(idle_timeout):\n-        deadlines.append((\"stream idle\", max(0.0, last_event_ts - call_start) + idle_timeout))\n+        deadlines.append(('stream idle', max(0.0, last_event_ts - call_start) + idle_timeout))\n     if not deadlines:\n         return None\n     label, deadline = min(deadlines, key=lambda d: d[1])\n     if deadline <= elapsed:\n         return None\n-    return label, deadline - elapsed\n+    return (label, deadline - elapsed)\n+    pass\n+\n+\n+\n \n \n class WaitNoticeState:\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-watchdog-body-only/agent/chat_completion_wait_notice.py\n+++ b//private<scratch>/hermes-watchdog-body-only/agent/chat_completion_wait_notice.py\n@@ -41,30 +41,30 @@\n     return text\n \n \n-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n-    last_event_ts: Optional[float], last_progress_ts: Optional[float],\n-    retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,\n-    idle_timeout: float, idle_requires_progress: bool, elapsed: float,\n-    progress_timeout: float = 0.0) -> Optional[tuple[str, float]]:\n+def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float, last_event_ts: Optional[float], last_progress_ts: Optional[float], retry_started_ts: Optional[float], call_start: float, idle_enabled: bool, idle_timeout: float, idle_requires_progress: bool, elapsed: float, progress_timeout: float=0.0) -> Optional[tuple[str, float]]:\n     \"\"\"Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when\n     none applies (disabled/infinite, or its deadline already passed).\"\"\"\n     deadlines: list[tuple[str, float]] = []\n     if math.isfinite(stale_timeout):\n-        deadlines.append((\"wall-clock stale\", stale_timeout))\n+        deadlines.append(('wall-clock stale', stale_timeout))\n     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0\n     if last_event_ts is None:\n         if ttfb_enabled and math.isfinite(ttfb_timeout):\n-            deadlines.append((\"TTFB\", attempt_offset + ttfb_timeout))\n+            deadlines.append(('TTFB', attempt_offset + ttfb_timeout))\n     elif progress_timeout > 0 and last_progress_ts is None:\n-        deadlines.append((\"first progress\", attempt_offset + progress_timeout))\n+        deadlines.append(('first progress', attempt_offset + progress_timeout))\n     elif (not idle_requires_progress or last_progress_ts is not None) and idle_enabled and math.isfinite(idle_timeout):\n-        deadlines.append((\"stream idle\", max(0.0, last_event_ts - call_start) + idle_timeout))\n+        deadlines.append(('stream idle', max(0.0, last_event_ts - call_start) + idle_timeout))\n     if not deadlines:\n         return None\n     label, deadline = min(deadlines, key=lambda d: d[1])\n     if deadline <= elapsed:\n         return None\n-    return label, deadline - elapsed\n+    return (label, deadline - elapsed)\n+    pass\n+\n+\n+\n \n \n class WaitNoticeState:\n",
+        "files_modified": [
+          "/private<scratch>/hermes-watchdog-body-only/agent/chat_completion_wait_notice.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-watchdog-body-only/agent/chat_completion_wait_notice.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-watchdog-body-only/agent/chat_completion_wait_notice.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "agent/chat_completion_wait_notice.py": "26aa4d603687f365729e4d8108efda7be627ea5482fa10c56f225c2a6cbc8c84",
+        "agent/chat_completion_nonstream.py": "34d4afad0a0c7228a0518eed4a2521ba1a340f509c83784c74abceb56f1becb7",
+        "tests/agent/test_codex_ttfb_watchdog.py": "eb91abc5498264e88543d443680a76f1e871fea50654fb53efec3e43243b4942"
+      }
+    },
+    {
+      "case": "hermes-accounting-keyword-rename",
+      "group": "pinned-real-source",
+      "helper": "agent/aux_accounting.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/auxiliary_client.py:6647": {
+          "error": "got an unexpected keyword argument 'provider'",
+          "scope": "cross-file"
+        },
+        "plugins/image_gen/_common.py:270": {
+          "error": "got an unexpected keyword argument 'provider'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:199": {
+          "error": "got an unexpected keyword argument 'provider'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:222": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:223": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/aux_accounting.py\n@@\n         _accounting.set(None)\n \n \n-def record_aux_usage(\n-    response: Any, task: Optional[str], *, provider: Optional[str] = None,\n-    base_url: Optional[str] = None,\n-) -> None:\n+def record_aux_usage(response: Any, task: Optional[str], *, renamed_provider: Optional[str]=None, base_url: Optional[str]=None) -> None:\n     \"\"\"Record an auxiliary response's token usage against the ambient session.\n \n     Strictly best-effort (accounting must never break an aux call). No-ops outside an\n@@\n         if ctx is None:\n             return\n         session_db, session_id = ctx\n-        raw_usage = getattr(response, \"usage\", None)\n+        raw_usage = getattr(response, 'usage', None)\n         if raw_usage is None:\n             return\n-\n         from agent.usage_pricing import estimate_usage_cost, normalize_usage, with_served_service_tier\n-\n-        usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider), response)\n-        if not (\n-            usage.input_tokens or usage.output_tokens\n-            or usage.cache_read_tokens or usage.cache_write_tokens\n-            or usage.reasoning_tokens\n-        ):\n+        usage = with_served_service_tier(normalize_usage(raw_usage, provider=renamed_provider), response)\n+        if not (usage.input_tokens or usage.output_tokens or usage.cache_read_tokens or usage.cache_write_tokens or usage.reasoning_tokens):\n             return\n-        model = str(getattr(response, \"model\", \"\") or \"\") or \"unknown\"\n+        model = str(getattr(response, 'model', '') or '') or 'unknown'\n         estimated_cost = None\n         try:\n-            cost = estimate_usage_cost(model, usage, provider=provider, base_url=base_url)\n+            cost = estimate_usage_cost(model, usage, provider=renamed_provider, base_url=base_url)\n             if cost.amount_usd is not None:\n                 estimated_cost = float(cost.amount_usd)\n         except Exception:\n-            logger.debug(\"Aux usage cost estimation failed\", exc_info=True)\n-        # Inside a Relay-driven tool callback the thread runs Relay's loop; a worker store refuses\n-        # synchronous RPC there (#139029).\n+            logger.debug('Aux usage cost estimation failed', exc_info=True)\n         from agent.runtime_session_store import call_off_event_loop\n-        call_off_event_loop(\n-            session_db.record_auxiliary_usage,\n-            session_id, task, model=model, billing_provider=provider, billing_base_url=base_url,\n-            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,\n-            cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens,\n-            reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost,\n-        )\n+        call_off_event_loop(session_db.record_auxiliary_usage, session_id, task, model=model, billing_provider=renamed_provider, billing_base_url=base_url, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens, reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost)\n     except Exception:\n-        logger.debug(\"Aux usage recording failed (non-fatal)\", exc_info=True)\n+        logger.debug('Aux usage recording failed (non-fatal)', exc_info=True)\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-accounting-keyword-rename/agent/aux_accounting.py\n+++ b//private<scratch>/hermes-accounting-keyword-rename/agent/aux_accounting.py\n@@ -42,10 +42,7 @@\n         _accounting.set(None)\n \n \n-def record_aux_usage(\n-    response: Any, task: Optional[str], *, provider: Optional[str] = None,\n-    base_url: Optional[str] = None,\n-) -> None:\n+def record_aux_usage(response: Any, task: Optional[str], *, renamed_provider: Optional[str]=None, base_url: Optional[str]=None) -> None:\n     \"\"\"Record an auxiliary response's token usage against the ambient session.\n \n     Strictly best-effort (accounting must never break an aux call). No-ops outside an\n@@ -60,36 +57,39 @@\n         if ctx is None:\n             return\n         session_db, session_id = ctx\n-        raw_usage = getattr(response, \"usage\", None)\n+        raw_usage = getattr(response, 'usage', None)\n         if raw_usage is None:\n             return\n-\n         from agent.usage_pricing import estimate_usage_cost, normalize_usage, with_served_service_tier\n-\n-        usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider), response)\n-        if not (\n-            usage.input_tokens or usage.output_tokens\n-            or usage.cache_read_tokens or usage.cache_write_tokens\n-            or usage.reasoning_tokens\n-        ):\n+        usage = with_served_service_tier(normalize_usage(raw_usage, provider=renamed_provider), response)\n+        if not (usage.input_tokens or usage.output_tokens or usage.cache_read_tokens or usage.cache_write_tokens or usage.reasoning_tokens):\n             return\n-        model = str(getattr(response, \"model\", \"\") or \"\") or \"unknown\"\n+        model = str(getattr(response, 'model', '') or '') or 'unknown'\n         estimated_cost = None\n         try:\n-            cost = estimate_usage_cost(model, usage, provider=provider, base_url=base_url)\n+            cost = estimate_usage_cost(model, usage, provider=renamed_provider, base_url=base_url)\n             if cost.amount_usd is not None:\n                 estimated_cost = float(cost.amount_usd)\n         except Exception:\n-            logger.debug(\"Aux usage cost estimation failed\", exc_info=True)\n-        # Inside a Relay-driven tool callback the thread runs Relay's loop; a worker store refuses\n-        # synchronous RPC there (#139029).\n+            logger.debug('Aux usage cost estimation failed', exc_info=True)\n         from agent.runtime_session_store import call_off_event_loop\n-        call_off_event_loop(\n-            session_db.record_auxiliary_usage,\n-            session_id, task, model=model, billing_provider=provider, billing_base_url=base_url,\n-            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,\n-            cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens,\n-            reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost,\n-        )\n+        call_off_event_loop(session_db.record_auxiliary_usage, session_id, task, model=model, billing_provider=renamed_provider, billing_base_url=base_url, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens, reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost)\n     except Exception:\n-        logger.debug(\"Aux usage recording failed (non-fatal)\", exc_info=True)\n+        logger.debug('Aux usage recording failed (non-fatal)', exc_info=True)\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n",
+        "files_modified": [
+          "/private<scratch>/hermes-accounting-keyword-rename/agent/aux_accounting.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-accounting-keyword-rename/agent/aux_accounting.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-accounting-keyword-rename/agent/aux_accounting.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `record_aux_usage` in `agent/aux_accounting.py` (`def record_aux_usage(response: Any, task: Optional[str], *, provider: Optional[str] = None, base_url: Optional[str] = None) -> None` -> `def record_aux_usage(response: Any, task: Optional[str], *, renamed_provider: Optional[str] = None, base_url: Optional[str] = None) -> None`) \u2014 Signature of 'record_aux_usage' no longer accepts 3 external call site(s). Unexpected keyword argument 'provider'.\n  -> Update caller `agent/auxiliary_client.py:6647` (`_validate_llm_response`): unexpected keyword argument 'provider'\n     Review replacing provider= with renamed_provider=.\n  -> Update caller `plugins/image_gen/_common.py:270` (`record_token_usage`): unexpected keyword argument 'provider'\n     Review replacing provider= with renamed_provider=.\n  -> Update caller `tests/hermes_state/test_aux_usage_accounting.py:199` (`TestAmbientAccountingContext.test_record_aux_usage_writes_through_context`): unexpected keyword argument 'provider'\n     Review replacing provider= with renamed_provider=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "agent/auxiliary_client.py:6647",
+        "plugins/image_gen/_common.py:270",
+        "tests/hermes_state/test_aux_usage_accounting.py:199"
+      ],
+      "files_sha256": {
+        "agent/aux_accounting.py": "162711ae15f31d1562a5a76a3f7f82840d8b92ccfcde834ee759404e407c2e83",
+        "agent/auxiliary_client.py": "34ed4b8328df4f3bc776835a88e0883e64c118edb9117df0ca2f9ad2300a5cdd",
+        "plugins/image_gen/_common.py": "d68ec699126f8146f876fb864432dc1ad5c810f1f9312a74ef189c0578a34f6e",
+        "tests/hermes_state/test_aux_usage_accounting.py": "c19e5ed4f83b3f00f02e6d9a9b6d2b107dfd8a9bc9536b2df60a8433291c23f0"
+      }
+    },
+    {
+      "case": "hermes-accounting-required-keyword",
+      "group": "pinned-real-source",
+      "helper": "agent/aux_accounting.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/auxiliary_client.py:6647": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "plugins/image_gen/_common.py:270": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:199": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:222": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:223": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/aux_accounting.py\n@@\n         _accounting.set(None)\n \n \n-def record_aux_usage(\n-    response: Any, task: Optional[str], *, provider: Optional[str] = None,\n-    base_url: Optional[str] = None,\n-) -> None:\n+def record_aux_usage(response: Any, task: Optional[str], *, provider: Optional[str]=None, base_url: Optional[str]=None, corpus_probe) -> None:\n     \"\"\"Record an auxiliary response's token usage against the ambient session.\n \n     Strictly best-effort (accounting must never break an aux call). No-ops outside an\n@@\n         if ctx is None:\n             return\n         session_db, session_id = ctx\n-        raw_usage = getattr(response, \"usage\", None)\n+        raw_usage = getattr(response, 'usage', None)\n         if raw_usage is None:\n             return\n-\n         from agent.usage_pricing import estimate_usage_cost, normalize_usage, with_served_service_tier\n-\n         usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider), response)\n-        if not (\n-            usage.input_tokens or usage.output_tokens\n-            or usage.cache_read_tokens or usage.cache_write_tokens\n-            or usage.reasoning_tokens\n-        ):\n+        if not (usage.input_tokens or usage.output_tokens or usage.cache_read_tokens or usage.cache_write_tokens or usage.reasoning_tokens):\n             return\n-        model = str(getattr(response, \"model\", \"\") or \"\") or \"unknown\"\n+        model = str(getattr(response, 'model', '') or '') or 'unknown'\n         estimated_cost = None\n         try:\n             cost = estimate_usage_cost(model, usage, provider=provider, base_url=base_url)\n             if cost.amount_usd is not None:\n                 estimated_cost = float(cost.amount_usd)\n         except Exception:\n-            logger.debug(\"Aux usage cost estimation failed\", exc_info=True)\n-        # Inside a Relay-driven tool callback the thread runs Relay's loop; a worker store refuses\n-        # synchronous RPC there (#139029).\n+            logger.debug('Aux usage cost estimation failed', exc_info=True)\n         from agent.runtime_session_store import call_off_event_loop\n-        call_off_event_loop(\n-            session_db.record_auxiliary_usage,\n-            session_id, task, model=model, billing_provider=provider, billing_base_url=base_url,\n-            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,\n-            cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens,\n-            reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost,\n-        )\n+        call_off_event_loop(session_db.record_auxiliary_usage, session_id, task, model=model, billing_provider=provider, billing_base_url=base_url, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens, reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost)\n     except Exception:\n-        logger.debug(\"Aux usage recording failed (non-fatal)\", exc_info=True)\n+        logger.debug('Aux usage recording failed (non-fatal)', exc_info=True)\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-accounting-required-keyword/agent/aux_accounting.py\n+++ b//private<scratch>/hermes-accounting-required-keyword/agent/aux_accounting.py\n@@ -42,10 +42,7 @@\n         _accounting.set(None)\n \n \n-def record_aux_usage(\n-    response: Any, task: Optional[str], *, provider: Optional[str] = None,\n-    base_url: Optional[str] = None,\n-) -> None:\n+def record_aux_usage(response: Any, task: Optional[str], *, provider: Optional[str]=None, base_url: Optional[str]=None, corpus_probe) -> None:\n     \"\"\"Record an auxiliary response's token usage against the ambient session.\n \n     Strictly best-effort (accounting must never break an aux call). No-ops outside an\n@@ -60,36 +57,39 @@\n         if ctx is None:\n             return\n         session_db, session_id = ctx\n-        raw_usage = getattr(response, \"usage\", None)\n+        raw_usage = getattr(response, 'usage', None)\n         if raw_usage is None:\n             return\n-\n         from agent.usage_pricing import estimate_usage_cost, normalize_usage, with_served_service_tier\n-\n         usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider), response)\n-        if not (\n-            usage.input_tokens or usage.output_tokens\n-            or usage.cache_read_tokens or usage.cache_write_tokens\n-            or usage.reasoning_tokens\n-        ):\n+        if not (usage.input_tokens or usage.output_tokens or usage.cache_read_tokens or usage.cache_write_tokens or usage.reasoning_tokens):\n             return\n-        model = str(getattr(response, \"model\", \"\") or \"\") or \"unknown\"\n+        model = str(getattr(response, 'model', '') or '') or 'unknown'\n         estimated_cost = None\n         try:\n             cost = estimate_usage_cost(model, usage, provider=provider, base_url=base_url)\n             if cost.amount_usd is not None:\n                 estimated_cost = float(cost.amount_usd)\n         except Exception:\n-            logger.debug(\"Aux usage cost estimation failed\", exc_info=True)\n-        # Inside a Relay-driven tool callback the thread runs Relay's loop; a worker store refuses\n-        # synchronous RPC there (#139029).\n+            logger.debug('Aux usage cost estimation failed', exc_info=True)\n         from agent.runtime_session_store import call_off_event_loop\n-        call_off_event_loop(\n-            session_db.record_auxiliary_usage,\n-            session_id, task, model=model, billing_provider=provider, billing_base_url=base_url,\n-            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,\n-            cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens,\n-            reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost,\n-        )\n+        call_off_event_loop(session_db.record_auxiliary_usage, session_id, task, model=model, billing_provider=provider, billing_base_url=base_url, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens, reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost)\n     except Exception:\n-        logger.debug(\"Aux usage recording failed (non-fatal)\", exc_info=True)\n+        logger.debug('Aux usage recording failed (non-fatal)', exc_info=True)\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n",
+        "files_modified": [
+          "/private<scratch>/hermes-accounting-required-keyword/agent/aux_accounting.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-accounting-required-keyword/agent/aux_accounting.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-accounting-required-keyword/agent/aux_accounting.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `record_aux_usage` in `agent/aux_accounting.py` (`def record_aux_usage(response: Any, task: Optional[str], *, provider: Optional[str] = None, base_url: Optional[str] = None) -> None` -> `def record_aux_usage(response: Any, task: Optional[str], *, provider: Optional[str] = None, base_url: Optional[str] = None, corpus_probe) -> None`) \u2014 Signature of 'record_aux_usage' no longer accepts 5 external call site(s). Missing required keyword-only argument 'corpus_probe'.\n  -> Update caller `agent/auxiliary_client.py:6647` (`_validate_llm_response`): missing required keyword-only argument 'corpus_probe'\n  -> Update caller `plugins/image_gen/_common.py:270` (`record_token_usage`): missing required keyword-only argument 'corpus_probe'\n  -> Update caller `tests/hermes_state/test_aux_usage_accounting.py:199` (`TestAmbientAccountingContext.test_record_aux_usage_writes_through_context`): missing required keyword-only argument 'corpus_probe'\n  -> Update caller `tests/hermes_state/test_aux_usage_accounting.py:222` (`TestAmbientAccountingContext.test_moa_tasks_excluded`): missing required keyword-only argument 'corpus_probe'\n  -> Update caller `tests/hermes_state/test_aux_usage_accounting.py:223` (`TestAmbientAccountingContext.test_moa_tasks_excluded`): missing required keyword-only argument 'corpus_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "agent/auxiliary_client.py:6647",
+        "plugins/image_gen/_common.py:270",
+        "tests/hermes_state/test_aux_usage_accounting.py:199",
+        "tests/hermes_state/test_aux_usage_accounting.py:222",
+        "tests/hermes_state/test_aux_usage_accounting.py:223"
+      ],
+      "files_sha256": {
+        "agent/aux_accounting.py": "162711ae15f31d1562a5a76a3f7f82840d8b92ccfcde834ee759404e407c2e83",
+        "agent/auxiliary_client.py": "34ed4b8328df4f3bc776835a88e0883e64c118edb9117df0ca2f9ad2300a5cdd",
+        "plugins/image_gen/_common.py": "d68ec699126f8146f876fb864432dc1ad5c810f1f9312a74ef189c0578a34f6e",
+        "tests/hermes_state/test_aux_usage_accounting.py": "c19e5ed4f83b3f00f02e6d9a9b6d2b107dfd8a9bc9536b2df60a8433291c23f0"
+      }
+    },
+    {
+      "case": "hermes-accounting-optional-keyword",
+      "group": "pinned-real-source",
+      "helper": "agent/aux_accounting.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/auxiliary_client.py:6647": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "plugins/image_gen/_common.py:270": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:199": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:222": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:223": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/aux_accounting.py\n@@\n         _accounting.set(None)\n \n \n-def record_aux_usage(\n-    response: Any, task: Optional[str], *, provider: Optional[str] = None,\n-    base_url: Optional[str] = None,\n-) -> None:\n+def record_aux_usage(response: Any, task: Optional[str], *, provider: Optional[str]=None, base_url: Optional[str]=None, corpus_probe=None) -> None:\n     \"\"\"Record an auxiliary response's token usage against the ambient session.\n \n     Strictly best-effort (accounting must never break an aux call). No-ops outside an\n@@\n         if ctx is None:\n             return\n         session_db, session_id = ctx\n-        raw_usage = getattr(response, \"usage\", None)\n+        raw_usage = getattr(response, 'usage', None)\n         if raw_usage is None:\n             return\n-\n         from agent.usage_pricing import estimate_usage_cost, normalize_usage, with_served_service_tier\n-\n         usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider), response)\n-        if not (\n-            usage.input_tokens or usage.output_tokens\n-            or usage.cache_read_tokens or usage.cache_write_tokens\n-            or usage.reasoning_tokens\n-        ):\n+        if not (usage.input_tokens or usage.output_tokens or usage.cache_read_tokens or usage.cache_write_tokens or usage.reasoning_tokens):\n             return\n-        model = str(getattr(response, \"model\", \"\") or \"\") or \"unknown\"\n+        model = str(getattr(response, 'model', '') or '') or 'unknown'\n         estimated_cost = None\n         try:\n             cost = estimate_usage_cost(model, usage, provider=provider, base_url=base_url)\n             if cost.amount_usd is not None:\n                 estimated_cost = float(cost.amount_usd)\n         except Exception:\n-            logger.debug(\"Aux usage cost estimation failed\", exc_info=True)\n-        # Inside a Relay-driven tool callback the thread runs Relay's loop; a worker store refuses\n-        # synchronous RPC there (#139029).\n+            logger.debug('Aux usage cost estimation failed', exc_info=True)\n         from agent.runtime_session_store import call_off_event_loop\n-        call_off_event_loop(\n-            session_db.record_auxiliary_usage,\n-            session_id, task, model=model, billing_provider=provider, billing_base_url=base_url,\n-            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,\n-            cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens,\n-            reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost,\n-        )\n+        call_off_event_loop(session_db.record_auxiliary_usage, session_id, task, model=model, billing_provider=provider, billing_base_url=base_url, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens, reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost)\n     except Exception:\n-        logger.debug(\"Aux usage recording failed (non-fatal)\", exc_info=True)\n+        logger.debug('Aux usage recording failed (non-fatal)', exc_info=True)\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-accounting-optional-keyword/agent/aux_accounting.py\n+++ b//private<scratch>/hermes-accounting-optional-keyword/agent/aux_accounting.py\n@@ -42,10 +42,7 @@\n         _accounting.set(None)\n \n \n-def record_aux_usage(\n-    response: Any, task: Optional[str], *, provider: Optional[str] = None,\n-    base_url: Optional[str] = None,\n-) -> None:\n+def record_aux_usage(response: Any, task: Optional[str], *, provider: Optional[str]=None, base_url: Optional[str]=None, corpus_probe=None) -> None:\n     \"\"\"Record an auxiliary response's token usage against the ambient session.\n \n     Strictly best-effort (accounting must never break an aux call). No-ops outside an\n@@ -60,36 +57,39 @@\n         if ctx is None:\n             return\n         session_db, session_id = ctx\n-        raw_usage = getattr(response, \"usage\", None)\n+        raw_usage = getattr(response, 'usage', None)\n         if raw_usage is None:\n             return\n-\n         from agent.usage_pricing import estimate_usage_cost, normalize_usage, with_served_service_tier\n-\n         usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider), response)\n-        if not (\n-            usage.input_tokens or usage.output_tokens\n-            or usage.cache_read_tokens or usage.cache_write_tokens\n-            or usage.reasoning_tokens\n-        ):\n+        if not (usage.input_tokens or usage.output_tokens or usage.cache_read_tokens or usage.cache_write_tokens or usage.reasoning_tokens):\n             return\n-        model = str(getattr(response, \"model\", \"\") or \"\") or \"unknown\"\n+        model = str(getattr(response, 'model', '') or '') or 'unknown'\n         estimated_cost = None\n         try:\n             cost = estimate_usage_cost(model, usage, provider=provider, base_url=base_url)\n             if cost.amount_usd is not None:\n                 estimated_cost = float(cost.amount_usd)\n         except Exception:\n-            logger.debug(\"Aux usage cost estimation failed\", exc_info=True)\n-        # Inside a Relay-driven tool callback the thread runs Relay's loop; a worker store refuses\n-        # synchronous RPC there (#139029).\n+            logger.debug('Aux usage cost estimation failed', exc_info=True)\n         from agent.runtime_session_store import call_off_event_loop\n-        call_off_event_loop(\n-            session_db.record_auxiliary_usage,\n-            session_id, task, model=model, billing_provider=provider, billing_base_url=base_url,\n-            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,\n-            cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens,\n-            reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost,\n-        )\n+        call_off_event_loop(session_db.record_auxiliary_usage, session_id, task, model=model, billing_provider=provider, billing_base_url=base_url, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens, reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost)\n     except Exception:\n-        logger.debug(\"Aux usage recording failed (non-fatal)\", exc_info=True)\n+        logger.debug('Aux usage recording failed (non-fatal)', exc_info=True)\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n",
+        "files_modified": [
+          "/private<scratch>/hermes-accounting-optional-keyword/agent/aux_accounting.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-accounting-optional-keyword/agent/aux_accounting.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-accounting-optional-keyword/agent/aux_accounting.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "agent/aux_accounting.py": "162711ae15f31d1562a5a76a3f7f82840d8b92ccfcde834ee759404e407c2e83",
+        "agent/auxiliary_client.py": "34ed4b8328df4f3bc776835a88e0883e64c118edb9117df0ca2f9ad2300a5cdd",
+        "plugins/image_gen/_common.py": "d68ec699126f8146f876fb864432dc1ad5c810f1f9312a74ef189c0578a34f6e",
+        "tests/hermes_state/test_aux_usage_accounting.py": "c19e5ed4f83b3f00f02e6d9a9b6d2b107dfd8a9bc9536b2df60a8433291c23f0"
+      }
+    },
+    {
+      "case": "hermes-accounting-body-only",
+      "group": "pinned-real-source",
+      "helper": "agent/aux_accounting.py",
+      "oracle": "CPython inspect.Signature.bind; original source call shapes, no Locus resolver",
+      "labels": {
+        "agent/auxiliary_client.py:6647": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "plugins/image_gen/_common.py:270": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:199": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:222": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:223": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: agent/aux_accounting.py\n@@\n         _accounting.set(None)\n \n \n-def record_aux_usage(\n-    response: Any, task: Optional[str], *, provider: Optional[str] = None,\n-    base_url: Optional[str] = None,\n-) -> None:\n+def record_aux_usage(response: Any, task: Optional[str], *, provider: Optional[str]=None, base_url: Optional[str]=None) -> None:\n     \"\"\"Record an auxiliary response's token usage against the ambient session.\n \n     Strictly best-effort (accounting must never break an aux call). No-ops outside an\n@@\n         if ctx is None:\n             return\n         session_db, session_id = ctx\n-        raw_usage = getattr(response, \"usage\", None)\n+        raw_usage = getattr(response, 'usage', None)\n         if raw_usage is None:\n             return\n-\n         from agent.usage_pricing import estimate_usage_cost, normalize_usage, with_served_service_tier\n-\n         usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider), response)\n-        if not (\n-            usage.input_tokens or usage.output_tokens\n-            or usage.cache_read_tokens or usage.cache_write_tokens\n-            or usage.reasoning_tokens\n-        ):\n+        if not (usage.input_tokens or usage.output_tokens or usage.cache_read_tokens or usage.cache_write_tokens or usage.reasoning_tokens):\n             return\n-        model = str(getattr(response, \"model\", \"\") or \"\") or \"unknown\"\n+        model = str(getattr(response, 'model', '') or '') or 'unknown'\n         estimated_cost = None\n         try:\n             cost = estimate_usage_cost(model, usage, provider=provider, base_url=base_url)\n             if cost.amount_usd is not None:\n                 estimated_cost = float(cost.amount_usd)\n         except Exception:\n-            logger.debug(\"Aux usage cost estimation failed\", exc_info=True)\n-        # Inside a Relay-driven tool callback the thread runs Relay's loop; a worker store refuses\n-        # synchronous RPC there (#139029).\n+            logger.debug('Aux usage cost estimation failed', exc_info=True)\n         from agent.runtime_session_store import call_off_event_loop\n-        call_off_event_loop(\n-            session_db.record_auxiliary_usage,\n-            session_id, task, model=model, billing_provider=provider, billing_base_url=base_url,\n-            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,\n-            cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens,\n-            reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost,\n-        )\n+        call_off_event_loop(session_db.record_auxiliary_usage, session_id, task, model=model, billing_provider=provider, billing_base_url=base_url, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens, reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost)\n     except Exception:\n-        logger.debug(\"Aux usage recording failed (non-fatal)\", exc_info=True)\n+        logger.debug('Aux usage recording failed (non-fatal)', exc_info=True)\n+    pass\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/hermes-accounting-body-only/agent/aux_accounting.py\n+++ b//private<scratch>/hermes-accounting-body-only/agent/aux_accounting.py\n@@ -42,10 +42,7 @@\n         _accounting.set(None)\n \n \n-def record_aux_usage(\n-    response: Any, task: Optional[str], *, provider: Optional[str] = None,\n-    base_url: Optional[str] = None,\n-) -> None:\n+def record_aux_usage(response: Any, task: Optional[str], *, provider: Optional[str]=None, base_url: Optional[str]=None) -> None:\n     \"\"\"Record an auxiliary response's token usage against the ambient session.\n \n     Strictly best-effort (accounting must never break an aux call). No-ops outside an\n@@ -60,36 +57,39 @@\n         if ctx is None:\n             return\n         session_db, session_id = ctx\n-        raw_usage = getattr(response, \"usage\", None)\n+        raw_usage = getattr(response, 'usage', None)\n         if raw_usage is None:\n             return\n-\n         from agent.usage_pricing import estimate_usage_cost, normalize_usage, with_served_service_tier\n-\n         usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider), response)\n-        if not (\n-            usage.input_tokens or usage.output_tokens\n-            or usage.cache_read_tokens or usage.cache_write_tokens\n-            or usage.reasoning_tokens\n-        ):\n+        if not (usage.input_tokens or usage.output_tokens or usage.cache_read_tokens or usage.cache_write_tokens or usage.reasoning_tokens):\n             return\n-        model = str(getattr(response, \"model\", \"\") or \"\") or \"unknown\"\n+        model = str(getattr(response, 'model', '') or '') or 'unknown'\n         estimated_cost = None\n         try:\n             cost = estimate_usage_cost(model, usage, provider=provider, base_url=base_url)\n             if cost.amount_usd is not None:\n                 estimated_cost = float(cost.amount_usd)\n         except Exception:\n-            logger.debug(\"Aux usage cost estimation failed\", exc_info=True)\n-        # Inside a Relay-driven tool callback the thread runs Relay's loop; a worker store refuses\n-        # synchronous RPC there (#139029).\n+            logger.debug('Aux usage cost estimation failed', exc_info=True)\n         from agent.runtime_session_store import call_off_event_loop\n-        call_off_event_loop(\n-            session_db.record_auxiliary_usage,\n-            session_id, task, model=model, billing_provider=provider, billing_base_url=base_url,\n-            input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,\n-            cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens,\n-            reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost,\n-        )\n+        call_off_event_loop(session_db.record_auxiliary_usage, session_id, task, model=model, billing_provider=provider, billing_base_url=base_url, input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens, reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost)\n     except Exception:\n-        logger.debug(\"Aux usage recording failed (non-fatal)\", exc_info=True)\n+        logger.debug('Aux usage recording failed (non-fatal)', exc_info=True)\n+    pass\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n+\n",
+        "files_modified": [
+          "/private<scratch>/hermes-accounting-body-only/agent/aux_accounting.py"
+        ],
+        "lint": {
+          "/private<scratch>/hermes-accounting-body-only/agent/aux_accounting.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/hermes-accounting-body-only/agent/aux_accounting.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "agent/aux_accounting.py": "162711ae15f31d1562a5a76a3f7f82840d8b92ccfcde834ee759404e407c2e83",
+        "agent/auxiliary_client.py": "34ed4b8328df4f3bc776835a88e0883e64c118edb9117df0ca2f9ad2300a5cdd",
+        "plugins/image_gen/_common.py": "d68ec699126f8146f876fb864432dc1ad5c810f1f9312a74ef189c0578a34f6e",
+        "tests/hermes_state/test_aux_usage_accounting.py": "c19e5ed4f83b3f00f02e6d9a9b6d2b107dfd8a9bc9536b2df60a8433291c23f0"
+      }
+    },
+    {
+      "case": "control-direct-alias",
+      "fixture_name": "direct-alias",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() got an unexpected keyword argument 'limit'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-direct-alias/pkg/api.py\n+++ b//private<scratch>/control-direct-alias/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-direct-alias/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-direct-alias/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-direct-alias/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, ceiling = 3)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Unexpected keyword argument 'limit'.\n  -> Update caller `pkg/client.py:3` (`run`): unexpected keyword argument 'limit'\n     Review replacing limit= with ceiling=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "d8ed408fd78367a738769508464084173fbefd9d1ad66965124ffb2ca3c6deb4"
+      }
+    },
+    {
+      "case": "control-module-import",
+      "fixture_name": "module-import",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() got an unexpected keyword argument 'limit'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-module-import/pkg/api.py\n+++ b//private<scratch>/control-module-import/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-module-import/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-module-import/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-module-import/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, ceiling = 3)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Unexpected keyword argument 'limit'.\n  -> Update caller `pkg/client.py:3` (`run`): unexpected keyword argument 'limit'\n     Review replacing limit= with ceiling=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "240a5e1b5d1f4e94e398ae617290316a1548c7889c2b4a4388bb9cd2d29dbcec"
+      }
+    },
+    {
+      "case": "control-module-alias",
+      "fixture_name": "module-alias",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() got an unexpected keyword argument 'limit'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-module-alias/pkg/api.py\n+++ b//private<scratch>/control-module-alias/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-module-alias/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-module-alias/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-module-alias/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, ceiling = 3)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Unexpected keyword argument 'limit'.\n  -> Update caller `pkg/client.py:3` (`run`): unexpected keyword argument 'limit'\n     Review replacing limit= with ceiling=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "ac9ad147c872cd62a9e47196f1b102b97c992238001cd8728f33eea8c14e6694"
+      }
+    },
+    {
+      "case": "control-from-module-alias",
+      "fixture_name": "from-module-alias",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() got an unexpected keyword argument 'limit'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-from-module-alias/pkg/api.py\n+++ b//private<scratch>/control-from-module-alias/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-from-module-alias/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-from-module-alias/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-from-module-alias/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, ceiling = 3)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Unexpected keyword argument 'limit'.\n  -> Update caller `pkg/client.py:3` (`run`): unexpected keyword argument 'limit'\n     Review replacing limit= with ceiling=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "6817b06221dbcb4367385081e5a6143806de7f3616e8ff5ac41482d9581c62e4"
+      }
+    },
+    {
+      "case": "control-relative-module",
+      "fixture_name": "relative-module",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() got an unexpected keyword argument 'limit'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-relative-module/pkg/api.py\n+++ b//private<scratch>/control-relative-module/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-relative-module/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-relative-module/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-relative-module/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, ceiling = 3)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Unexpected keyword argument 'limit'.\n  -> Update caller `pkg/client.py:3` (`run`): unexpected keyword argument 'limit'\n     Review replacing limit= with ceiling=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "8fc82390a98d13f3b64ced3e8e7727f98a55b027db0ebfea1edadb7d2fe83cec"
+      }
+    },
+    {
+      "case": "control-repeated-local-import",
+      "fixture_name": "repeated-local-import",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "first": {
+            "ok": true,
+            "value": 4
+          },
+          "second": {
+            "ok": true,
+            "value": 5
+          }
+        },
+        "after": {
+          "first": {
+            "ok": false,
+            "error": "process() got an unexpected keyword argument 'limit'"
+          },
+          "second": {
+            "ok": false,
+            "error": "process() got an unexpected keyword argument 'limit'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        },
+        "pkg/client.py:6": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-repeated-local-import/pkg/api.py\n+++ b//private<scratch>/control-repeated-local-import/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-repeated-local-import/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-repeated-local-import/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-repeated-local-import/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, ceiling = 3)`) \u2014 Signature of 'process' no longer accepts 2 external call site(s). Unexpected keyword argument 'limit'.\n  -> Update caller `pkg/client.py:3` (`first`): unexpected keyword argument 'limit'\n     Review replacing limit= with ceiling=.\n  -> Update caller `pkg/client.py:6` (`second`): unexpected keyword argument 'limit'\n     Review replacing limit= with ceiling=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3",
+        "pkg/client.py:6"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "743e9cf56e450ecb51e924dda069fa7e71e08438b73cb65bf1f93c8033a44893"
+      }
+    },
+    {
+      "case": "control-scoped-different-imports",
+      "fixture_name": "scoped-different-imports",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "first": {
+            "ok": true,
+            "value": 4
+          },
+          "second": {
+            "ok": true,
+            "value": 5
+          }
+        },
+        "after": {
+          "first": {
+            "ok": false,
+            "error": "process() got an unexpected keyword argument 'limit'"
+          },
+          "second": {
+            "ok": true,
+            "value": 5
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        },
+        "pkg/client.py:6": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-scoped-different-imports/pkg/api.py\n+++ b//private<scratch>/control-scoped-different-imports/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-scoped-different-imports/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-scoped-different-imports/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-scoped-different-imports/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, ceiling = 3)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Unexpected keyword argument 'limit'.\n  -> Update caller `pkg/client.py:3` (`first`): unexpected keyword argument 'limit'\n     Review replacing limit= with ceiling=.\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "76ff190858e0cace225e88492f9d63f4b01b4d579e34c05b6eb3cc48365190e1"
+      }
+    },
+    {
+      "case": "control-parameter-shadow",
+      "fixture_name": "parameter-shadow",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-parameter-shadow/pkg/api.py\n+++ b//private<scratch>/control-parameter-shadow/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-parameter-shadow/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-parameter-shadow/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-parameter-shadow/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "d776ab47ac93a6c3ed21667ae0cd44198c81eb2286573a6359c04cb3ac3b205d"
+      }
+    },
+    {
+      "case": "control-assignment-shadow",
+      "fixture_name": "assignment-shadow",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:5": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-assignment-shadow/pkg/api.py\n+++ b//private<scratch>/control-assignment-shadow/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-assignment-shadow/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-assignment-shadow/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-assignment-shadow/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "e7fe3f2bc93404dc3803ec280c1b905c48bdcaa1890852da0d90e6c1e2f96a84"
+      }
+    },
+    {
+      "case": "control-conditional-other-import",
+      "fixture_name": "conditional-other-import",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:6": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-conditional-other-import/pkg/api.py\n+++ b//private<scratch>/control-conditional-other-import/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-conditional-other-import/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-conditional-other-import/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-conditional-other-import/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "23fa6d3f310903ad96ed8326604fbf70075d9f1eeee3acd236e17d54ae1f6665"
+      }
+    },
+    {
+      "case": "control-same-name-other-module",
+      "fixture_name": "same-name-other-module",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-same-name-other-module/pkg/api.py\n+++ b//private<scratch>/control-same-name-other-module/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-same-name-other-module/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-same-name-other-module/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-same-name-other-module/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "e1a460391cb06341b06ed9ac6b009f4b1ff476459221f447150bdc5804b6a049"
+      }
+    },
+    {
+      "case": "control-local-shadow",
+      "fixture_name": "local-shadow",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:4": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-local-shadow/pkg/api.py\n+++ b//private<scratch>/control-local-shadow/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n-    return value + limit\n+def process(value, *, ceiling=3):\n+    return value + ceiling\n",
+        "files_modified": [
+          "/private<scratch>/control-local-shadow/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-local-shadow/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-local-shadow/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "e30c2759c251aa5eb32de956ae6481c1c79865306dd9ad35a77772549cc2e0dc"
+      }
+    },
+    {
+      "case": "control-unpacked-compatible",
+      "fixture_name": "unpacked-compatible",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, extra=None):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-unpacked-compatible/pkg/api.py\n+++ b//private<scratch>/control-unpacked-compatible/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, extra=None):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-unpacked-compatible/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-unpacked-compatible/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-unpacked-compatible/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "43ad2025885b50282c763b44917c1ccce03f1a3ad8ca7c8a0cacac6eb3aa65af"
+      }
+    },
+    {
+      "case": "control-direct-alias-required-keyword",
+      "fixture_name": "direct-alias",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() missing 1 required keyword-only argument: 'required_probe'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-direct-alias-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-direct-alias-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-direct-alias-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-direct-alias-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-direct-alias-required-keyword/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, limit = 3, required_probe)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Missing required keyword-only argument 'required_probe'.\n  -> Update caller `pkg/client.py:3` (`run`): missing required keyword-only argument 'required_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "d8ed408fd78367a738769508464084173fbefd9d1ad66965124ffb2ca3c6deb4"
+      }
+    },
+    {
+      "case": "control-module-import-required-keyword",
+      "fixture_name": "module-import",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() missing 1 required keyword-only argument: 'required_probe'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-module-import-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-module-import-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-module-import-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-module-import-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-module-import-required-keyword/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, limit = 3, required_probe)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Missing required keyword-only argument 'required_probe'.\n  -> Update caller `pkg/client.py:3` (`run`): missing required keyword-only argument 'required_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "240a5e1b5d1f4e94e398ae617290316a1548c7889c2b4a4388bb9cd2d29dbcec"
+      }
+    },
+    {
+      "case": "control-module-alias-required-keyword",
+      "fixture_name": "module-alias",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() missing 1 required keyword-only argument: 'required_probe'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-module-alias-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-module-alias-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-module-alias-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-module-alias-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-module-alias-required-keyword/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, limit = 3, required_probe)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Missing required keyword-only argument 'required_probe'.\n  -> Update caller `pkg/client.py:3` (`run`): missing required keyword-only argument 'required_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "ac9ad147c872cd62a9e47196f1b102b97c992238001cd8728f33eea8c14e6694"
+      }
+    },
+    {
+      "case": "control-from-module-alias-required-keyword",
+      "fixture_name": "from-module-alias",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() missing 1 required keyword-only argument: 'required_probe'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-from-module-alias-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-from-module-alias-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-from-module-alias-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-from-module-alias-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-from-module-alias-required-keyword/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, limit = 3, required_probe)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Missing required keyword-only argument 'required_probe'.\n  -> Update caller `pkg/client.py:3` (`run`): missing required keyword-only argument 'required_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "6817b06221dbcb4367385081e5a6143806de7f3616e8ff5ac41482d9581c62e4"
+      }
+    },
+    {
+      "case": "control-relative-module-required-keyword",
+      "fixture_name": "relative-module",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": false,
+            "error": "process() missing 1 required keyword-only argument: 'required_probe'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-relative-module-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-relative-module-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-relative-module-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-relative-module-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-relative-module-required-keyword/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, limit = 3, required_probe)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Missing required keyword-only argument 'required_probe'.\n  -> Update caller `pkg/client.py:3` (`run`): missing required keyword-only argument 'required_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "8fc82390a98d13f3b64ced3e8e7727f98a55b027db0ebfea1edadb7d2fe83cec"
+      }
+    },
+    {
+      "case": "control-repeated-local-import-required-keyword",
+      "fixture_name": "repeated-local-import",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "first": {
+            "ok": true,
+            "value": 4
+          },
+          "second": {
+            "ok": true,
+            "value": 5
+          }
+        },
+        "after": {
+          "first": {
+            "ok": false,
+            "error": "process() missing 1 required keyword-only argument: 'required_probe'"
+          },
+          "second": {
+            "ok": false,
+            "error": "process() missing 1 required keyword-only argument: 'required_probe'"
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        },
+        "pkg/client.py:6": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-repeated-local-import-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-repeated-local-import-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-repeated-local-import-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-repeated-local-import-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-repeated-local-import-required-keyword/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, limit = 3, required_probe)`) \u2014 Signature of 'process' no longer accepts 2 external call site(s). Missing required keyword-only argument 'required_probe'.\n  -> Update caller `pkg/client.py:3` (`first`): missing required keyword-only argument 'required_probe'\n  -> Update caller `pkg/client.py:6` (`second`): missing required keyword-only argument 'required_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3",
+        "pkg/client.py:6"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "743e9cf56e450ecb51e924dda069fa7e71e08438b73cb65bf1f93c8033a44893"
+      }
+    },
+    {
+      "case": "control-scoped-different-imports-required-keyword",
+      "fixture_name": "scoped-different-imports",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "first": {
+            "ok": true,
+            "value": 4
+          },
+          "second": {
+            "ok": true,
+            "value": 5
+          }
+        },
+        "after": {
+          "first": {
+            "ok": false,
+            "error": "process() missing 1 required keyword-only argument: 'required_probe'"
+          },
+          "second": {
+            "ok": true,
+            "value": 5
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        },
+        "pkg/client.py:6": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-scoped-different-imports-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-scoped-different-imports-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-scoped-different-imports-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-scoped-different-imports-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-scoped-different-imports-required-keyword/pkg/api.py",
+        "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `process` in `pkg/api.py` (`def process(value, *, limit = 3)` -> `def process(value, *, limit = 3, required_probe)`) \u2014 Signature of 'process' no longer accepts 1 external call site(s). Missing required keyword-only argument 'required_probe'.\n  -> Update caller `pkg/client.py:3` (`first`): missing required keyword-only argument 'required_probe'\nInspect and update the affected call sites above before concluding your task."
+      },
+      "named_sites": [
+        "pkg/client.py:3"
+      ],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "76ff190858e0cace225e88492f9d63f4b01b4d579e34c05b6eb3cc48365190e1"
+      }
+    },
+    {
+      "case": "control-parameter-shadow-required-keyword",
+      "fixture_name": "parameter-shadow",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-parameter-shadow-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-parameter-shadow-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-parameter-shadow-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-parameter-shadow-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-parameter-shadow-required-keyword/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "d776ab47ac93a6c3ed21667ae0cd44198c81eb2286573a6359c04cb3ac3b205d"
+      }
+    },
+    {
+      "case": "control-assignment-shadow-required-keyword",
+      "fixture_name": "assignment-shadow",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:5": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-assignment-shadow-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-assignment-shadow-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-assignment-shadow-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-assignment-shadow-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-assignment-shadow-required-keyword/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "e7fe3f2bc93404dc3803ec280c1b905c48bdcaa1890852da0d90e6c1e2f96a84"
+      }
+    },
+    {
+      "case": "control-conditional-other-import-required-keyword",
+      "fixture_name": "conditional-other-import",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:6": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-conditional-other-import-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-conditional-other-import-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-conditional-other-import-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-conditional-other-import-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-conditional-other-import-required-keyword/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "23fa6d3f310903ad96ed8326604fbf70075d9f1eeee3acd236e17d54ae1f6665"
+      }
+    },
+    {
+      "case": "control-same-name-other-module-required-keyword",
+      "fixture_name": "same-name-other-module",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-same-name-other-module-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-same-name-other-module-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-same-name-other-module-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-same-name-other-module-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-same-name-other-module-required-keyword/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "e1a460391cb06341b06ed9ac6b009f4b1ff476459221f447150bdc5804b6a049"
+      }
+    },
+    {
+      "case": "control-local-shadow-required-keyword",
+      "fixture_name": "local-shadow",
+      "group": "constructed-control",
+      "helper": "pkg/api.py",
+      "oracle": "Executed authored fixture before/after in clean Python subprocesses",
+      "oracle_execution": {
+        "before": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        },
+        "after": {
+          "run": {
+            "ok": true,
+            "value": 4
+          }
+        }
+      },
+      "labels": {
+        "pkg/client.py:4": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_args": {
+        "mode": "patch",
+        "patch": "*** Begin Patch\n*** Update File: pkg/api.py\n@@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n*** End Patch"
+      },
+      "patch_result": {
+        "success": true,
+        "diff": "--- a//private<scratch>/control-local-shadow-required-keyword/pkg/api.py\n+++ b//private<scratch>/control-local-shadow-required-keyword/pkg/api.py\n@@ -1,2 +1,2 @@\n-def process(value, *, limit=3):\n+def process(value, *, limit=3, required_probe):\n     return value + limit\n",
+        "files_modified": [
+          "/private<scratch>/control-local-shadow-required-keyword/pkg/api.py"
+        ],
+        "lint": {
+          "/private<scratch>/control-local-shadow-required-keyword/pkg/api.py": {
+            "status": "ok",
+            "output": ""
+          }
+        },
+        "resolved_path": "/private<scratch>/control-local-shadow-required-keyword/pkg/api.py"
+      },
+      "named_sites": [],
+      "files_sha256": {
+        "pkg/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "pkg/api.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/other.py": "7143d39fd365d5e65496cc6d7c21dbd1f3b87a48d57cdcd9dfe26cbaedbdc92c",
+        "pkg/client.py": "e30c2759c251aa5eb32de956ae6481c1c79865306dd9ad35a77772549cc2e0dc"
+      }
+    }
+  ],
+  "case_manifest": [
+    {
+      "case": "hermes-retry-keyword-rename",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/retry_utils.py:167": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "same-file"
+        },
+        "agent/auxiliary_rate_limit_backoff.py:45": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:24": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:15": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:45": {
+          "error": "got an unexpected keyword argument 'max_delay'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "617fd41ed84631aa69c92c3494a9dd8da50ddab36047c2772097f669802c4451"
+    },
+    {
+      "case": "hermes-retry-required-keyword",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/retry_utils.py:167": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "same-file"
+        },
+        "agent/auxiliary_rate_limit_backoff.py:45": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:24": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:15": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:45": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "f1c7158ab4a62b35e7843faadf224ce0f6cdc70d5c7c80e5561001188475d076"
+    },
+    {
+      "case": "hermes-retry-optional-keyword",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/retry_utils.py:167": {
+          "error": null,
+          "scope": "same-file"
+        },
+        "agent/auxiliary_rate_limit_backoff.py:45": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:24": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:15": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:45": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "30b9961673ffa42719ebb3e319de421561ff4b5b31850f2ae472216444f89a1d"
+    },
+    {
+      "case": "hermes-retry-body-only",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/retry_utils.py:167": {
+          "error": null,
+          "scope": "same-file"
+        },
+        "agent/auxiliary_rate_limit_backoff.py:45": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:24": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:15": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_retry_utils.py:45": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "637f2904d6f2bb83857a5c9aa0113b015e5d238c79f5c3ce24b7f4ad7b5f3cb8"
+    },
+    {
+      "case": "hermes-watchdog-keyword-rename",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/chat_completion_nonstream.py:168": {
+          "error": "missing a required keyword-only argument: 'renamed_stale_timeout'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:335": {
+          "error": "missing a required keyword-only argument: 'renamed_stale_timeout'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:458": {
+          "error": "missing a required keyword-only argument: 'renamed_stale_timeout'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "be3efd59ef0e409aae90264a3286fb1a46a48cf4a685f7e04c8eacdd8af50b74"
+    },
+    {
+      "case": "hermes-watchdog-required-keyword",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/chat_completion_nonstream.py:168": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:335": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:458": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "3a02d71c0bf54dfd8681c7659b72bae072165b1b0ea3249cd25d21a0355f5b94"
+    },
+    {
+      "case": "hermes-watchdog-optional-keyword",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/chat_completion_nonstream.py:168": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:335": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:458": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "590e7594ddaa62810e76e488df2e1ed3ef3380bfd110adb33e4a740bfb1a77ce"
+    },
+    {
+      "case": "hermes-watchdog-body-only",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/chat_completion_nonstream.py:168": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:335": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/agent/test_codex_ttfb_watchdog.py:458": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "b6dde47e29d2a03fec1f6ef067df2d8605fcc3e216342c08c171d2515338dd03"
+    },
+    {
+      "case": "hermes-accounting-keyword-rename",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/auxiliary_client.py:6647": {
+          "error": "got an unexpected keyword argument 'provider'",
+          "scope": "cross-file"
+        },
+        "plugins/image_gen/_common.py:270": {
+          "error": "got an unexpected keyword argument 'provider'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:199": {
+          "error": "got an unexpected keyword argument 'provider'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:222": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:223": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "43d70e4ebbb13ee1a951fe89809f4c9e5140575193b1e4b436a0f257a6b2cda0"
+    },
+    {
+      "case": "hermes-accounting-required-keyword",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/auxiliary_client.py:6647": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "plugins/image_gen/_common.py:270": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:199": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:222": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:223": {
+          "error": "missing a required argument: 'corpus_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "921f93a42a69d7c3e99cd5d43b285378f21534cb63ac390ae9d56f22eb57c3f7"
+    },
+    {
+      "case": "hermes-accounting-optional-keyword",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/auxiliary_client.py:6647": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "plugins/image_gen/_common.py:270": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:199": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:222": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:223": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "b481050146ce71b659465f7e9b91697c12342e7f21757013c1c705d52d7e9a56"
+    },
+    {
+      "case": "hermes-accounting-body-only",
+      "group": "pinned-real-source",
+      "labels": {
+        "agent/auxiliary_client.py:6647": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "plugins/image_gen/_common.py:270": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:199": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:222": {
+          "error": null,
+          "scope": "cross-file"
+        },
+        "tests/hermes_state/test_aux_usage_accounting.py:223": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "0689fb4e8ddea02bbdad897e4c8c519c44f28a26770dffea66af1ba43da422ce"
+    },
+    {
+      "case": "control-direct-alias",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-module-import",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-module-alias",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-from-module-alias",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-relative-module",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-repeated-local-import",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        },
+        "pkg/client.py:6": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-scoped-different-imports",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() got an unexpected keyword argument 'limit'",
+          "scope": "cross-file"
+        },
+        "pkg/client.py:6": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-parameter-shadow",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-assignment-shadow",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:5": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-conditional-other-import",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:6": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-same-name-other-module",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-local-shadow",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:4": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "1033ec349329648312076e26e1fde79deb17a5f243dab3a776c36147f63940ac"
+    },
+    {
+      "case": "control-unpacked-compatible",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "91cc92072aee4decd4b3eac86a8b0b805c94158f0bd292a1aedcdfaaa725ca34"
+    },
+    {
+      "case": "control-direct-alias-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-module-import-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-module-alias-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-from-module-alias-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-relative-module-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-repeated-local-import-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        },
+        "pkg/client.py:6": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-scoped-different-imports-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": "process() missing 1 required keyword-only argument: 'required_probe'",
+          "scope": "cross-file"
+        },
+        "pkg/client.py:6": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-parameter-shadow-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-assignment-shadow-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:5": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-conditional-other-import-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:6": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-same-name-other-module-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:3": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    },
+    {
+      "case": "control-local-shadow-required-keyword",
+      "group": "constructed-control",
+      "labels": {
+        "pkg/client.py:4": {
+          "error": null,
+          "scope": "cross-file"
+        }
+      },
+      "patch_sha256": "d72811c0eba5d0c9378f69b2e52135d54945552c93f6073cc9544f448229bd00"
+    }
+  ],
+  "status": "complete",
+  "plugin_ref": "frozen-snapshot",
+  "plugin_base_commit": "af1d9030d6e7b3cf9366e886d19dffdcc42a4de9",
+  "plugin_engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
+  "summary": {
+    "pinned-real-source": {
+      "cases": 12,
+      "broken": 24,
+      "named_broken": 22,
+      "compatible": 28,
+      "named_compatible": 0,
+      "unlabelled_named": 0,
+      "missed_sites": [
+        {
+          "case": "hermes-retry-keyword-rename",
+          "site": "agent/retry_utils.py:167",
+          "scope": "same-file"
+        },
+        {
+          "case": "hermes-retry-required-keyword",
+          "site": "agent/retry_utils.py:167",
+          "scope": "same-file"
+        }
+      ],
+      "false_positive_sites": [],
+      "same_file_broken": 2
+    },
+    "constructed-control": {
+      "cases": 25,
+      "broken": 16,
+      "named_broken": 16,
+      "compatible": 13,
+      "named_compatible": 0,
+      "unlabelled_named": 0,
+      "missed_sites": [],
+      "false_positive_sites": [],
+      "same_file_broken": 0
+    }
+  },
+  "distinct_labelled_sites": 28
+}

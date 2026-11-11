@@ -1,11 +1,11 @@
 manifest_version: 2
 api_version: 1
 name: locus-codegraph
-version: 0.1.4
+version: 0.1.5
 description: >-
-  Live AST codebase graph, transitive blast-radius analyzer, signature drift guard,
-  @sym:/@impact:/@hotspots: context references, and interactive visual graph explorer
-  for Web Dashboard and Hermes Desktop.
+  Catch supported Python caller breakage in Hermes edit results, with exact
+  locations, binding errors and repair context. Local code navigation and
+  caller inboxes for Web Dashboard and Hermes Desktop.
 author: Atikur Rahman
 license: MIT
 homepage: https://github.com/atikur/hermes-locus

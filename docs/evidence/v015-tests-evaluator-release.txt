@@ -1,0 +1,12 @@
+test_file_boundary_blocks_private_paths_and_symlink_escapes (test_evaluation_protocol.EvaluationProtocolTests.test_file_boundary_blocks_private_paths_and_symlink_escapes) ... ok
+test_infrastructure_failures_stay_in_denominator_and_missing_usage_is_not_zero (test_evaluation_protocol.EvaluationProtocolTests.test_infrastructure_failures_stay_in_denominator_and_missing_usage_is_not_zero) ... ok
+test_pair_control_rejects_non_warning_input_difference (test_evaluation_protocol.EvaluationProtocolTests.test_pair_control_rejects_non_warning_input_difference) ... ok
+test_schedule_is_reproducible_balanced_and_paired (test_evaluation_protocol.EvaluationProtocolTests.test_schedule_is_reproducible_balanced_and_paired) ... ok
+test_source_oracle_rejects_weakened_assertion_unrelated_edit_and_wrong_body (test_evaluation_protocol.EvaluationProtocolTests.test_source_oracle_rejects_weakened_assertion_unrelated_edit_and_wrong_body) ... ok
+test_stops_depend_on_usage_or_infrastructure_not_success (test_evaluation_protocol.EvaluationProtocolTests.test_stops_depend_on_usage_or_infrastructure_not_success) ... ok
+test_summary_does_not_turn_interruption_into_comparative_failure (test_evaluation_protocol.EvaluationProtocolTests.test_summary_does_not_turn_interruption_into_comparative_failure) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.007s
+
+OK

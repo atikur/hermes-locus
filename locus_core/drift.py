@@ -68,21 +68,18 @@ def _external_callers_for_symbol(
         (workspace_id, symbol_name, edited_path, edited_path),
     ).fetchall()
 
-    callers: list[dict[str, Any]] = [
-        {
-            "path": r["caller_path"],
-            "caller": r["caller_symbol"],
-            "line": int(r["line_no"]),
-            "arg_count": int(r["arg_count"]),
-            "kind": "call",
-            "_python_call": (
-                _load_shape(r["python_call_json"])
-                if r["resolved_path"] == edited_path and r["explicit_import"]
-                else None
-            ),
-        }
-        for r in rows
-    ]
+    callers: list[dict[str, Any]] = []
+    for row in rows:
+        shape = _load_shape(row["python_call_json"])
+        precise = shape is not None and shape.get("binding_version") == 2
+        if precise and (row["resolved_path"] != edited_path or not shape.get("direct_import")):
+            continue
+        callers.append({
+            "path": row["caller_path"], "caller": row["caller_symbol"],
+            "line": int(row["line_no"]), "arg_count": int(row["arg_count"]), "kind": "call",
+            "_python_call": shape if (row["resolved_path"] == edited_path
+                and (precise or row["explicit_import"])) else None,
+        })
 
     if include_imports:
         imp_rows = conn.execute(
@@ -90,7 +87,7 @@ def _external_callers_for_symbol(
             SELECT src_path, imported_names, line_no
             FROM imports
             WHERE workspace_id = ?
-              AND (resolved_path = ? OR resolved_path = '')
+              AND resolved_path = ?
               AND src_path != ?
             ORDER BY src_path, line_no
             """,
@@ -126,7 +123,91 @@ def _load_shape(raw: str | None) -> dict[str, Any] | None:
 
 
 def _public_caller(caller: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in caller.items() if key != "_python_call"}
+    result = {key: value for key, value in caller.items() if key != "_python_call"}
+    shape = caller.get("_python_call")
+    reference = _binding_reference(shape)
+    if reference is not None:
+        # Persist the proven import identity so later loss of static resolution
+        # is distinguishable from a caller deliberately changing its target.
+        result["binding_reference"] = reference
+    if shape and shape.get("callee_expression"):
+        result["callee_expression"] = shape["callee_expression"]
+    return result
+
+
+def _binding_reference(shape: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not shape or shape.get("binding_version") != 2 or not shape.get("direct_import"):
+        return None
+    return {key: shape.get(key) for key in ("import_module", "import_name", "import_kind", "attribute_path")}
+
+
+def _previously_tracked(caller: dict[str, Any], tracked: list[dict[str, Any]]) -> bool:
+    shape = caller.get("_python_call")
+    reference = _binding_reference(shape)
+    expression = shape.get("callee_expression") if shape else None
+    for old in tracked:
+        if (old.get("path"), old.get("caller")) != (caller.get("path"), caller.get("caller")):
+            continue
+        if reference is not None and old.get("binding_reference") is not None:
+            if reference == old["binding_reference"]:
+                return True
+        elif expression and old.get("callee_expression"):
+            if expression == old["callee_expression"]:
+                return True
+        elif _caller_location(old) == _caller_location(caller):
+            return True
+    return False
+
+
+def _unresolved_tracked_callers(
+    conn: sqlite3.Connection, workspace_id: str, tracked: list[dict[str, Any]], symbol_name: str,
+) -> list[dict[str, Any]]:
+    """Retain established risks when the same import loses target confidence.
+
+    Only an already affected binding qualifies. New unknown receivers still do
+    not create alerts, and removal or a changed import target closes the old risk.
+    Match the import identity within its lexical caller even if lines shifted.
+    If caller-side analysis became uncertain, retain the same source expression;
+    its loss of a proven binding is not evidence that the old risk was repaired.
+    """
+    by_path: dict[str, list[dict[str, Any]]] = {}
+    for caller in tracked:
+        if caller.get("kind") == "call":
+            by_path.setdefault(caller["path"], []).append(caller)
+    unresolved = []
+    for path, previous in by_path.items():
+        rows = conn.execute(
+            "SELECT caller_symbol, callee_name, line_no, arg_count, python_call_json FROM calls "
+            "WHERE workspace_id = ? AND caller_path = ? AND resolved_path = ''",
+            (workspace_id, path),
+        ).fetchall()
+        for row in rows:
+            shape = _load_shape(row["python_call_json"])
+            reference = _binding_reference(shape)
+            if not shape or shape.get("binding_version") != 2:
+                continue
+            expression = shape.get("callee_expression")
+            def same_reference(old: dict[str, Any]) -> bool:
+                if old.get("caller") != row["caller_symbol"]:
+                    return False
+                if reference is not None and old.get("binding_reference") is not None:
+                    return old["binding_reference"] == reference
+                if reference is None and old.get("callee_expression") and expression:
+                    return old["callee_expression"] == expression
+                # Older persisted alerts lack a source expression. A surviving
+                # same-named unresolved call remains uncertain after migration.
+                return row["callee_name"] == symbol_name
+            matched = next((old for old in previous if same_reference(old)), None)
+            if matched is not None:
+                unresolved.append({
+                    "path": path, "caller": row["caller_symbol"], "line": int(row["line_no"]),
+                    "arg_count": int(row["arg_count"]), "kind": "call",
+                    "binding_reference": reference or matched.get("binding_reference"),
+                    "callee_expression": expression or matched.get("callee_expression"),
+                    "analysis_status": "needs_verification",
+                    "incompatibility": "Previously affected call no longer resolves with static confidence; verify this caller.",
+                })
+    return unresolved
 
 
 def _read_callers(raw: str) -> list[dict[str, Any]]:
@@ -240,6 +321,9 @@ def _classify_callers(
                 uncertain.append(_public_caller(caller))
             continue
 
+        if call_shape is not None and call_shape.get("binding_version") == 2 and new_shape is None:
+            # A decorated/dynamic function has no proven static calling convention.
+            continue
         count = caller["arg_count"]
         if count < 0:
             if legacy_unknown_risk:
@@ -327,8 +411,20 @@ def reconcile_drift_alerts(
         "SELECT * FROM drift_alerts WHERE workspace_id = ? AND resolved = 0 ORDER BY id",
         (workspace_id,),
     ).fetchall()
+    status_row = conn.execute("SELECT scan_status_json FROM workspaces WHERE workspace_id = ?", (workspace_id,)).fetchone()
+    try:
+        status = json.loads(status_row[0]) if status_row else {}
+    except (ValueError, TypeError):
+        status = {}
+    unavailable = {entry["path"] for entry in [*status.get("stale_files", []), *status.get("parse_errors", [])]}
+    if unavailable:
+        # A true deletion has no retained row, even if a previous scan warning
+        # has not yet been replaced by the transaction's final summary.
+        indexed = {r[0] for r in conn.execute("SELECT rel_path FROM files WHERE workspace_id = ?", (workspace_id,))}
+        unavailable.intersection_update(indexed)
     active: list[DriftAlert] = []
     for row in rows:
+        tracked = _read_callers(row["affected_callers_json"])
         symbol = conn.execute(
             """
             SELECT signature, min_args, max_args, python_signature_json FROM symbols
@@ -340,6 +436,18 @@ def reconcile_drift_alerts(
             conn, workspace_id, row["edited_path"], row["symbol_name"].split(".")[-1],
             include_imports=symbol is None,
         )
+        stale_callers = []
+        fresh_callers = []
+        for caller in callers:
+            if caller["path"] in unavailable or row["edited_path"] in unavailable:
+                if _previously_tracked(caller, tracked):
+                    stale_callers.append({
+                        **_public_caller(caller), "analysis_status": "needs_verification",
+                        "incompatibility": "Caller or target source was not reindexed; verify against current files.",
+                    })
+            else:
+                fresh_callers.append(caller)
+        callers = fresh_callers
         severity = "critical"
         new_signature = "<removed>"
         baseline = _load_shape(row["baseline_signature_json"])
@@ -361,7 +469,7 @@ def reconcile_drift_alerts(
                     else new_signature != row["old_signature"]
                 ),
                 tracked_sites=frozenset(
-                    _caller_location(caller) for caller in _read_callers(row["affected_callers_json"])
+                    _caller_location(caller) for caller in tracked
                     if caller.get("kind") == "call"
                 ),
             )
@@ -375,13 +483,27 @@ def reconcile_drift_alerts(
                     f"{len(affected)} external call site(s) with unpacked or unknown arguments."
                 )
 
+        unresolved = stale_callers + _unresolved_tracked_callers(
+            conn, workspace_id, tracked, row["symbol_name"].split(".")[-1],
+        )
+        if unresolved:
+            if not affected:
+                severity = "warning"
+                reason = (
+                    f"{len(unresolved)} previously affected external call site(s) need verification: "
+                    "their source or imported target could not be verified against current files."
+                )
+            else:
+                reason += f" {len(unresolved)} additional previously affected site(s) need verification after loss of static target confidence."
+            affected.extend(unresolved)
+
         if not affected:
             conn.execute("UPDATE drift_alerts SET resolved = 1 WHERE id = ?", (int(row["id"]),))
             continue
         alert = DriftAlert(
             edited_path=row["edited_path"], symbol_name=row["symbol_name"],
             severity=severity, old_signature=row["old_signature"],
-            new_signature=new_signature, reason=reason, affected_callers=affected[:25],
+            new_signature=new_signature, reason=reason, affected_callers=affected,
         )
         conn.execute(
             """
@@ -422,7 +544,7 @@ def detect_and_record_drift(
                         f"Exported symbol '{old_sym.qualified_name}' was removed, "
                         f"but {len(callers)} external site(s) still reference it."
                     ),
-                    affected_callers=[_public_caller(caller) for caller in callers[:25]],
+                    affected_callers=[_public_caller(caller) for caller in callers],
                     baseline_signature=old_sym.python_signature,
                 )
             )
@@ -459,7 +581,7 @@ def detect_and_record_drift(
                     old_signature=old_sym.signature,
                     new_signature=new_sym.signature,
                     reason=_describe_break(new_sym.qualified_name, broken, new_arity),
-                    affected_callers=broken[:25],
+                    affected_callers=broken,
                     baseline_signature=old_shape,
                 )
             )
@@ -475,7 +597,7 @@ def detect_and_record_drift(
                         f"The signature of '{new_sym.qualified_name}' may reject "
                         f"{len(uncertain)} external call site(s) with unpacked or unknown arguments."
                     ),
-                    affected_callers=uncertain[:25],
+                    affected_callers=uncertain,
                     baseline_signature=old_shape,
                 )
             )

@@ -13,7 +13,7 @@ import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Optional, TypedDict
+from typing import Any, Iterable, Optional, TypedDict
 
 LANGUAGE_BY_EXT: dict[str, str] = {
     ".py": "python",
@@ -38,7 +38,16 @@ class PythonSignature(TypedDict):
     has_var_keyword: bool
 
 
-class PythonCall(TypedDict):
+class _PythonBindingMetadata(TypedDict, total=False):
+    binding_version: int
+    import_module: str
+    import_name: str
+    import_kind: str
+    attribute_path: list[str]
+    callee_expression: list[str]
+
+
+class PythonCall(_PythonBindingMetadata):
     positional_count: int
     keywords: list[str]
     has_star_args: bool
@@ -91,6 +100,7 @@ class ParsedFile:
     imports: list[ParsedImport] = field(default_factory=list)
     calls: list[ParsedCall] = field(default_factory=list)
     parse_error: str = ""
+    python_module: dict[str, Any] | None = None
 
 
 def detect_language(rel_path: str) -> Optional[str]:
@@ -270,69 +280,104 @@ def _python_func_signature_and_arity(
 _PythonFunction = ast.FunctionDef | ast.AsyncFunctionDef
 
 
+@dataclass
+class _PythonBinding:
+    kind: str
+    module: str = ""
+    name: str = ""
+    line: int = 0
+    unconditional: bool = False
+
+
+@dataclass
+class _PythonScope:
+    node: ast.AST
+    parent: "_PythonScope | None"
+    kind: str
+    name: str
+    bindings: dict[str, list[_PythonBinding]] = field(default_factory=dict)
+    star_import: bool = False
+    dynamic: bool = False
+
+    def bind(self, name: str, binding: _PythonBinding | None = None) -> None:
+        self.bindings.setdefault(name, []).append(binding or _PythonBinding("unknown"))
+
+
+def _attribute_parts(node: ast.AST) -> list[str]:
+    parts = []
+    while isinstance(node, ast.Attribute):
+        parts.append(node.attr)
+        node = node.value
+    if not isinstance(node, ast.Name):
+        return []
+    return [node.id, *reversed(parts)]
+
+
 class _PythonCallCollector(ast.NodeVisitor):
+    """Collect lexical import bindings, declining ambiguous/dynamic targets.
+
+    This is intentionally not dataflow inference: assignments, conditional imports,
+    star imports and dynamic mutation prevent a confident binding. A shadow in one
+    function does not poison an independent function's local import.
+    """
+
     def __init__(self, rel_path: str, tree: ast.Module) -> None:
         self.rel_path = rel_path
-        self.scope_stack: list[str] = ["<module>"]
+        self.root = self.scope = _PythonScope(tree, None, "module", "<module>")
         self.calls: list[ParsedCall] = []
         self.imports: list[ParsedImport] = []
-        self.function_scope: _PythonFunction | None = None
-        self.direct_import_scopes: dict[ast.ImportFrom, _PythonFunction | None] = {
-            stmt: None for stmt in tree.body if isinstance(stmt, ast.ImportFrom) and stmt.module
-        }
-        self.direct_imports: dict[str, ast.ImportFrom] = {}
-        self.bare_calls: list[tuple[ParsedCall, _PythonFunction | None]] = []
-        self.rebound_names: set[str] = set()
-        self.has_star_import = False
+        self.pending: list[tuple[ParsedCall, list[str], _PythonScope]] = []
+        self.nonlocal_mutations: set[str] = set()
+        self.attribute_mutations: set[str] = set()
+
+    def _unconditional(self, node: ast.AST) -> bool:
+        return node in getattr(self.scope.node, "body", ())
 
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
-            import_name = alias.asname or alias.name.split(".")[-1]
-            self.rebound_names.update((alias.asname or alias.name.split(".")[0], import_name))
-            self.imports.append(
-                ParsedImport(
-                    src_path=self.rel_path,
-                    target_spec=alias.name,
-                    imported_names=[import_name],
-                    line_no=getattr(node, "lineno", 1),
-                )
-            )
+            bound = alias.asname or alias.name.split(".")[0]
+            self.scope.bind(bound, _PythonBinding(
+                "module", alias.name, bound if alias.asname else "", node.lineno,
+                self._unconditional(node),
+            ))
+            self.imports.append(ParsedImport(self.rel_path, alias.name, [], node.lineno))
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        spec = "." * node.level + (node.module or "")
         for alias in node.names:
             if alias.name == "*":
-                self.has_star_import = True
+                self.scope.star_import = True
                 continue
-            bound_name = alias.asname or alias.name
-            if (node in self.direct_import_scopes and bound_name == alias.name
-                    and bound_name not in self.direct_imports):
-                self.direct_imports[bound_name] = node
-            else:
-                # The graph's legacy import index also lists the original name
-                # for an aliased from-import. Neither name proves a binding.
-                self.rebound_names.update((bound_name, alias.name))
+            self.scope.bind(alias.asname or alias.name, _PythonBinding(
+                "from", spec, alias.name, node.lineno, self._unconditional(node),
+            ))
+            self.imports.append(ParsedImport(self.rel_path, spec, [alias.name], node.lineno))
 
-        dots = "." * (node.level or 0)
-        mod = node.module or ""
-        spec = f"{dots}{mod}" if (dots or mod) else "."
-        names = [a.name for a in node.names if a.name != "*"]
-        self.imports.append(
-            ParsedImport(
-                src_path=self.rel_path,
-                target_spec=spec,
-                imported_names=names,
-                line_no=getattr(node, "lineno", 1),
-            )
-        )
+    def _child_scope(self, node: ast.AST, kind: str, name: str) -> _PythonScope:
+        parent = self.scope
+        qname = name if parent.name == "<module>" else f"{parent.name}.{name}"
+        return _PythonScope(node, parent, kind, qname)
 
-    def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        self.rebound_names.add(node.name)
-        previous_function = self.function_scope
-        self.function_scope = None
-        self.scope_stack.append(node.name)
-        self.generic_visit(node)
-        self.scope_stack.pop()
-        self.function_scope = previous_function
+    def _arguments(self, args: ast.arguments) -> None:
+        for arg in [*args.posonlyargs, *args.args, *args.kwonlyargs, args.vararg, args.kwarg]:
+            if arg is not None:
+                self.scope.bind(arg.arg)
+
+    def _visit_fn(self, node: _PythonFunction) -> None:
+        self.scope.bind(node.name, _PythonBinding(
+            "function" if self._unconditional(node) and not node.decorator_list else "unknown",
+            line=node.lineno, unconditional=self._unconditional(node),
+        ))
+        # Defaults and decorators execute in the enclosing scope, not the body.
+        for item in [*node.decorator_list, *node.args.defaults, *node.args.kw_defaults]:
+            if item is not None:
+                self.visit(item)
+        previous = self.scope
+        self.scope = self._child_scope(node, "function", node.name)
+        self._arguments(node.args)
+        for stmt in node.body:
+            self.visit(stmt)
+        self.scope = previous
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self._visit_fn(node)
@@ -340,104 +385,185 @@ class _PythonCallCollector(ast.NodeVisitor):
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         self._visit_fn(node)
 
-    def _visit_fn(self, node: _PythonFunction) -> None:
-        self.rebound_names.add(node.name)
-        self.direct_import_scopes.update({
-            stmt: node for stmt in node.body if isinstance(stmt, ast.ImportFrom) and stmt.module
-        })
-        previous_function = self.function_scope
-        self.function_scope = node
-        parent = self.scope_stack[-1]
-        qname = f"{parent}.{node.name}" if parent != "<module>" else node.name
-        self.scope_stack.append(qname)
-        self.generic_visit(node)
-        self.scope_stack.pop()
-        self.function_scope = previous_function
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self.scope.bind(node.name)
+        for item in [*node.bases, *node.decorator_list, *node.keywords]:
+            self.visit(item)
+        previous = self.scope
+        self.scope = self._child_scope(node, "class", node.name)
+        for stmt in node.body:
+            self.visit(stmt)
+        self.scope = previous
 
-    def visit_arg(self, node: ast.arg) -> None:
-        self.rebound_names.add(node.arg)
-        self.generic_visit(node)
+    def visit_Lambda(self, node: ast.Lambda) -> None:
+        for item in [*node.args.defaults, *node.args.kw_defaults]:
+            if item is not None:
+                self.visit(item)
+        previous = self.scope
+        self.scope = self._child_scope(node, "function", "<lambda>")
+        self._arguments(node.args)
+        self.visit(node.body)
+        self.scope = previous
+
+    def _comprehension(self, node: ast.AST) -> None:
+        generators = node.generators
+        self.visit(generators[0].iter)
+        previous = self.scope
+        self.scope = self._child_scope(node, "function", "<comprehension>")
+        for i, gen in enumerate(generators):
+            if i:
+                self.visit(gen.iter)
+            self.visit(gen.target)
+            for condition in gen.ifs:
+                self.visit(condition)
+        for name in ("elt", "key", "value"):
+            item = getattr(node, name, None)
+            if item is not None:
+                self.visit(item)
+        self.scope = previous
+
+    visit_ListComp = visit_SetComp = visit_DictComp = visit_GeneratorExp = _comprehension
 
     def visit_Name(self, node: ast.Name) -> None:
         if isinstance(node.ctx, (ast.Store, ast.Del)):
-            self.rebound_names.add(node.id)
+            self.scope.bind(node.id)
+
+    def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
+        self.visit(node.value)
+        scope = self.scope
+        while isinstance(scope.node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            assert scope.parent is not None
+            scope = scope.parent
+        if isinstance(node.target, ast.Name):
+            scope.bind(node.target.id)
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        if isinstance(node.ctx, (ast.Store, ast.Del)):
+            parts = _attribute_parts(node)
+            if parts:
+                self.attribute_mutations.add(parts[0])
+        self.generic_visit(node)
+
+    def visit_Global(self, node: ast.Global) -> None:
+        # Reads with global/nonlocal declarations could be supported later; mutations
+        # can affect calls in other scopes and require dataflow to reason about.
+        self.nonlocal_mutations.update(node.names)
+
+    visit_Nonlocal = visit_Global
 
     def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
-        if node.name is not None:
-            self.rebound_names.add(node.name)
+        if node.name:
+            self.scope.bind(node.name)
         self.generic_visit(node)
 
     def visit_MatchAs(self, node: ast.MatchAs) -> None:
-        if node.name is not None:
-            self.rebound_names.add(node.name)
+        if node.name:
+            self.scope.bind(node.name)
         self.generic_visit(node)
 
     def visit_MatchStar(self, node: ast.MatchStar) -> None:
-        if node.name is not None:
-            self.rebound_names.add(node.name)
+        if node.name:
+            self.scope.bind(node.name)
 
     def visit_MatchMapping(self, node: ast.MatchMapping) -> None:
-        if node.rest is not None:
-            self.rebound_names.add(node.rest)
+        if node.rest:
+            self.scope.bind(node.rest)
         self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> None:
-        callee = ""
-        if isinstance(node.func, ast.Name):
-            callee = node.func.id
-        elif isinstance(node.func, ast.Attribute):
-            callee = node.func.attr
-
-        if callee and callee not in {
-            "len", "str", "int", "float", "bool", "list", "dict", "set", "tuple",
-            "print", "isinstance", "getattr", "setattr", "hasattr", "range", "enumerate",
-            "sorted", "min", "max", "sum", "any", "all", "zip", "super", "open",
-            "append", "extend", "get", "items", "keys", "values", "strip", "split", "join",
-            "format", "lower", "upper", "replace", "startswith", "endswith",
-        }:
-            positional_count = sum(not isinstance(arg, ast.Starred) for arg in node.args)
+        parts = _attribute_parts(node.func)
+        if parts and parts[0] in {"exec", "eval", "globals", "locals", "__import__"}:
+            self.scope.dynamic = True
+        if parts and parts[0] in {"setattr", "delattr"} and node.args:
+            target = _attribute_parts(node.args[0])
+            if target:
+                self.attribute_mutations.add(target[0])
+        if parts and not (len(parts) == 1 and parts[0] in {
+            "len", "str", "int", "float", "bool", "list", "dict", "set", "tuple", "print",
+            "isinstance", "getattr", "setattr", "hasattr", "range", "enumerate", "sorted", "min",
+            "max", "sum", "any", "all", "zip", "super", "open",
+        }):
+            positional = sum(not isinstance(arg, ast.Starred) for arg in node.args)
             keywords = [kw.arg for kw in node.keywords if kw.arg is not None]
-            has_star_args = positional_count != len(node.args)
-            has_star_kwargs = len(keywords) != len(node.keywords)
-            arg_count = -1 if has_star_args or has_star_kwargs else positional_count + len(keywords)
-            python_call: PythonCall | None = None
-            # Attribute targets may be bound methods. The resolver cannot
-            # establish the receiver, so keep their existing arity behavior.
-            if isinstance(node.func, ast.Name):
-                python_call = {
-                    "positional_count": positional_count,
-                    "keywords": keywords,
-                    "has_star_args": has_star_args,
-                    "has_star_kwargs": has_star_kwargs,
-                    "direct_import": False,
-                }
+            star_args, star_kwargs = positional != len(node.args), len(keywords) != len(node.keywords)
+            shape: PythonCall = {
+                "positional_count": positional, "keywords": keywords,
+                "has_star_args": star_args, "has_star_kwargs": star_kwargs,
+                "direct_import": False, "binding_version": 2,
+                "callee_expression": parts,
+            }
             call = ParsedCall(
-                caller_path=self.rel_path,
-                caller_symbol=self.scope_stack[-1],
-                callee_name=callee,
-                line_no=node.lineno,
-                arg_count=arg_count,
-                python_call=python_call,
+                self.rel_path, self.scope.name, parts[-1], node.lineno,
+                -1 if star_args or star_kwargs else positional + len(keywords), shape,
             )
             self.calls.append(call)
-            if python_call is not None:
-                self.bare_calls.append((call, self.function_scope))
+            self.pending.append((call, parts, self.scope))
         self.generic_visit(node)
 
+    def _lookup(self, name: str, scope: _PythonScope, line: int) -> _PythonBinding | None:
+        if name in self.nonlocal_mutations or name in self.attribute_mutations:
+            return None
+        current = scope
+        while current is not None:
+            if current.star_import or current.dynamic:
+                return None
+            entries = current.bindings.get(name)
+            if entries:
+                if len(entries) != 1:
+                    return None
+                binding = entries[0]
+                if not binding.unconditional or binding.kind not in {"module", "from"}:
+                    return None
+                # Conservatively require lexical declaration before the use even
+                # across closures (module execution order is otherwise unknown).
+                return binding if binding.line < line else None
+            parent = current.parent
+            if current.kind == "function":
+                while parent is not None and parent.kind == "class":
+                    parent = parent.parent
+            current = parent
+        return None
+
     def mark_direct_imports(self) -> None:
-        # The graph resolves short names across a whole file. Use precise
-        # binding only where a direct import gives that guess a static basis.
-        if self.has_star_import:
-            return
-        for call, function_scope in self.bare_calls:
-            declaration = self.direct_imports.get(call.callee_name)
-            if declaration is None or call.callee_name in self.rebound_names:
+        for call, parts, scope in self.pending:
+            binding = self._lookup(parts[0], scope, call.line_no)
+            if binding is None:
                 continue
-            scope = self.direct_import_scopes[declaration]
-            if scope is not None and scope is not function_scope:
-                continue
-            if call.line_no > (declaration.end_lineno or declaration.lineno) and call.python_call is not None:
-                call.python_call["direct_import"] = True
+            attrs = parts[1:]
+            if binding.kind == "module":
+                if binding.name:  # import package.module as alias
+                    suffix = attrs
+                else:  # import package.module binds the package root
+                    prefix = binding.module.split(".")[1:]
+                    if attrs[:len(prefix)] != prefix:
+                        continue
+                    suffix = attrs[len(prefix):]
+                if len(suffix) != 1:
+                    continue
+                module, imported_name = binding.module, ""
+            else:
+                # A direct function or a member of an explicitly imported module.
+                if len(attrs) > 1:
+                    continue
+                module, imported_name, suffix = binding.module, binding.name, attrs
+            assert call.python_call is not None
+            call.python_call.update({
+                "direct_import": True, "import_module": module,
+                "import_name": imported_name, "import_kind": binding.kind,
+                "attribute_path": suffix,
+            })
+            call.callee_name = suffix[-1] if suffix else imported_name
+
+    def module_metadata(self) -> dict[str, Any]:
+        bindings = {}
+        imports = {}
+        for name, entries in self.root.bindings.items():
+            entry = entries[0]
+            bindings[name] = entry.kind if (len(entries) == 1 and entry.unconditional
+                and name not in self.nonlocal_mutations and name not in self.attribute_mutations) else "unknown"
+            if bindings[name] in {"from", "module"}:
+                imports[name] = {"kind": entry.kind, "module": entry.module, "name": entry.name}
+        return {"bindings": bindings, "imports": imports, "dynamic": self.root.dynamic or self.root.star_import}
 
 
 def _parse_python(rel_path: str, source: str) -> ParsedFile:
@@ -565,6 +691,7 @@ def _parse_python(rel_path: str, source: str) -> ParsedFile:
     collector.mark_direct_imports()
     parsed.imports = collector.imports
     parsed.calls = collector.calls
+    parsed.python_module = collector.module_metadata()
     return parsed
 
 

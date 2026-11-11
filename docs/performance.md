@@ -1,5 +1,44 @@
 # Larger-workspace trial
 
+## Version 0.1.5 full-workspace observation
+
+On 11 November 2026, Python 3.14.7 on macOS 26.4 arm64 indexed a fresh archive
+of Hermes commit `78abaafcccec20a546c94e8734a70e38c08a6a69` with a raised
+20,000-file cap. It indexed **17,025 files, 192,406 symbols, and 66,779 edges**,
+with no parse errors or file-cap truncation.
+
+| Operation | Observed wall time |
+| --- | ---: |
+| Scan with a fresh database | 73.65 s |
+| Cached scan, no source changes | 2.72 s |
+| Real Hermes one-file keyword-rename patch | 9.42 s |
+| Real Hermes three-file caller-repair patch | 5.88 s |
+
+Each operation ran once; operating-system caches were unchanged. Scan timings
+call `index_workspace` directly. Patch timings include Hermes file editing,
+linting, hook indexing, and result transformation, so they do not isolate plugin
+overhead. The rename returned five affected sites and one open alert; the repair
+left zero open alerts. No model calls were made. The 30-second edit-hook callback
+timeout was unchanged; the 73.65-second cold scan was measured directly, not
+inside a startup hook.
+
+The measured engine SHA-256 was
+`f37ddb1fbc088b7f55df42acba3df6032fa0c105d10078ecfe7d00906b926226`.
+This precedes the report-count correction in the frozen corpus/model engine
+`efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac`.
+The benchmark was not rerun after that correction; these timings belong to the
+recorded snapshot. The final candidate engine
+`c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c`
+adds caller-confidence preservation, stale-source handling, and bounded source
+excerpts after that freeze and was not benchmarked
+again either. [Raw measurements and settings](evidence/v015-performance.json).
+
+This is one observation on one workspace, not a latency distribution or a
+performance guarantee. The full scan and larger file cap differ from the older
+subset trial below, so the two tables are not a matched speed comparison.
+
+## Historical v0.1.3 bounded-subset observation
+
 Measured on 11 November 2026 using an Apple M4 with 16 GiB RAM, macOS 26.4 arm64,
 and Python 3.11.16. The workspace was a Hermes Agent source checkout at
 `01672831e48c1224bc003f834dd9b8c1cfc96a57`. Locus Codegraph's 0.1.3 candidate
