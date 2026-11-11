@@ -458,17 +458,18 @@ def _store_parsed_file(
 def _relink_and_rank(conn: sqlite3.Connection, workspace_id: str) -> int:
     """Resolve cross-file imports & calls and compute PageRank + fan-in/fan-out."""
     file_rows = conn.execute(
-        "SELECT rel_path, lang FROM files WHERE workspace_id = ?",
+        "SELECT rel_path, lang, pagerank, fan_in, fan_out FROM files WHERE workspace_id = ?",
         (workspace_id,),
     ).fetchall()
     known_files = {r["rel_path"] for r in file_rows}
+    old_file_stats = {r["rel_path"]: (r["pagerank"], r["fan_in"], r["fan_out"]) for r in file_rows}
     lang_by_file = {r["rel_path"]: r["lang"] for r in file_rows}
     if not known_files:
         return 0
 
     # 1. Resolve imports
     imp_rows = conn.execute(
-        "SELECT rowid, src_path, target_spec, imported_names FROM imports WHERE workspace_id = ?",
+        "SELECT rowid, src_path, target_spec, imported_names, resolved_path FROM imports WHERE workspace_id = ?",
         (workspace_id,),
     ).fetchall()
 
@@ -481,7 +482,8 @@ def _relink_and_rank(conn: sqlite3.Connection, workspace_id: str) -> int:
         lang = lang_by_file.get(src, "python")
         names = [n for n in (r["imported_names"] or "").split(",") if n]
         resolved = _resolve_import_spec(src, lang, r["target_spec"], known_files, names)
-        imp_updates.append((resolved, int(r["rowid"])))
+        if resolved != r["resolved_path"]:
+            imp_updates.append((resolved, int(r["rowid"])))
         if resolved:
             file_imports.setdefault(src, set()).add(resolved)
             for n in names:
@@ -503,7 +505,7 @@ def _relink_and_rank(conn: sqlite3.Connection, workspace_id: str) -> int:
             exported_defs_by_name.setdefault(sr["name"], []).append(sr["rel_path"])
 
     call_rows = conn.execute(
-        "SELECT rowid, caller_path, callee_name FROM calls WHERE workspace_id = ?",
+        "SELECT rowid, caller_path, callee_name, resolved_path FROM calls WHERE workspace_id = ?",
         (workspace_id,),
     ).fetchall()
     call_updates: list[tuple[str, int]] = []
@@ -527,7 +529,8 @@ def _relink_and_rank(conn: sqlite3.Connection, workspace_id: str) -> int:
             elif len(candidate_files) == 1:
                 resolved_target = candidate_files[0]
 
-        call_updates.append((resolved_target, int(cr["rowid"])))
+        if resolved_target != cr["resolved_path"]:
+            call_updates.append((resolved_target, int(cr["rowid"])))
         if resolved_target and resolved_target != cpath and resolved_target in known_files:
             call_edges.setdefault(cpath, set()).add(resolved_target)
 
@@ -561,19 +564,16 @@ def _relink_and_rank(conn: sqlite3.Connection, workspace_id: str) -> int:
             next_ranks[n] = base_rank + dangling_share + damping * inbound
         ranks = next_ranks
 
-    conn.executemany(
-        "UPDATE files SET pagerank = ?, fan_in = ?, fan_out = ? WHERE workspace_id = ? AND rel_path = ?",
-        [
-            (
-                round(ranks[n], 6),
-                len(in_neighbors[n]),
-                len(out_neighbors[n]),
-                workspace_id,
-                n,
-            )
-            for n in nodes
-        ],
-    )
+    rank_updates = []
+    for n in nodes:
+        stats = (round(ranks[n], 6), len(in_neighbors[n]), len(out_neighbors[n]))
+        if stats != old_file_stats[n]:
+            rank_updates.append((*stats, workspace_id, n))
+    if rank_updates:
+        conn.executemany(
+            "UPDATE files SET pagerank = ?, fan_in = ?, fan_out = ? WHERE workspace_id = ? AND rel_path = ?",
+            rank_updates,
+        )
     return edge_count
 
 
