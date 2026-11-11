@@ -10,14 +10,30 @@ permissions:
 
 jobs:
   standalone:
-    name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    name: Standalone ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    env:
+      PYTHONUTF8: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.14"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.11"
+          - os: ubuntu-latest
+            python-version: "3.12"
+          - os: ubuntu-latest
+            python-version: "3.14"
+          - os: macos-latest
+            python-version: "3.14"
+          - os: windows-latest
+            python-version: "3.14"
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -26,10 +42,66 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install -r requirements-dev.txt
       - name: Unit and API tests
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
+        if: matrix.os != 'windows-latest'
         run: python -m unittest discover -s tests -v
+      - name: Portable Windows smoke tests
+        if: matrix.os == 'windows-latest'
+        run: python -m unittest -v tests.test_python_call_shapes tests.test_large_graphs tests.test_storage_migration
       - name: Engine demonstration
-        env:
-          PYTHONDONTWRITEBYTECODE: "1"
         run: python scripts/run_demo.py
+
+  hermes-integration:
+    name: Pinned Hermes install and edit replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The signature corpus also compares the archived v0.1.3 baseline.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out the verified Hermes host
+        uses: actions/checkout@v4
+        with:
+          repository: NousResearch/hermes-agent
+          ref: 78abaafcccec20a546c94e8734a70e38c08a6a69
+          path: hermes-host
+          persist-credentials: false
+      - name: Prepare the host's locked Python and uv
+        # Use the pinned host's setup-pm phases directly because its checkout is nested.
+        run: |
+          python3 -S hermes-host/scripts/ci/setup_toolchain.py prepare \
+            --toolchain python --home "$RUNNER_TEMP/setup-pm"
+          python3 -S hermes-host/scripts/ci/setup_toolchain.py install \
+            --toolchain python --home "$RUNNER_TEMP/setup-pm"
+      - name: Install the host's locked core dependencies
+        run: |
+          "$HERMES_PYTHON" -S hermes-host/scripts/ci/setup_toolchain.py dependencies \
+            --toolchain python --extras '[]' --home "$HERMES_HOME"
+      - name: Install the host's pinned pytest tools
+        run: |
+          uv pip install --python "$HERMES_PYTHON" --target "$RUNNER_TEMP/locus-pytest" \
+            pytest==9.1.1 pytest-asyncio==1.4.0
+      - name: Install the exact plugin commit and verify the edit hook
+        run: |
+          "$HERMES_PYTHON" tests/integration/verify_hermes_refactor.py \
+            --source "$GITHUB_WORKSPACE/hermes-host" --runtime "$HERMES_RUNTIME_DIR" \
+            --pytest-deps "$RUNNER_TEMP/locus-pytest" --variant candidate --install-from-git \
+            --output "$RUNNER_TEMP/locus-hermes-replay.json"
+      - name: Check signature detection across pinned source fixtures
+        run: |
+          "$HERMES_PYTHON" tests/integration/verify_signature_corpus.py \
+            --source "$GITHUB_WORKSPACE/hermes-host" --runtime "$HERMES_RUNTIME_DIR" \
+            --candidate-ref HEAD --check-supported --output "$RUNNER_TEMP/locus-signature-corpus.json"
+      - name: Upload Hermes integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: locus-hermes-integration
+          path: |
+            ${{ runner.temp }}/locus-hermes-replay.json
+            ${{ runner.temp }}/locus-signature-corpus.json
+          if-no-files-found: ignore
+          retention-days: 14

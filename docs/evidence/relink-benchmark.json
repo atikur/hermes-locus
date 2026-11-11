@@ -1,0 +1,165 @@
+{
+  "revisions": {
+    "baseline": "abd696671431cf0d99694354019321fd3d6826b0",
+    "optimized": "fcdb087e45c93bacca529bbd087014e84033ad8c"
+  },
+  "workspace_source_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+  "environment": {
+    "system": "Darwin",
+    "release": "25.4.0",
+    "machine": "arm64",
+    "python": "3.14.7",
+    "sqlite": "3.53.1",
+    "python_hash_seed": "0"
+  },
+  "method": "SQLite backup to one seed; each arm starts from a copy of the same seed. Arm order alternates by repeat.",
+  "limits": [
+    "One workspace on one machine; cache and disk effects still vary by order.",
+    "Wall time covers relink and commit. It excludes scanning, reparsing, copying, and graph comparison.",
+    "WAL size includes any staged reparse writes, while SQL update counts cover relink only."
+  ],
+  "trials": [
+    {
+      "order": [
+        "baseline",
+        "optimized"
+      ],
+      "arms": {
+        "baseline": [
+          {
+            "scenario": "reparse-display",
+            "relink_seconds_including_commit": 7.4762,
+            "sql_rows_updated_during_relink": 1219296,
+            "wal_bytes_including_reparse": 67168392,
+            "edges": 79469,
+            "graph_sha256": "2370240983973f74fd668da9fd9f1b616d6fb0629292653a5377c6d588f63843"
+          },
+          {
+            "scenario": "unchanged",
+            "relink_seconds_including_commit": 5.5598,
+            "sql_rows_updated_during_relink": 1219296,
+            "wal_bytes_including_reparse": 66039512,
+            "edges": 79469,
+            "graph_sha256": "2370240983973f74fd668da9fd9f1b616d6fb0629292653a5377c6d588f63843"
+          },
+          {
+            "scenario": "add-dependency",
+            "relink_seconds_including_commit": 5.6942,
+            "sql_rows_updated_during_relink": 1219299,
+            "wal_bytes_including_reparse": 66245512,
+            "edges": 79470,
+            "graph_sha256": "29fb8c0ab6d258b97d986941441c7dddbebab758ca38e7f49c85edd170f3bfa6"
+          }
+        ],
+        "optimized": [
+          {
+            "scenario": "reparse-display",
+            "relink_seconds_including_commit": 4.31,
+            "sql_rows_updated_during_relink": 311,
+            "wal_bytes_including_reparse": 1310192,
+            "edges": 79469,
+            "graph_sha256": "2370240983973f74fd668da9fd9f1b616d6fb0629292653a5377c6d588f63843"
+          },
+          {
+            "scenario": "unchanged",
+            "relink_seconds_including_commit": 2.2037,
+            "sql_rows_updated_during_relink": 0,
+            "wal_bytes_including_reparse": 0,
+            "edges": 79469,
+            "graph_sha256": "2370240983973f74fd668da9fd9f1b616d6fb0629292653a5377c6d588f63843"
+          },
+          {
+            "scenario": "add-dependency",
+            "relink_seconds_including_commit": 2.3157,
+            "sql_rows_updated_during_relink": 48,
+            "wal_bytes_including_reparse": 222512,
+            "edges": 79470,
+            "graph_sha256": "29fb8c0ab6d258b97d986941441c7dddbebab758ca38e7f49c85edd170f3bfa6"
+          }
+        ]
+      },
+      "graph_equal": true
+    },
+    {
+      "order": [
+        "optimized",
+        "baseline"
+      ],
+      "arms": {
+        "optimized": [
+          {
+            "scenario": "reparse-display",
+            "relink_seconds_including_commit": 4.4796,
+            "sql_rows_updated_during_relink": 311,
+            "wal_bytes_including_reparse": 1310192,
+            "edges": 79469,
+            "graph_sha256": "2370240983973f74fd668da9fd9f1b616d6fb0629292653a5377c6d588f63843"
+          },
+          {
+            "scenario": "unchanged",
+            "relink_seconds_including_commit": 2.2693,
+            "sql_rows_updated_during_relink": 0,
+            "wal_bytes_including_reparse": 0,
+            "edges": 79469,
+            "graph_sha256": "2370240983973f74fd668da9fd9f1b616d6fb0629292653a5377c6d588f63843"
+          },
+          {
+            "scenario": "add-dependency",
+            "relink_seconds_including_commit": 2.1,
+            "sql_rows_updated_during_relink": 48,
+            "wal_bytes_including_reparse": 222512,
+            "edges": 79470,
+            "graph_sha256": "29fb8c0ab6d258b97d986941441c7dddbebab758ca38e7f49c85edd170f3bfa6"
+          }
+        ],
+        "baseline": [
+          {
+            "scenario": "reparse-display",
+            "relink_seconds_including_commit": 7.23,
+            "sql_rows_updated_during_relink": 1219296,
+            "wal_bytes_including_reparse": 67168392,
+            "edges": 79469,
+            "graph_sha256": "2370240983973f74fd668da9fd9f1b616d6fb0629292653a5377c6d588f63843"
+          },
+          {
+            "scenario": "unchanged",
+            "relink_seconds_including_commit": 5.3096,
+            "sql_rows_updated_during_relink": 1219296,
+            "wal_bytes_including_reparse": 66039512,
+            "edges": 79469,
+            "graph_sha256": "2370240983973f74fd668da9fd9f1b616d6fb0629292653a5377c6d588f63843"
+          },
+          {
+            "scenario": "add-dependency",
+            "relink_seconds_including_commit": 5.716,
+            "sql_rows_updated_during_relink": 1219299,
+            "wal_bytes_including_reparse": 66245512,
+            "edges": 79470,
+            "graph_sha256": "29fb8c0ab6d258b97d986941441c7dddbebab758ca38e7f49c85edd170f3bfa6"
+          }
+        ]
+      },
+      "graph_equal": true
+    }
+  ],
+  "seed_rows": {
+    "workspaces": 1,
+    "files": 17025,
+    "imports": 159280,
+    "calls": 1042991,
+    "symbols": 192406
+  },
+  "input_index_sha256": "6fd8f61cbd89cc2db760e872732525546ab572834c47caa7f36104536743fadd",
+  "median_relink_seconds": {
+    "baseline": {
+      "reparse-display": 7.3531,
+      "unchanged": 5.434699999999999,
+      "add-dependency": 5.7051
+    },
+    "optimized": {
+      "reparse-display": 4.3948,
+      "unchanged": 2.2365,
+      "add-dependency": 2.20785
+    }
+  }
+}

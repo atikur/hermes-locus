@@ -103,16 +103,27 @@ def main() -> None:
     parser.add_argument("--pytest-deps", type=Path, required=True, help="directory containing pytest and pytest-asyncio")
     parser.add_argument("--variant", choices=("baseline", "candidate"), required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--install-from-git", action="store_true",
+        help="use Hermes to install and enable the exact committed candidate in the scratch profile",
+    )
     args = parser.parse_args()
+    if args.install_from_git and args.variant != "candidate":
+        parser.error("--install-from-git requires --variant candidate")
     source, runtime, deps, output = (p.resolve() for p in (args.source, args.runtime, args.pytest_deps, args.output))
     plugin = Path(__file__).resolve().parents[2]
+    plugin_revision = "candidate working tree"
+    if args.variant == "baseline":
+        plugin_revision = BASELINE_COMMIT
+    elif args.install_from_git:
+        plugin_revision = git_head(plugin)
     output.parent.mkdir(parents=True, exist_ok=True)
     evidence: dict[str, Any] = {
         "scenario": "Rename the required keyword-only argument of prepare_tool_preview at the same arity",
         "variant": args.variant,
         "workspace_commit": WORKSPACE_COMMIT,
         "hermes_host_commit": git_head(source),
-        "plugin_revision": BASELINE_COMMIT if args.variant == "baseline" else "candidate working tree",
+        "plugin_revision": plugin_revision,
         "python_version": platform.python_version(),
         "model_calls": 0,
         "max_files": 20000,
@@ -143,12 +154,12 @@ def main() -> None:
             extract_commit(source, WORKSPACE_COMMIT, workspace)
             if args.variant == "baseline":
                 extract_commit(plugin, BASELINE_COMMIT, installed)
-            else:
+            elif not args.install_from_git:
                 shutil.copytree(plugin, installed, ignore=shutil.ignore_patterns(".git", ".venv", "__pycache__", "*.pyc"))
-            evidence["plugin_engine_sha256"] = engine_digest(installed)
 
+            enabled = "[]" if args.install_from_git else f"[{PLUGIN_NAME}]"
             (home / "config.yaml").write_text(
-                "plugins:\n  enabled: [locus-codegraph]\n  hook_callback_timeout: 120\n"
+                f"plugins:\n  enabled: {enabled}\n  hook_callback_timeout: 120\n"
                 "  entries:\n    locus-codegraph:\n      settings:\n"
                 "        auto_index_on_start: true\n        drift_guard: true\n        max_files: 20000\n"
                 "terminal:\n  backend: local\n  cwd: " + json.dumps(str(workspace)) + "\n",
@@ -163,6 +174,26 @@ def main() -> None:
                 "TERMINAL_CWD": str(workspace), "LOCUS_WORKSPACE": str(workspace), "TERMINAL_ENV": "local",
                 "PYTHONDONTWRITEBYTECODE": "1",
             })
+            if args.install_from_git:
+                command = ["-m", "hermes_cli.main", "plugins", "install", plugin.as_uri(),
+                           "--ref", plugin_revision, "--enable"]
+                result = subprocess.run(
+                    [sys.executable, *command], cwd=source, text=True, capture_output=True, timeout=300,
+                    env={**os.environ, "PYTHONPATH": str(source), "GIT_TERMINAL_PROMPT": "0"},
+                )
+                evidence["install"] = {
+                    "command": ["<hermes-python>", *command], "exit_code": result.returncode,
+                    "stdout": result.stdout, "stderr": result.stderr,
+                }
+                if result.returncode != 0:
+                    raise RuntimeError(f"Hermes plugin install exited {result.returncode}. See the replay report.")
+                installed_revision = git_head(installed)
+                evidence["install"]["installed_revision"] = installed_revision
+                if installed_revision != plugin_revision:
+                    raise RuntimeError(f"Expected plugin {plugin_revision}, installed {installed_revision}")
+                print(f"Installed and enabled Locus at {installed_revision}", flush=True)
+            evidence["plugin_engine_sha256"] = engine_digest(installed)
+
             sys.dont_write_bytecode = True
             sys.path.insert(0, str(source))
             os.chdir(workspace)

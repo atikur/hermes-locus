@@ -2,7 +2,7 @@
 
 **Locus Codegraph shows Hermes what a change could break, then flags incompatible callers while it works.**
 
-[60-second live demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) · [Installation](../README.md#install) · [Transcript and verification](verification.md#live-keyword-refactor-on-hermes-agent)
+[60-second demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) · [Installation](../README.md#install) · [Transcript and verification](verification.md#live-keyword-refactor-on-hermes-agent)
 
 It adds a local structural code graph to Hermes Agent. Before a refactor, `@sym:`
 and `@impact:` expose definitions, callers, dependent modules, and suggested tests.
@@ -29,6 +29,16 @@ first patch result, before Hermes searched for callers. Hermes confirmed the
 locations, repaired the five calls, passed all 26 upstream display tests, and
 verified that no drift alerts remained. The prompt staged the helper edit and
 gave Hermes no caller locations. [Evidence and scope](verification.md#live-keyword-refactor-on-hermes-agent)
+
+## Check the guard across three repositories
+
+Nineteen matched Hermes patches on pinned source files from Hermes Agent,
+HTTPX, and Requests tested breaking and compatible signature edits.
+Python's argument binding labeled each selected call. Locus 0.1.4 named
+33 of 33 incompatible direct-import call instances, compared with 6 of 33
+in v0.1.3. Neither version named a compatible call. Both missed the nine
+broken calls in the module-qualified Requests case.
+[Reproduce the check](verification.md#signature-changes-across-three-repositories)
 
 ## Keyword rename replay
 
@@ -102,4 +112,4 @@ in the official form. Catalog listing remains subject to maintainer review.
 
 ## Suggested X post
 
-> Built Locus Codegraph for the @NousResearch Hermes Agent Plugin Hackathon. In a live refactor on Hermes's own code, the first edit flagged five broken calls. Hermes repaired all five and passed 26 tests. https://github.com/atikur/hermes-locus
+> Hermes renamed a Python keyword. Locus Codegraph flagged 5 broken calls in the patch result, before caller search. Hermes fixed them and passed 26 tests. Built for the @NousResearch Plugin Hackathon. AI voiceover. https://github.com/atikur/hermes-locus

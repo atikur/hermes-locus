@@ -4,7 +4,9 @@ Verified on 11 November 2026 on macOS (Darwin 25.4.0, arm64).
 
 The local checks below cover **0.1.4** with Python call binding. The
 [GitHub workflow](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
-separately runs the standalone suite on Python 3.11, 3.12, and 3.14.
+defines standalone jobs on Linux and macOS, a portable Windows smoke test,
+and a fresh plugin install and edit replay on pinned Hermes. The model
+evaluation runs separately and requires an API key.
 
 Since version 0.1.2, this project uses the distinct plugin identity
 `locus-codegraph` to coexist with an unrelated plugin named Locus. The earlier
@@ -54,7 +56,11 @@ edit and five keyword repairs. This was one staged session to show when the
 warning arrives. The [scripted comparison](#keyword-rename-on-hermes-agent)
 tests the same edit on two versions of Locus.
 
-[60-second recording](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) ·
+The 60-second demo opens with the recorded run. Its final nine seconds show
+the Hermes Web Dashboard replaying the same edits and the alert clearing.
+All four repaired files in the replay match the live run byte for byte.
+
+[60-second demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) ·
 [Full event transcript](evidence/live-keyword-session.jsonl) ·
 [Prompt](evidence/live-keyword-prompt.txt) ·
 [Independent verification](evidence/live-keyword-verification.json)
@@ -109,6 +115,62 @@ the v0.1.3 commit from this plugin's history.
   --source /path/to/hermes-agent --runtime /path/to/hermes-runtime \
   --pytest-deps /path/to/test-deps --variant candidate --output candidate.json
 ```
+
+## Signature changes across three repositories
+
+We ran 19 matched edits through the real Hermes `patch` tool on selected
+original Python files from pinned revisions of Hermes Agent, HTTPX, and
+Requests. Each edit starts from the original files. Edits include renamed
+keywords, required keywords, positional-only changes, compatible additions,
+and body-only controls. CPython's `inspect.Signature.bind` independently
+labels which original calls still bind after each edit.
+
+| Call instances in the selected edits | v0.1.3 | v0.1.4 |
+| --- | ---: | ---: |
+| Incompatible direct-import calls named | 6 / 33 | **33 / 33** |
+| Compatible direct-import calls named | 0 / 33 | **0 / 33** |
+| Incompatible module-qualified calls named | 0 / 9 | **0 / 9** |
+| All incompatible calls named | 6 / 42 | **33 / 42** |
+
+The same source call can appear in several edits. These counts measure call
+binding for the selected edits, including one module-qualified Requests case
+that Locus does not resolve precisely. They do not estimate accuracy across
+entire repositories or verify runtime behavior. No model calls are involved.
+
+[Pinned source revisions, oracle labels and actual patch results](evidence/signature-corpus.json) ·
+[Replay script](../tests/integration/verify_signature_corpus.py)
+
+Run with the Hermes interpreter. The script checks each upstream source blob
+against its Git hash. External Python files are fetched from GitHub unless
+`--cache` points to previously downloaded copies.
+
+```bash
+/path/to/hermes/python tests/integration/verify_signature_corpus.py \
+  --source /path/to/hermes-agent --runtime /path/to/hermes-runtime \
+  --candidate-ref HEAD --output signature-corpus.json
+```
+
+## Fewer SQLite writes during an edit
+
+Locus recalculates resolution and ranking after an edit. The final v0.1.4
+engine skips database updates when the resolved paths and graph statistics
+have stayed the same.
+
+We compared the previous and optimized engines using identical copies of a
+17,025-file Hermes Agent index on one Apple Silicon Mac. Two repeats alternated
+execution order. The measured relink and commit step after reparsing
+`agent/display.py` took a median of **7.35 s before and 4.39 s after**. The
+number of rows updated in that step dropped from **1,219,296 to 311**. The
+benchmarks for a no-change relink and a new dependency also produced identical
+graph digests before and after the optimization.
+
+This measures the database relink step with an existing index. It excludes
+startup scans, source parsing, and model calls. Three simultaneous trial
+sessions on this Mac hit Hermes's hook timeout while using the raised
+20,000-file cap. We switched the model study to serial runs.
+
+[Raw timings and graph digests](evidence/relink-benchmark.json) ·
+[Benchmark runner](../tests/integration/benchmark_relink.py)
 
 ## Real model-assisted refactor
 
