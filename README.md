@@ -4,7 +4,7 @@
 
 **Locus Codegraph shows Hermes what a change could break, then flags incompatible callers while it works.** It builds a local structural graph of your repository and connects it to agent tools, `@` context references, the Web Dashboard, and Hermes Desktop.
 
-[Watch the 58-second keyword rename replay](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-keyword-replay.mp4) · [Review the tool results and test output](docs/verification.md#keyword-rename-on-hermes-agent)
+[Watch the 60-second live Hermes refactor](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) · [Review the transcript and test output](docs/verification.md#live-keyword-refactor-on-hermes-agent)
 
 The analysis engine uses Python's standard library (`ast`, `sqlite3`, and structural parsers). It needs no API key, hosted index, or extra model call. Hermes supplies the web and desktop integration libraries.
 
@@ -27,7 +27,7 @@ Suppose checkout code calls `verify_token(token, audience="checkout")`, and an A
 
 Locus supplies the evidence and the agent performs the repair. The warning above is abbreviated for illustration.
 
-In a replay on Hermes Agent's own code, the same keyword rename passed through the real `patch` tool on both versions. Locus 0.1.4 named five affected call sites before testing. The earlier version reported zero. Three upstream tests failed after the rename, and all 26 passed again after repair. [Replay and evidence](docs/verification.md#keyword-rename-on-hermes-agent)
+In a live refactor on Hermes Agent's own code, Locus named all five affected call sites in the result of the first edit, before Hermes searched for callers. Hermes confirmed the locations, repaired the calls, and passed all 26 upstream display tests. A separate scripted replay showed that the same edit produced no warning in Locus 0.1.3. [Live evidence and replay](docs/verification.md#live-keyword-refactor-on-hermes-agent)
 
 ## Install
 

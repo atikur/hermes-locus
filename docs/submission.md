@@ -2,7 +2,7 @@
 
 **Locus Codegraph shows Hermes what a change could break, then flags incompatible callers while it works.**
 
-[58-second replay](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-keyword-replay.mp4) · [Installation](../README.md#install) · [Replay evidence](verification.md#keyword-rename-on-hermes-agent)
+[60-second live demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) · [Installation](../README.md#install) · [Transcript and verification](verification.md#live-keyword-refactor-on-hermes-agent)
 
 It adds a local structural code graph to Hermes Agent. Before a refactor, `@sym:`
 and `@impact:` expose definitions, callers, dependent modules, and suggested tests.
@@ -21,6 +21,15 @@ transforms tool results, registers context-reference providers, and exposes web
 and desktop interfaces. The distinctive capability is structural feedback arriving
 inside the editing loop. The plugin supplies evidence; Hermes performs repairs.
 
+## Live keyword refactor
+
+Hermes with OpenAI `gpt-5.4-mini` renamed a keyword-only parameter in Hermes
+Agent's own code. Locus 0.1.4 reported all five incompatible call sites in the
+first patch result, before Hermes searched for callers. Hermes confirmed the
+locations, repaired the five calls, passed all 26 upstream display tests, and
+verified that no drift alerts remained. The prompt staged the helper edit and
+gave Hermes no caller locations. [Evidence and scope](verification.md#live-keyword-refactor-on-hermes-agent)
+
 ## Keyword rename replay
 
 Locus Codegraph 0.1.4 ran a controlled replay of a same-arity keyword rename on
@@ -30,7 +39,7 @@ and three test calls in the patch result and suggested replacing `max_len=`
 with `limit=`. After the scripted repair, all 26 upstream tests passed and the
 alert cleared. [Replay commands and results](verification.md#keyword-rename-on-hermes-agent)
 
-## Recorded model session
+## Earlier recorded model session
 
 A real Hermes session with OpenAI `gpt-5.4-mini` changed a shared helper to require
 an additional argument. Its actual editing-tool result contained a warning naming
@@ -93,4 +102,4 @@ in the official form. Catalog listing remains subject to maintainer review.
 
 ## Suggested X post
 
-> Built Locus Codegraph for the @NousResearch Hermes Agent Plugin Hackathon. It shows affected callers, flags signature drift inside edit results, and tracks the agent's repairs. Local analysis, no hosted index. Working demo below. https://github.com/atikur/hermes-locus
+> Built Locus Codegraph for the @NousResearch Hermes Agent Plugin Hackathon. In a live refactor on Hermes's own code, the first edit flagged five broken calls. Hermes repaired all five and passed 26 tests. https://github.com/atikur/hermes-locus

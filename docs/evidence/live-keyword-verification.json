@@ -1,0 +1,60 @@
+{
+  "passed": true,
+  "source": {
+    "passed": true,
+    "baseline_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+    "archived_files_and_links_compared": 24306,
+    "expected_files_verified": [
+      "agent/display.py",
+      "gateway/platforms/base.py",
+      "gateway/run_turn_progress.py",
+      "tests/agent/test_display.py"
+    ],
+    "expected_caller_sites_verified": [
+      "gateway/platforms/base.py:2014",
+      "gateway/run_turn_progress.py:375",
+      "tests/agent/test_display.py:142",
+      "tests/agent/test_display.py:155",
+      "tests/agent/test_display.py:164"
+    ],
+    "unexpected_count": 0,
+    "unexpected_examples": []
+  },
+  "timeline": {
+    "passed": true,
+    "model": "gpt-5.4-mini",
+    "helper_patch_warning_line": 5,
+    "reported_call_sites": [
+      "gateway/platforms/base.py:2014",
+      "gateway/run_turn_progress.py:375",
+      "tests/agent/test_display.py:142",
+      "tests/agent/test_display.py:155",
+      "tests/agent/test_display.py:164"
+    ],
+    "potential_inspection_before_warning": [],
+    "repaired_files_in_trace": [
+      "gateway/platforms/base.py",
+      "gateway/run_turn_progress.py",
+      "tests/agent/test_display.py"
+    ],
+    "last_repair_line": 23,
+    "zero_drift_line_after_repair": 31,
+    "problems": [],
+    "raw_transcript_sha256": "42084d3cca45dc59d156eeeefc524cdd4da2f5a0c8c908ff59eed3581edafe5e",
+    "sanitized_transcript_sha256": "ae919f00018037e6f78ed5e938a945f4e13c63b310330a5e4de50a378d22c9b2"
+  },
+  "tests": {
+    "model_invoked_wrapper_results": [
+      {
+        "start_line": 24,
+        "line": 25,
+        "exit_code": 0,
+        "passed_26": true
+      }
+    ],
+    "model_invoked_26_passed_after_repair": true,
+    "independent_test_run_performed_by_this_verifier": false
+  },
+  "tested_plugin_commit": "c6a07dcf64affe8f90ea9a4498fa3395cca224a8",
+  "first_caller_search_line": 6
+}

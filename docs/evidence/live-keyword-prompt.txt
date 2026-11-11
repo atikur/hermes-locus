@@ -1,0 +1,9 @@
+Work in this disposable Hermes Agent checkout: <workspace>
+
+Rename the required keyword-only parameter `max_len` to `limit` in `prepare_tool_preview` in `agent/display.py` (around line 512). Update its use in the function body and preserve behavior.
+
+First, use `read_file` only on `agent/display.py`, then make one `patch` that changes only this function's signature and body. Wait for that patch result before you search for, inspect, or edit callers.
+
+Then inspect the patch result, find and repair every affected call, and run the original display tests from the workspace with `../run-display-tests`. This is the sole terminal command needed. After the tests, call locus_hotspots and report the open drift count. Summarize what changed and the test result.
+
+Keep tool reads and file edits inside the disposable checkout. You may execute the sibling test wrapper as described above. Use local tools only, avoid credential access and network requests, and leave adjacent worktrees and profiles alone. Do not commit or push.

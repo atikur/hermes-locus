@@ -6,10 +6,9 @@ The local checks below cover **0.1.4** with Python call binding. The
 [GitHub workflow](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
 separately runs the standalone suite on Python 3.11, 3.12, and 3.14.
 
-Version 0.1.2 uses the distinct plugin identity `locus-codegraph` to coexist with
-an unrelated plugin named Locus. The recorded model session below used 0.1.1;
-its event transcript is preserved unchanged. The refactoring engine is unchanged
-by the identity update.
+Since version 0.1.2, this project uses the distinct plugin identity
+`locus-codegraph` to coexist with an unrelated plugin named Locus. The earlier
+fixture session used 0.1.1; its event transcript is preserved.
 
 ## Reproducible checks
 
@@ -33,6 +32,36 @@ Run the standalone suite using the README instructions. For the host suite,
 use the Hermes interpreter and a disposable `HERMES_HOME`, then run the same
 `python -m unittest discover -s tests -v` command. Host-dependent tests are
 explicitly skipped when Hermes is unavailable.
+
+## Live keyword refactor on Hermes Agent
+
+Hermes with OpenAI `gpt-5.4-mini` changed a keyword-only parameter in its own
+source, from `max_len` to `limit`. The run used a fresh archive of upstream
+Hermes commit [`78abaafc`](https://github.com/NousResearch/hermes-agent/commit/78abaafcccec20a546c94e8734a70e38c08a6a69)
+and Locus 0.1.4 at commit `c6a07dcf64affe8f90ea9a4498fa3395cca224a8`.
+
+1. The prompt named the helper and requested that Hermes edit it before looking
+   at callers. It supplied no caller locations or count.
+2. The actual `patch` result warned about all five incompatible call sites
+   and suggested replacing `max_len=` with `limit=` (transcript line 5).
+3. Hermes searched to confirm the list (line 6), then repaired all five calls.
+4. Hermes ran the upstream display suite: **26 passed** (line 25).
+   `locus_hotspots` then reported **zero open signature drift alerts** (line 31).
+
+An independent comparison checked 24,306 archived files and symlinks against
+upstream. Only the four expected files changed, with the requested helper
+edit and five keyword repairs. This was one staged session to show when the
+warning arrives. The [scripted comparison](#keyword-rename-on-hermes-agent)
+tests the same edit on two versions of Locus.
+
+[60-second recording](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) ·
+[Full event transcript](evidence/live-keyword-session.jsonl) ·
+[Prompt](evidence/live-keyword-prompt.txt) ·
+[Independent verification](evidence/live-keyword-verification.json)
+
+The prompt and transcript redact only the local workspace path. Both the live
+run and scripted comparison used the same source archive, test dependencies,
+and scan cap and timeout settings described below.
 
 ## Keyword rename on Hermes Agent
 
@@ -59,6 +88,7 @@ suggestions on a small fixture, and cleared the alert after a repair and rescan.
 
 [v0.1.3 replay](evidence/keyword-refactor-baseline.json) ·
 [v0.1.4 replay](evidence/keyword-refactor-candidate.json) ·
+[58-second comparison](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-keyword-replay.mp4) ·
 [Integration test](../tests/integration/verify_hermes_refactor.py)
 
 The replay scripts the edits and makes zero model calls. It measures the alert
