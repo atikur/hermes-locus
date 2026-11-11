@@ -2,7 +2,7 @@
 
 **Locus Codegraph puts precise caller feedback inside Hermes's edit results.**
 
-[70-second live demo](../assets/locus-v020-demo.mp4) · [Current evidence](verification.md#version-020-rehearsal-same-file-and-instance-calls) · [Earlier 0.1.5 replay](../assets/locus-v015-proof.mp4) · [0.1.5 evidence](verification.md#version-015-candidate) · [Actual final-engine Desktop/Web checks](evidence/v015-native-stale-verification.md) · [Installation](../README.md#install)
+[78-second live demo](../assets/locus-v020-demo.mp4) · [Current evidence](verification.md#version-020-rehearsal-same-file-and-instance-calls) · [Earlier 0.1.5 replay](../assets/locus-v015-proof.mp4) · [0.1.5 evidence](verification.md#version-015-candidate) · [Actual final-engine Desktop/Web checks](evidence/v015-native-stale-verification.md) · [Installation](../README.md#install)
 
 The replay shows one selected controlled `efbf401` study session with a pre-applied helper edit and independently run tests; it is not a live UI capture, final-engine run, or typical-success estimate. [Media provenance](evidence/v015-demo-selected-evidence.json).
 

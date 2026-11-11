@@ -4,9 +4,9 @@
 
 **Locus lets Hermes check a Python signature change before and after making it.** Ask `@whatif:verify_token(token,*,scope=None)` and Locus binds every statically proven caller against the proposed signature, before any file changes, and lists the call sites that would break and why. When Hermes then edits the code, the same check runs inside the editing tool's own result: broken callers arrive with file, line and the binding error, and for a renamed keyword, a ready caller patch.
 
-[![The 70-second live demo: rehearsal in the Hermes terminal](assets/locus-v020-demo-poster.jpg)](assets/locus-v020-demo.mp4)
+[![The 78-second live demo: rehearsal in the Hermes terminal](assets/locus-v020-demo-poster.jpg)](assets/locus-v020-demo.mp4)
 
-[Watch the 70-second demo](assets/locus-v020-demo.mp4): one real Hermes web-chat session with gpt-5.4-mini and Locus installed from this repository. Typing and the agent's work are sped up 2x and marked on screen. [How it was recorded](docs/demo.md).
+[Watch the 78-second demo](assets/locus-v020-demo.mp4): one real Hermes web-chat session with gpt-5.4-mini and Locus installed from this repository. Typing and the agent's work are sped up 2x and marked on screen. [How it was recorded](docs/demo.md).
 
 The engine uses only Python's standard library (`ast`, `sqlite3`). It needs no API key, hosted index or extra model call, and it never edits your code.
 

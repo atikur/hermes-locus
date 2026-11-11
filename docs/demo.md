@@ -1,6 +1,6 @@
 # How the demo was recorded
 
-[`assets/locus-v020-demo.mp4`](../assets/locus-v020-demo.mp4) is 71.6 seconds, 1920x1080, with narration. It shows one real session, recorded in one take on 11 November 2026.
+[`assets/locus-v020-demo.mp4`](../assets/locus-v020-demo.mp4) is 78.6 seconds, 1920x1080, with narration. It shows one real session, recorded in one take on 11 November 2026.
 
 ## Setup
 
@@ -24,8 +24,9 @@
 - Title and end cards, and captions below the picture.
 - Typing and the agent's work are sped up 2x, tagged "2x" on screen; the agent's reply plays at half speed so it can be read.
 - Two zoomed crops: the rehearsal panel and the agent's reply. Two short frame holds let narration lines finish. Nothing is cut or reordered.
+- A 7-second card, inserted right after Hermes's edit to `auth/tokens.py`, shows the actual patch tool result verbatim from [the session record](evidence/v020-live-demo-session.json), wrapped to fit and with the two caller lines highlighted. It is labelled as such on screen.
 - Narration was added afterwards with text-to-speech.
 
 ## Limit
 
-The Hermes terminal shows tool calls and the model's reply, not the raw tool result, so the alert itself is not on screen. The session record linked above shows it.
+The Hermes terminal shows tool calls and the model's reply, not the raw tool result. The alert therefore appears in the video as the inserted card, taken verbatim from the session record, rather than in the terminal itself.
