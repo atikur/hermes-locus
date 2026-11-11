@@ -1,4 +1,4 @@
-"""Shared FastAPI backend for Locus Web Dashboard and Native Hermes Desktop (/api/plugins/locus/*).
+"""Shared FastAPI backend for Locus Codegraph Web Dashboard and Native Hermes Desktop (/api/plugins/locus-codegraph/*).
 
 All synchronous AST/SQLite operations execute off the gateway event loop via ``asyncio.to_thread``.
 """
@@ -103,7 +103,7 @@ def _notify_desktop(root: Path, reason: str) -> None:
     try:
         from hermes_cli.plugin_events import broadcast_plugin_event
 
-        broadcast_plugin_event("locus", "graph.updated", {"workspace": str(root), "reason": reason})
+        broadcast_plugin_event("locus-codegraph", "graph.updated", {"workspace": str(root), "reason": reason})
     except (Exception, SystemExit):
         pass
 

@@ -1,4 +1,4 @@
-"""Locus — Live AST Codebase Graph, Blast-Radius Engine & Signature Drift Guard for Hermes Agent."""
+"""Locus Codegraph — codebase graph, blast radius, and signature drift feedback for Hermes Agent."""
 
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ from .locus_core import (
     validate_safe_workspace_root,
     workspace_id_for,
 )
+from .locus_core.storage import PLUGIN_NAME
 
 if TYPE_CHECKING:
     from hermes_cli.plugins import PluginContext
@@ -220,7 +221,7 @@ def _broadcast_desktop_update(event_name: str, payload: dict[str, Any]) -> None:
     try:
         from hermes_cli.plugin_events import broadcast_plugin_event
 
-        broadcast_plugin_event("locus", event_name, payload)
+        broadcast_plugin_event(PLUGIN_NAME, event_name, payload)
     except (Exception, SystemExit):
         pass
 
@@ -296,7 +297,7 @@ class LocusSymbolReferenceProvider(ContextReferenceProvider):
     """Inline AST symbol definitions, callers, and snippets via ``@sym:<query>``."""
 
     prefix = "sym"
-    description = "Inline AST symbol signature, callers & source excerpt (Locus)"
+    description = "Inline AST symbol signature, callers & source excerpt (Locus Codegraph)"
 
     def __init__(self, ctx: Any) -> None:
         self._ctx = ctx
@@ -328,7 +329,7 @@ class LocusImpactReferenceProvider(ContextReferenceProvider):
     """Inline transitive blast-radius & covering test report via ``@impact:<file-or-symbol>``."""
 
     prefix = "impact"
-    description = "Inline transitive blast radius, callers & covering tests (Locus)"
+    description = "Inline transitive blast radius, callers & suggested tests (Locus Codegraph)"
 
     def __init__(self, ctx: Any) -> None:
         self._ctx = ctx
@@ -377,7 +378,7 @@ class LocusHotspotsReferenceProvider(ContextReferenceProvider):
     """Inline architectural cycles, god-modules & drift report via ``@hotspots:all``."""
 
     prefix = "hotspots"
-    description = "Inline circular dependencies, hub modules & drift alerts (Locus)"
+    description = "Inline circular dependencies, hub modules & drift alerts (Locus Codegraph)"
 
     def __init__(self, ctx: Any) -> None:
         self._ctx = ctx
@@ -418,7 +419,7 @@ def _handle_slash_command(ctx: Any, raw_args: str = "", **kwargs: Any) -> str:
     if not sub:
         try:
             picked = ctx.ask_choice(
-                "Locus — choose an architectural view:",
+                "Locus Codegraph — choose an architectural view:",
                 [
                     {"value": "status", "label": "Workspace Graph Summary", "description": "Files, symbols, edges, cycles & drift"},
                     {"value": "map", "label": "PageRank Architectural Map", "description": "Top central modules & exported signatures"},
@@ -438,7 +439,7 @@ def _handle_slash_command(ctx: Any, raw_args: str = "", **kwargs: Any) -> str:
         stats = index_workspace(root, force=True, max_files=max_files)
         _broadcast_desktop_update("graph.updated", {"workspace": str(root), "reason": "manual_reindex"})
         return (
-            f"✅ **Locus Re-Indexed** `{stats.get('root_path', root)}`\n"
+            f"✅ **Locus Codegraph Re-Indexed** `{stats.get('root_path', root)}`\n"
             f"- Files: `{stats.get('file_count', 0)}` · Symbols: `{stats.get('symbol_count', 0)}` · "
             f"Edges: `{stats.get('edge_count', 0)}` · Time: `{stats.get('scan_ms', 0)} ms`"
         )
@@ -467,7 +468,7 @@ def _handle_slash_command(ctx: Any, raw_args: str = "", **kwargs: Any) -> str:
     # Default: status overview
     repo = get_repo_map(root, max_files=5)
     return (
-        f"### Locus Graph Status (`{root.name}`)\n"
+        f"### Locus Codegraph Status (`{root.name}`)\n"
         f"- **Workspace**: `{repo.get('root_path', root)}`\n"
         f"- **Indexed**: `{repo.get('file_count', 0)}` files · `{repo.get('symbol_count', 0)}` symbols · "
         f"`{repo.get('edge_count', 0)}` edges\n"
@@ -532,7 +533,7 @@ def _handle_cli_command(args: Any) -> int:
 
 
 def register(ctx: PluginContext) -> None:
-    """Register Locus tools, @-context references, drift hooks, commands, and skill."""
+    """Register Locus Codegraph tools, context references, hooks, commands, and skill."""
     drift_lock = threading.Lock()
     # Both hook orders occur in Hermes. Retain bounded, per-registration receipts
     # so inspection happens once and only transform_tool_result delivers the alert.
@@ -633,7 +634,7 @@ def register(ctx: PluginContext) -> None:
 
     ctx.register_tool(
         name="locus_map",
-        toolset="locus",
+        toolset=PLUGIN_NAME,
         schema=LOCUS_MAP_SCHEMA,
         handler=handle_locus_map,
         description="PageRank architectural map of central workspace modules, signatures & cycles",
@@ -641,7 +642,7 @@ def register(ctx: PluginContext) -> None:
     )
     ctx.register_tool(
         name="locus_symbol",
-        toolset="locus",
+        toolset=PLUGIN_NAME,
         schema=LOCUS_SYMBOL_SCHEMA,
         handler=handle_locus_symbol,
         description="AST symbol definition, callers, callees & source snippet lookup",
@@ -649,7 +650,7 @@ def register(ctx: PluginContext) -> None:
     )
     ctx.register_tool(
         name="locus_impact",
-        toolset="locus",
+        toolset=PLUGIN_NAME,
         schema=LOCUS_IMPACT_SCHEMA,
         handler=handle_locus_impact,
         description="Pre-refactor transitive blast radius, external callers & covering tests",
@@ -657,7 +658,7 @@ def register(ctx: PluginContext) -> None:
     )
     ctx.register_tool(
         name="locus_hotspots",
-        toolset="locus",
+        toolset=PLUGIN_NAME,
         schema=LOCUS_HOTSPOTS_SCHEMA,
         handler=handle_locus_hotspots,
         description="Detect circular dependencies, god modules, untested core files & drift",
@@ -777,7 +778,7 @@ def register(ctx: PluginContext) -> None:
         description="Analyze repository architecture, symbol callers, transitive blast radius, and signature drift.",
     )
 
-    # 5. Bundled Read-Only Skill (locus:locus-navigation)
+    # 5. Bundled Read-Only Skill (locus-codegraph:locus-navigation)
     skill_path = Path(__file__).resolve().parent / "skills" / "locus-navigation" / "SKILL.md"
     if skill_path.is_file():
         ctx.register_skill(

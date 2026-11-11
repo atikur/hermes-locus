@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Interactive <60s live terminal showcase of Locus for Hermes Agent.
+"""Interactive <60s live terminal showcase of Locus Codegraph for Hermes Agent.
 
 Run instant verification:
     python3 scripts/run_demo.py
@@ -113,7 +113,7 @@ def _seed_demo_workspace(ws: Path) -> None:
 
 def run_showcase(cinematic: bool = False) -> int:
     print(f"\n{BOLD}{PURPLE}╔══════════════════════════════════════════════════════════════════════════╗{RESET}")
-    print(f"{BOLD}{PURPLE}║  LOCUS for Hermes Agent  ·  Live AST Graph, Blast-Radius & Drift Guard   ║{RESET}")
+    print(f"{BOLD}{PURPLE}║  LOCUS CODEGRAPH · Hermes Agent · AST Graph, Blast Radius & Drift Guard   ║{RESET}")
     print(f"{BOLD}{PURPLE}║  Zero Runtime Dependencies · CLI + @-Context + Web UI + Desktop SDK      ║{RESET}")
     print(f"{BOLD}{PURPLE}╚══════════════════════════════════════════════════════════════════════════╝{RESET}")
     _pause(1.2, cinematic)
@@ -240,16 +240,16 @@ def run_showcase(cinematic: bool = False) -> int:
         # ── Summary Footer ───────────────────────────────────────────────────
         print(f"\n{CYAN}{'━' * 74}{RESET}")
         print(
-            f"  {BOLD}Locus Unified Surfaces:{RESET} "
+            f"  {BOLD}Locus Codegraph Unified Surfaces:{RESET} "
             f"{GREEN}4 Agent Tools{RESET} · {CYAN}3 @-Context Prefixes{RESET} · "
-            f"{AMBER}Web Dashboard (/locus){RESET} · {PURPLE}Hermes Desktop SDK{RESET}"
+            f"{AMBER}Web Dashboard (/locus-codegraph){RESET} · {PURPLE}Hermes Desktop SDK{RESET}"
         )
         print(f"{CYAN}{'━' * 74}{RESET}\n")
     return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run the Locus live terminal showcase.")
+    parser = argparse.ArgumentParser(description="Run the Locus Codegraph live terminal showcase.")
     parser.add_argument(
         "--cinematic",
         action="store_true",

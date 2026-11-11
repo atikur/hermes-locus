@@ -118,7 +118,7 @@ class TestContextReferencesAndCommands(unittest.IsolatedAsyncioTestCase):
 
                 # Verify /locus slash command subcommands
                 slash = ctx.commands["locus"]
-                self.assertIn("Locus Graph Status", slash("status"))
+                self.assertIn("Locus Codegraph Status", slash("status"))
                 self.assertIn("Architectural Map", slash("map"))
                 self.assertIn("Blast-Radius Report", slash("impact payments.py"))
                 self.assertIn("capture_payment", slash("symbol capture_payment"))

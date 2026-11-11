@@ -1,7 +1,7 @@
-"""Profile-scoped SQLite storage for Locus codebase graphs and drift alerts.
+"""Profile-scoped SQLite storage for Locus Codegraph and drift alerts.
 
 Uses Hermes's public ``plugins.plugin_storage.plugin_db`` helper whenever running
-inside Hermes so WAL mode, profile switching, and ``<HERMES_HOME>/plugin-data/locus/``
+inside Hermes so WAL mode, profile switching, and ``<HERMES_HOME>/plugin-data/locus-codegraph/``
 isolation work out of the box. Falls back to standard ``sqlite3`` when invoked from
 standalone unit tests or external scripts.
 """
@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator, Optional
 
-PLUGIN_NAME = "locus"
+PLUGIN_NAME = "locus-codegraph"
 DB_FILENAME = "locus.db"
 
 _SCHEMA_SQL = """

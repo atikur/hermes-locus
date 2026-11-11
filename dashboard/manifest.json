@@ -1,11 +1,11 @@
 {
-  "name": "locus",
-  "label": "Locus Graph",
+  "name": "locus-codegraph",
+  "label": "Locus Codegraph",
   "description": "Live AST codebase dependency graph, transitive blast-radius visualizer & signature drift guard",
   "icon": "Code",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "tab": {
-    "path": "/locus",
+    "path": "/locus-codegraph",
     "position": "after:skills"
   },
   "slots": ["sessions:top"],

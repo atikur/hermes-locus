@@ -1,9 +1,9 @@
 ---
 name: locus-navigation
-description: Navigate repositories, inspect dependencies before refactoring, select relevant tests, and respond to signature drift using Locus tools and context references.
+description: Navigate repositories, inspect dependencies before refactoring, select relevant tests, and respond to signature drift using Locus Codegraph tools and context references.
 ---
 
-# Locus navigation and refactoring
+# Locus Codegraph navigation and refactoring
 
 Locus maintains a local structural dependency graph of the selected workspace.
 Python has AST definitions, signatures, and call argument counts. TypeScript and

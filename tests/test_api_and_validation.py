@@ -34,21 +34,21 @@ class TestApiAndValidation(unittest.TestCase):
             os.environ["LOCUS_DB_PATH"] = str(db_path)
             try:
                 app = FastAPI()
-                app.include_router(locus_router, prefix="/api/plugins/locus")
+                app.include_router(locus_router, prefix="/api/plugins/locus-codegraph")
                 client = TestClient(app)
 
                 # 1. Reindex workspace
-                r_scan = client.post("/api/plugins/locus/reindex", json={"workspace": str(ws), "force": True})
+                r_scan = client.post("/api/plugins/locus-codegraph/reindex", json={"workspace": str(ws), "force": True})
                 self.assertEqual(r_scan.status_code, 200)
                 self.assertEqual(r_scan.json()["file_count"], 2)
 
                 # 2. Summary defaults to most recently indexed workspace
-                r_sum = client.get("/api/plugins/locus/summary")
+                r_sum = client.get("/api/plugins/locus-codegraph/summary")
                 self.assertEqual(r_sum.status_code, 200)
                 self.assertEqual(r_sum.json()["file_count"], 2)
 
                 # 3. Visual SVG graph with blast-radius focus
-                r_graph = client.get("/api/plugins/locus/graph", params={"focus": "engine.py"})
+                r_graph = client.get("/api/plugins/locus-codegraph/graph", params={"focus": "engine.py"})
                 self.assertEqual(r_graph.status_code, 200)
                 gdata = r_graph.json()
                 self.assertEqual(len(gdata["nodes"]), 2)
@@ -56,18 +56,18 @@ class TestApiAndValidation(unittest.TestCase):
 
                 # 4. Impact, symbol, symbols, hotspots
                 self.assertEqual(
-                    client.get("/api/plugins/locus/impact", params={"target": "engine.py"}).status_code,
+                    client.get("/api/plugins/locus-codegraph/impact", params={"target": "engine.py"}).status_code,
                     200,
                 )
                 self.assertEqual(
-                    client.get("/api/plugins/locus/symbol", params={"name": "run_job"}).status_code,
+                    client.get("/api/plugins/locus-codegraph/symbol", params={"name": "run_job"}).status_code,
                     200,
                 )
                 self.assertEqual(
-                    client.get("/api/plugins/locus/symbols", params={"q": "run"}).status_code,
+                    client.get("/api/plugins/locus-codegraph/symbols", params={"q": "run"}).status_code,
                     200,
                 )
-                self.assertEqual(client.get("/api/plugins/locus/hotspots").status_code, 200)
+                self.assertEqual(client.get("/api/plugins/locus-codegraph/hotspots").status_code, 200)
             finally:
                 if old_env is None:
                     os.environ.pop("LOCUS_DB_PATH", None)

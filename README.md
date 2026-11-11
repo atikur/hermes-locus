@@ -1,8 +1,8 @@
-# Locus — Catch cross-file breakage while Hermes edits
+# Locus Codegraph — Catch cross-file breakage while Hermes edits
 
 ![Locus banner](assets/locus-banner.svg)
 
-**Locus shows Hermes what a change could break, then flags incompatible callers while it works.** It builds a local structural graph of your repository and connects it to agent tools, `@` context references, the Web Dashboard, and Hermes Desktop.
+**Locus Codegraph shows Hermes what a change could break, then flags incompatible callers while it works.** It builds a local structural graph of your repository and connects it to agent tools, `@` context references, the Web Dashboard, and Hermes Desktop.
 
 The analysis engine uses Python's standard library (`ast`, `sqlite3`, and structural parsers). It needs no API key, hosted index, or extra model call. Hermes supplies the web and desktop integration libraries.
 
@@ -33,7 +33,7 @@ Requires **Hermes Agent >=0.22.0** and **Python >=3.10**. Python 3.11 is a conve
 hermes plugins install https://github.com/atikur/hermes-locus
 ```
 
-After catalog acceptance, the short form is `hermes plugins install locus`. In Hermes Desktop, use the plugin installer or this deep link:
+After catalog acceptance, the short form is `hermes plugins install locus-codegraph`. In Hermes Desktop, use the plugin installer or this deep link:
 
 ```text
 hermes://plugin/install?repo=atikur/hermes-locus&enable=1
@@ -83,7 +83,7 @@ hermes locus map --workspace /path/to/project
 
 ## Agent tools
 
-The `locus` toolset exposes four tools, plus a bundled `locus-navigation` skill. Tools read source and maintain the local index; they do not modify source files.
+The `locus-codegraph` toolset exposes four tools, plus a bundled `locus-navigation` skill. Tools read source and maintain the local index; they do not modify source files.
 
 | Tool | Parameters | Result |
 | --- | --- | --- |
@@ -98,8 +98,8 @@ The `locus` toolset exposes four tools, plus a bundled `locus-navigation` skill.
 
 *Captured from the real Hermes Web Dashboard using the disposable checkout fixture.*
 
-- **Web Dashboard:** `/locus` provides a selectable dependency graph, impact rings, symbol search, workspace selection, and drift inspection. The page and `sessions:top` drift banner refresh every five seconds.
-- **Hermes Desktop:** the **Locus Graph** pane shares the analysis API, provides status and command-palette actions, refreshes through polling and plugin events, and can insert `@impact:<file>` into the composer.
+- **Web Dashboard:** `/locus-codegraph` provides a selectable dependency graph, impact rings, symbol search, workspace selection, and drift inspection. The page and `sessions:top` drift banner refresh every five seconds.
+- **Hermes Desktop:** the **Locus Codegraph** pane shares the analysis API, provides status and command-palette actions, refreshes through polling and plugin events, and can insert `@impact:<file>` into the composer.
 
 Check the selected workspace when switching between repositories. Dismissing a warning in the UI acknowledges it; dismissal does not repair code or establish that tests pass.
 
@@ -122,7 +122,7 @@ Locus is a navigation and refactoring aid. Its results have these boundaries:
 
 ## Configuration
 
-Use Hermes Settings or `plugins.config.locus` in your Hermes configuration:
+Use Hermes Settings or `plugins.config.locus-codegraph` in your Hermes configuration:
 
 | Setting | Default | Effect |
 | --- | --- | --- |
@@ -173,7 +173,9 @@ See [the submission runbook](docs/submission.md) for the real-session demonstrat
 
 ## Verified behavior
 
-Version 0.1.1 passed 41 tests in the Hermes environment. A real GPT-5.4 mini session received the drift warning, repaired both callers, and passed the fixture tests. See [verification evidence and the full transcript](docs/verification.md) for commands, results, and limits.
+The release passes 42 tests in the Hermes environment. A real GPT-5.4 mini session received the drift warning, repaired both callers, and passed the fixture tests. Version 0.1.2 gives this project the distinct installation identity `locus-codegraph`; the recorded refactor used version 0.1.1. See [verification evidence and the full transcript](docs/verification.md) for commands, results, and limits.
+
+[Watch the 77-second working demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4) · [Download captions](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.srt)
 
 ## Architecture
 
@@ -203,7 +205,7 @@ Hermes editing tool
 ## Privacy and behavior disclosure
 
 - **Reads:** supported source files inside the selected workspace. The scanner rejects filesystem/home/system roots and sensitive credential directories, skips hidden files and build/vendor directories, rejects symlink escapes, skips detected binary content, and limits each source file to 512 KiB. Supported extensions are `.py`, `.pyi`, `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.go`, and `.rs`.
-- **Stores locally:** file metadata, signatures, short docstring summaries, imports, calls, drift records, and activity metadata in `<HERMES_HOME>/plugin-data/locus/locus.db`. Full source files are not stored in the database. Source excerpts are read when requested.
+- **Stores locally:** file metadata, signatures, short docstring summaries, imports, calls, drift records, and activity metadata in `<HERMES_HOME>/plugin-data/locus-codegraph/locus.db`. Full source files are not stored in the database. Source excerpts are read when requested.
 - **Changes context:** explicit `@sym:`, `@impact:`, and `@hotspots:` references expand into reports. With `drift_guard` enabled, recognized editing-tool results may include a drift notice. Those reports and source excerpts become visible to the model configured in Hermes.
 - **No external service calls:** Locus's analysis makes no outbound network requests, reads no API credentials, collects no telemetry, and spawns no shell commands or background daemons. Web/Desktop clients communicate with Hermes's API. Locus never modifies workspace source files.
 

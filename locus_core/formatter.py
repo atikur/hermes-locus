@@ -9,11 +9,11 @@ from typing import Any
 def format_repo_map_markdown(data: dict[str, Any]) -> str:
     """Render a compact, high-signal architectural map for LLM context or slash commands."""
     if not data.get("ok"):
-        return f"Locus RepoMap Error: {data.get('error', 'unknown error')}"
+        return f"Locus Codegraph RepoMap Error: {data.get('error', 'unknown error')}"
 
     langs = ", ".join(f"{k}: {v}" for k, v in data.get("languages", {}).items()) or "none"
     lines: list[str] = [
-        f"## Locus Architectural Map (`{data.get('file_count', 0)}` files, "
+        f"## Locus Codegraph Architectural Map (`{data.get('file_count', 0)}` files, "
         f"`{data.get('symbol_count', 0)}` symbols, `{data.get('edge_count', 0)}` dependency edges)",
         f"- Languages: {langs}",
     ]
@@ -42,7 +42,7 @@ def format_repo_map_markdown(data: dict[str, Any]) -> str:
 def format_symbol_markdown(data: dict[str, Any]) -> str:
     """Render symbol definition, callers, callees, and bounded source snippet."""
     if not data.get("ok"):
-        return f"Locus Symbol Lookup: {data.get('error', 'not found')}"
+        return f"Locus Codegraph Symbol Lookup: {data.get('error', 'not found')}"
 
     sym = data["symbol"]
     lines: list[str] = [
@@ -87,7 +87,7 @@ def format_symbol_markdown(data: dict[str, Any]) -> str:
 def format_impact_markdown(data: dict[str, Any]) -> str:
     """Render transitive blast-radius analysis, call sites, covering tests, and drift warnings."""
     if not data.get("ok"):
-        return f"Locus Impact Analysis: {data.get('error', 'target not found')}"
+        return f"Locus Codegraph Impact Analysis: {data.get('error', 'target not found')}"
 
     sym_part = (
         f" · symbol `{data['matched_symbol']['qualified_name']}`"
@@ -149,9 +149,9 @@ def format_impact_markdown(data: dict[str, Any]) -> str:
 def format_hotspots_markdown(data: dict[str, Any]) -> str:
     """Render circular dependencies, god modules, untested core files, and open drift."""
     if not data.get("ok"):
-        return f"Locus Hotspots Error: {data.get('error', 'unknown error')}"
+        return f"Locus Codegraph Hotspots Error: {data.get('error', 'unknown error')}"
 
-    lines: list[str] = ["## Locus Architectural Hotspots & Health"]
+    lines: list[str] = ["## Locus Codegraph Architectural Hotspots & Health"]
 
     drifts = data.get("open_drift_alerts") or []
     lines.append(f"\n### Open Signature Drift Alerts ({len(drifts)})")

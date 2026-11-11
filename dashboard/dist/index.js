@@ -1,4 +1,4 @@
-/* Locus Web Dashboard Plugin Bundle — Interactive SVG Graph, Blast-Radius Radar & Drift Guard */
+/* Locus Codegraph Web Dashboard Plugin Bundle — Interactive SVG Graph, Blast-Radius Radar & Drift Guard */
 (function () {
   "use strict";
 
@@ -46,7 +46,7 @@
       function refresh() {
         if (inFlight) return;
         inFlight = true;
-        SDK.fetchJSON("/api/plugins/locus/summary")
+        SDK.fetchJSON("/api/plugins/locus-codegraph/summary")
           .then(function (d) { if (alive) setSummary(d); })
           .catch(function () {})
           .finally(function () { inFlight = false; });
@@ -69,17 +69,17 @@
         h(
           "div",
           { className: "flex items-center gap-2" },
-          h(Badge, { variant: "destructive" }, "Locus Drift Guard"),
+          h(Badge, { variant: "destructive" }, "Locus Codegraph Drift Guard"),
           h(
             "span",
             null,
             summary.open_drift_count +
               " unresolved signature drift alert(s) in " +
               (summary.workspace_name || "workspace") +
-              " — open the Locus Graph tab to inspect affected callers."
+              " — open the Locus Codegraph tab to inspect affected callers."
           )
         ),
-        h("a", { href: "/locus", className: "underline font-medium" }, "Inspect Graph →")
+        h("a", { href: "/locus-codegraph", className: "underline font-medium" }, "Inspect Graph →")
       )
     );
   }
@@ -106,12 +106,12 @@
 
     return h(
       "div",
-      { className: "locus-canvas-wrap" },
+      { className: "locus-codegraph-canvas-wrap" },
       h(
         "svg",
         {
           viewBox: "0 0 880 520",
-          className: "locus-svg",
+          className: "locus-codegraph-svg",
           role: "img",
           "aria-label": "Locus interactive codebase dependency and blast-radius graph",
         },
@@ -121,7 +121,7 @@
           h(
             "marker",
             {
-              id: "locus-arrow-normal",
+              id: "locus-codegraph-arrow-normal",
               viewBox: "0 0 10 10",
               refX: "9",
               refY: "5",
@@ -134,7 +134,7 @@
           h(
             "marker",
             {
-              id: "locus-arrow-blast",
+              id: "locus-codegraph-arrow-blast",
               viewBox: "0 0 10 10",
               refX: "9",
               refY: "5",
@@ -147,7 +147,7 @@
           h(
             "marker",
             {
-              id: "locus-arrow-cycle",
+              id: "locus-codegraph-arrow-cycle",
               viewBox: "0 0 10 10",
               refX: "9",
               refY: "5",
@@ -228,20 +228,20 @@
             let stroke = "currentColor";
             let strokeOpacity = hasFocus ? "0.14" : "0.24";
             let strokeWidth = "1.2";
-            let marker = "url(#locus-arrow-normal)";
+            let marker = "url(#locus-codegraph-arrow-normal)";
             let cls = "";
 
             if (e.kind === "cycle") {
               stroke = "var(--color-destructive, #ef4444)";
               strokeOpacity = "0.85";
               strokeWidth = "2";
-              marker = "url(#locus-arrow-cycle)";
-              cls = "locus-edge-cycle";
+              marker = "url(#locus-codegraph-arrow-cycle)";
+              cls = "locus-codegraph-edge-cycle";
             } else if (e.kind === "blast") {
               stroke = "var(--color-warning, #f59e0b)";
               strokeOpacity = "0.82";
               strokeWidth = "1.9";
-              marker = "url(#locus-arrow-blast)";
+              marker = "url(#locus-codegraph-arrow-blast)";
             }
 
             return h("path", {
@@ -270,7 +270,7 @@
               {
                 key: n.id,
                 transform: "translate(" + n.x + "," + n.y + ")",
-                className: "locus-node-group",
+                className: "locus-codegraph-node-group",
                 onClick: function () {
                   onSelectNode(n.id);
                 },
@@ -281,7 +281,7 @@
                   fill: "none",
                   stroke: fill,
                   strokeWidth: "1.8",
-                  className: "locus-pulse-ring",
+                  className: "locus-codegraph-pulse-ring",
                 }),
               h("circle", {
                 r: r,
@@ -289,7 +289,7 @@
                 fillOpacity: isSelected || n.role === "focus" ? "0.95" : "0.78",
                 stroke: "var(--color-card, #0f172a)",
                 strokeWidth: "2",
-                className: "locus-node-circle",
+                className: "locus-codegraph-node-circle",
               }),
               h(
                 "text",
@@ -320,35 +320,35 @@
       ),
       h(
         "div",
-        { className: "locus-legend" },
+        { className: "locus-codegraph-legend" },
         h(
           "span",
-          { className: "locus-legend-item" },
-          h("span", { className: "locus-dot", style: { background: "var(--color-primary, #38bdf8)" } }),
+          { className: "locus-codegraph-legend-item" },
+          h("span", { className: "locus-codegraph-dot", style: { background: "var(--color-primary, #38bdf8)" } }),
           "Focused Target"
         ),
         h(
           "span",
-          { className: "locus-legend-item" },
-          h("span", { className: "locus-dot", style: { background: "var(--color-warning, #f59e0b)" } }),
+          { className: "locus-codegraph-legend-item" },
+          h("span", { className: "locus-codegraph-dot", style: { background: "var(--color-warning, #f59e0b)" } }),
           "Hop 1 Direct Dependent"
         ),
         h(
           "span",
-          { className: "locus-legend-item" },
-          h("span", { className: "locus-dot", style: { background: "var(--color-accent, #a78bfa)" } }),
+          { className: "locus-codegraph-legend-item" },
+          h("span", { className: "locus-codegraph-dot", style: { background: "var(--color-accent, #a78bfa)" } }),
           "Hop 2–3 Transitive"
         ),
         h(
           "span",
-          { className: "locus-legend-item" },
-          h("span", { className: "locus-dot", style: { background: "var(--color-success, #10b981)" } }),
+          { className: "locus-codegraph-legend-item" },
+          h("span", { className: "locus-codegraph-dot", style: { background: "var(--color-success, #10b981)" } }),
           "Covering Test"
         ),
         h(
           "span",
-          { className: "locus-legend-item" },
-          h("span", { className: "locus-dot", style: { background: "var(--color-destructive, #ef4444)" } }),
+          { className: "locus-codegraph-legend-item" },
+          h("span", { className: "locus-codegraph-dot", style: { background: "var(--color-destructive, #ef4444)" } }),
           "Cycle / Signature Drift"
         ),
         h(
@@ -395,9 +395,9 @@
           (foc ? "&focus=" + encodeURIComponent(foc) : "");
 
         Promise.all([
-          SDK.fetchJSON("/api/plugins/locus/summary" + qsWs),
-          SDK.fetchJSON("/api/plugins/locus/graph" + qsGraph),
-          background ? Promise.resolve(null) : SDK.fetchJSON("/api/plugins/locus/symbols?limit=20" + (ws ? "&workspace=" + encodeURIComponent(ws) : "")),
+          SDK.fetchJSON("/api/plugins/locus-codegraph/summary" + qsWs),
+          SDK.fetchJSON("/api/plugins/locus-codegraph/graph" + qsGraph),
+          background ? Promise.resolve(null) : SDK.fetchJSON("/api/plugins/locus-codegraph/symbols?limit=20" + (ws ? "&workspace=" + encodeURIComponent(ws) : "")),
         ])
           .then(function (res) {
             if (sequence !== loadSequence.current) return;
@@ -454,7 +454,7 @@
         "?limit=25&q=" +
         encodeURIComponent(q) +
         (workspace ? "&workspace=" + encodeURIComponent(workspace) : "");
-      SDK.fetchJSON("/api/plugins/locus/symbols" + qs)
+      SDK.fetchJSON("/api/plugins/locus-codegraph/symbols" + qs)
         .then(function (d) {
           if (sequence !== symbolSearchSequence.current) return;
           setSymList((d && d.symbols) || []);
@@ -469,7 +469,7 @@
         "?name=" +
         encodeURIComponent(name) +
         (workspace ? "&workspace=" + encodeURIComponent(workspace) : "");
-      SDK.fetchJSON("/api/plugins/locus/symbol" + qs)
+      SDK.fetchJSON("/api/plugins/locus-codegraph/symbol" + qs)
         .then(function (d) {
           if (sequence !== symbolDetailSequence.current) return;
           if (d && d.ok) setSymDetail(d);
@@ -480,7 +480,7 @@
     function handleReindex() {
       setBusyScan(true);
       const targetWs = wsInput.trim() || workspace;
-      SDK.fetchJSON("/api/plugins/locus/reindex", {
+      SDK.fetchJSON("/api/plugins/locus-codegraph/reindex", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ workspace: targetWs, force: true }),
@@ -499,7 +499,7 @@
     }
 
     function handleResolveDrift(alertId) {
-      SDK.fetchJSON("/api/plugins/locus/resolve-drift", {
+      SDK.fetchJSON("/api/plugins/locus-codegraph/resolve-drift", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ alert_id: alertId }),
@@ -512,7 +512,7 @@
 
     return h(
       "div",
-      { className: "locus-root" },
+      { className: "locus-codegraph-root" },
 
       /* Header Bar */
       h(
@@ -527,7 +527,7 @@
             h(
               "div",
               { className: "flex items-center gap-2" },
-              h("span", { className: "text-base font-bold" }, "Locus Architectural Intelligence"),
+              h("span", { className: "text-base font-bold" }, "Locus Codegraph"),
               h(Badge, { variant: "outline" }, "AST + Blast Radius + Drift Guard"),
               copied && h(Badge, { variant: "secondary" }, "Copied " + copied)
             ),
@@ -606,52 +606,52 @@
       summary &&
         h(
           "div",
-          { className: "locus-kpi-grid" },
+          { className: "locus-codegraph-kpi-grid" },
           h(
             "div",
-            { className: "locus-kpi-card" },
-            h("div", { className: "locus-kpi-value" }, summary.file_count),
-            h("div", { className: "locus-kpi-label" }, "Indexed Source Files")
+            { className: "locus-codegraph-kpi-card" },
+            h("div", { className: "locus-codegraph-kpi-value" }, summary.file_count),
+            h("div", { className: "locus-codegraph-kpi-label" }, "Indexed Source Files")
           ),
           h(
             "div",
-            { className: "locus-kpi-card" },
-            h("div", { className: "locus-kpi-value" }, summary.symbol_count),
-            h("div", { className: "locus-kpi-label" }, "AST Symbols & Signatures")
+            { className: "locus-codegraph-kpi-card" },
+            h("div", { className: "locus-codegraph-kpi-value" }, summary.symbol_count),
+            h("div", { className: "locus-codegraph-kpi-label" }, "AST Symbols & Signatures")
           ),
           h(
             "div",
-            { className: "locus-kpi-card" },
-            h("div", { className: "locus-kpi-value" }, summary.edge_count),
-            h("div", { className: "locus-kpi-label" }, "Cross-File Call/Import Edges")
+            { className: "locus-codegraph-kpi-card" },
+            h("div", { className: "locus-codegraph-kpi-value" }, summary.edge_count),
+            h("div", { className: "locus-codegraph-kpi-label" }, "Cross-File Call/Import Edges")
           ),
           h(
             "div",
-            { className: "locus-kpi-card" },
-            h("div", { className: "locus-kpi-value" }, summary.cycle_count),
-            h("div", { className: "locus-kpi-label" }, "Circular Import Chains")
+            { className: "locus-codegraph-kpi-card" },
+            h("div", { className: "locus-codegraph-kpi-value" }, summary.cycle_count),
+            h("div", { className: "locus-codegraph-kpi-label" }, "Circular Import Chains")
           ),
           h(
             "div",
-            { className: "locus-kpi-card" },
+            { className: "locus-codegraph-kpi-card" },
             h(
               "div",
               {
-                className: "locus-kpi-value",
+                className: "locus-codegraph-kpi-value",
                 style: summary.open_drift_count
                   ? { color: "var(--color-destructive, #ef4444)" }
                   : undefined,
               },
               summary.open_drift_count
             ),
-            h("div", { className: "locus-kpi-label" }, "Open Signature Drift Alerts")
+            h("div", { className: "locus-codegraph-kpi-label" }, "Open Signature Drift Alerts")
           )
         ),
 
       /* Main 2-Column Workspace: Interactive SVG Canvas + Tabbed Inspector */
       h(
         "div",
-        { className: "locus-main-grid" },
+        { className: "locus-codegraph-main-grid" },
 
         /* Left: Interactive SVG Graph */
         h(
@@ -775,13 +775,13 @@
                         h("div", { className: "font-semibold mb-1" }, "Direct Dependents (Hop 1)"),
                         h(
                           "div",
-                          { className: "locus-scroll-list" },
+                          { className: "locus-codegraph-scroll-list" },
                           impact.direct_dependents.map(function (d) {
                             return h(
                               "button",
                               {
                                 key: d.rel_path,
-                                className: "locus-row-btn",
+                                className: "locus-codegraph-row-btn",
                                 onClick: function () {
                                   setFocus(d.rel_path);
                                 },
@@ -803,13 +803,13 @@
                         h("div", { className: "font-semibold mb-1" }, "Transitive Blast Radius (Hops 2–3)"),
                         h(
                           "div",
-                          { className: "locus-scroll-list" },
+                          { className: "locus-codegraph-scroll-list" },
                           impact.transitive_dependents.map(function (d) {
                             return h(
                               "button",
                               {
                                 key: d.rel_path,
-                                className: "locus-row-btn",
+                                className: "locus-codegraph-row-btn",
                                 onClick: function () {
                                   setFocus(d.rel_path);
                                 },
@@ -849,13 +849,13 @@
                     ),
                     h(
                       "div",
-                      { className: "locus-scroll-list" },
+                      { className: "locus-codegraph-scroll-list" },
                       ((summary && summary.top_modules) || []).map(function (m, idx) {
                         return h(
                           "button",
                           {
                             key: m.rel_path,
-                            className: "locus-row-btn",
+                            className: "locus-codegraph-row-btn",
                             onClick: function () {
                               setFocus(m.rel_path);
                             },
@@ -923,17 +923,17 @@
                         " · Outgoing calls: " +
                         (symDetail.callees ? symDetail.callees.length : 0)
                     ),
-                    symDetail.snippet && h("pre", { className: "locus-code-excerpt" }, symDetail.snippet)
+                    symDetail.snippet && h("pre", { className: "locus-codegraph-code-excerpt" }, symDetail.snippet)
                   ),
                 h(
                   "div",
-                  { className: "locus-scroll-list" },
+                  { className: "locus-codegraph-scroll-list" },
                   symList.map(function (s) {
                     return h(
                       "button",
                       {
                         key: s.symbol_id,
-                        className: "locus-row-btn",
+                        className: "locus-codegraph-row-btn",
                         onClick: function () {
                           handleInspectSymbol(s.qualified_name);
                         },
@@ -954,13 +954,13 @@
             activePanel === "health" &&
               h(
                 "div",
-                { className: "flex flex-col gap-3 text-xs locus-scroll-list" },
+                { className: "flex flex-col gap-3 text-xs locus-codegraph-scroll-list" },
                 h("div", { className: "font-semibold" }, "Open Signature Drift Alerts"),
                 summary && summary.drift_alerts && summary.drift_alerts.length > 0
                   ? summary.drift_alerts.map(function (d) {
                       return h(
                         "div",
-                        { key: d.id, className: "locus-row-btn" },
+                        { key: d.id, className: "locus-codegraph-row-btn" },
                         h(
                           "div",
                           { className: "flex items-center justify-between gap-2" },
@@ -991,7 +991,7 @@
                   ? summary.cycles.map(function (cyc, idx) {
                       return h(
                         "div",
-                        { key: "cyc-" + idx, className: "locus-row-btn font-mono" },
+                        { key: "cyc-" + idx, className: "locus-codegraph-row-btn font-mono" },
                         cyc.join(" → ")
                       );
                     })
@@ -1002,12 +1002,12 @@
             activePanel === "activity" &&
               h(
                 "div",
-                { className: "locus-scroll-list text-xs" },
+                { className: "locus-codegraph-scroll-list text-xs" },
                 summary && summary.recent_activity && summary.recent_activity.length > 0
                   ? summary.recent_activity.map(function (ev) {
                       return h(
                         "div",
-                        { key: ev.id, className: "locus-row-btn" },
+                        { key: ev.id, className: "locus-codegraph-row-btn" },
                         h(
                           "div",
                           { className: "flex items-center justify-between" },
@@ -1029,8 +1029,8 @@
     );
   }
 
-  window.__HERMES_PLUGINS__.register("locus", LocusDashboardPage);
+  window.__HERMES_PLUGINS__.register("locus-codegraph", LocusDashboardPage);
   if (typeof window.__HERMES_PLUGINS__.registerSlot === "function") {
-    window.__HERMES_PLUGINS__.registerSlot("locus", "sessions:top", LocusSessionsDriftBanner);
+    window.__HERMES_PLUGINS__.registerSlot("locus-codegraph", "sessions:top", LocusSessionsDriftBanner);
   }
 })();

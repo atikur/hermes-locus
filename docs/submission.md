@@ -1,113 +1,84 @@
-# Locus submission runbook
+# Locus Codegraph — submission and demonstration
 
-## Entry description
+**Locus Codegraph shows Hermes what a change could break, then flags incompatible callers while it works.**
 
-**One sentence:** Locus shows Hermes what a change could break, then flags incompatible callers while it works.
+It adds a local structural code graph to Hermes Agent. Before a refactor, `@sym:`
+and `@impact:` expose definitions, callers, dependent modules, and suggested tests.
+After supported edits, its signature-drift guard puts actionable caller warnings
+in tool results so Hermes can repair them. Python receives AST and argument-count
+analysis; TypeScript/JavaScript, Go, and Rust receive lighter structural indexing.
+The same index powers four agent tools, commands, a Web Dashboard, and a Desktop
+pane. The analysis core uses Python's standard library and requires no hosted
+index or additional model call.
 
-**Short description:** Locus adds a local structural code graph to Hermes Agent. Before a refactor, `@sym:` and `@impact:` expose definitions, callers, dependent modules, and suggested tests. After supported edits, the signature-drift guard places actionable caller warnings in the tool result so Hermes can repair them. Python receives AST and argument-count analysis; TypeScript/JavaScript, Go, and Rust receive lighter structural indexing. The same index powers agent tools, commands, a Web Dashboard, and a Desktop pane. The core uses Python's standard library and requires no hosted index or additional model call.
+## What makes it a plugin
 
-**What makes it a plugin:** Locus persists a workspace index, subscribes to Hermes lifecycle hooks, transforms tool results, registers context-reference providers, and exposes interactive web/desktop interfaces. The distinctive workflow is structural feedback arriving inside the editing loop.
+Locus Codegraph persists a workspace index, subscribes to Hermes lifecycle hooks,
+transforms tool results, registers context-reference providers, and exposes web
+and desktop interfaces. The distinctive capability is structural feedback arriving
+inside the editing loop. The plugin supplies evidence; Hermes performs repairs.
 
-## A 70-second working demonstration
+## Recorded demonstration
 
-Record an actual Hermes session with Locus enabled. Keep source edits, tool feedback, and test output legible. Use a disposable Python project with a shared helper, a direct caller, an indirect caller, and a meaningful test. Do not record credentials or private project content.
+A real Hermes session with OpenAI `gpt-5.4-mini` changed a shared helper to require
+an additional argument. Its actual editing-tool result contained a warning naming
+two incompatible callers. The agent repaired both callers, ran all three fixture
+tests successfully, and verified zero remaining drift alerts.
 
-| Time | Visible action | Narration |
-| --- | --- | --- |
-| 0–8s | Show `verify_token(token)` and a caller in another module | “Changing a shared function can leave callers behind. Locus gives Hermes structural feedback while it edits.” |
-| 8–20s | Ask Hermes to inspect `@sym:verify_token` and `@impact:auth/tokens.py`; show the caller and suggested test | “Before changing it, Hermes can see the affected modules and which tests are likely relevant.” |
-| 20–38s | Have Hermes add a required `audience` argument to the helper first; show the actual editing-tool result | “Locus catches this caller still passing one argument and adds its location directly to the tool result.” |
-| 38–54s | Hermes updates the caller to pass the audience | “The agent uses that evidence to repair the caller.” |
-| 54–65s | Run the relevant test and query open drift; show the actual output | “The test passes, and the tracked mismatch clears after the caller is repaired.” |
-| 65–70s | Briefly show the graph or final repository URL | “Locus: a local code graph connected to Hermes's refactoring loop.” |
+- [Complete event transcript](evidence/live-hermes-session.jsonl)
+- [Exact prompt](evidence/demo-prompt.txt)
+- [Environment, checks, and limitations](verification.md)
+- [Real dashboard capture](../assets/locus-live-dashboard.jpg)
+- [77-second video](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4)
 
-For a deterministic demonstration of the warning, explicitly tell Hermes this is a controlled demonstration and to edit the helper before updating callers. Otherwise a capable agent may update all files in one batch, leaving no intermediate breakage to show. Do not claim the demonstration measures a baseline agent's failure rate.
+The 77-second submission video presents selected actual tool output and the real
+dashboard capture, with narration. It is labeled “Recorded Hermes run · edited
+for clarity.” The full transcript retains incidental failed commands. Version
+0.1.2 changes the installation identity to `locus-codegraph`; the recorded session
+used 0.1.1. The video is a controlled capability demonstration, not a measurement
+of an unassisted agent's failure rate.
 
-Suggested prompt:
+## Reproduce the workflow
 
-```text
-This disposable project is a demonstration of Locus. Inspect @sym:verify_token
-and @impact:auth/tokens.py. Change verify_token to require an audience argument.
-For this demonstration, edit the helper first in a separate tool call, inspect
-the returned Locus feedback, then update the affected callers. Run the relevant
-tests and report any remaining drift alerts.
+Create the synthetic project in an empty destination:
+
+```bash
+python3.11 scripts/create_demo_workspace.py ../locus-demo
+cd ../locus-demo
+python3.11 -m unittest discover -s tests -v
+hermes
 ```
 
-The existing `scripts/run_demo.py` is a useful engine smoke test and rehearsal. It performs scripted file changes; identify it as a fixture demo if it appears in a video. A standalone script run is not evidence of an LLM repairing callers inside Hermes.
+With Locus Codegraph enabled and a model configured, use:
 
-## Evidence to collect from the final commit
+```text
+This disposable project is a demonstration of Locus Codegraph. Inspect
+@sym:verify_token and @impact:auth/tokens.py. Change verify_token to require
+an audience argument. For this demonstration, edit the helper first in a
+separate tool call, inspect the returned Locus feedback, then update the affected
+callers. Run the relevant tests and report any remaining drift alerts.
+```
 
-Record actual results below after execution. These placeholders are not pass claims.
+Separating the helper edit makes the intermediate warning visible. Otherwise,
+an agent may correctly update all files in one batch. The standalone
+`scripts/run_demo.py` exercises the engine with scripted edits and is useful for
+rehearsal; it is not the recorded LLM-driven demonstration.
 
-| Evidence | Result to fill |
-| --- | --- |
-| Plugin commit | `[FINAL_40_CHARACTER_SHA]` |
-| Hermes version and source commit | `[VERSION_AND_SHA]` |
-| Python version / platform | `[VERSION_AND_PLATFORM]` |
-| Standalone test suite | `[PASS_COUNT, SKIP_COUNT, COMMAND, DATE]` |
-| Test suite with Hermes modules available | `[PASS_COUNT, SKIP_COUNT, COMMAND, DATE]` |
-| `hermes plugins validate . --install-deps` | `[ACTUAL_RESULT]` |
-| `hermes plugins doctor . --ci` | `[ACTUAL_RESULT]` |
-| Catalog validator and payload checks | `[ACTUAL_RESULTS]` |
-| Real Hermes edit → warning → caller repair → test | `[TRANSCRIPT_OR_RECORDING_REFERENCE]` |
-| Web / desktop surfaces included in the video | `[WHAT_WAS_ACTUALLY_EXERCISED]` |
+## Entry links and status
 
-Measure performance only when needed. Include hardware, source-file count, cold versus cached scan, command, and observed elapsed time. Do not generalize the tiny fixture's timings to a large repository.
+- [Public repository](https://github.com/atikur/hermes-locus)
+- [Release CI](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
+- [Catalog PR search](https://github.com/NousResearch/hermes-agent/pulls?q=is%3Apr+author%3Aatikur+locus-codegraph)
+- [Official entry form](https://form.typeform.com/to/FwJLvOln)
+- [Organizer announcement](https://x.com/NousResearch/status/2118094256438936062)
+- [Catalog admission rules](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins/catalog-submission)
 
-## Release and entry sequence
-
-1. Finish the source changes and run the checks above.
-2. Commit the tested plugin. Publish the repository and verify the public URL can be cloned.
-3. Update the catalog entry's `sha`, asset URLs, repository URL, version, and maintainer to match that published commit. Never leave the handoff's original SHA in a changed submission.
-4. Run the current catalog validator and open the catalog PR.
-5. Publish the working demo video on X, under 90 seconds, tagging `@NousResearch`.
-6. Submit the catalog PR and demo links through the official entry form. Confirm the form's success state and retain it.
-
-The catalog itself requires maintainer review and merge before listing. Hackathon entry timing and form requirements are separate; check the organizer's announcement at submission time.
-
-## Submission links
-
-- Public repository: `[VERIFIED_PUBLIC_REPOSITORY_URL]`
-- Catalog pull request: `[CATALOG_PR_URL]`
-- Demo post: `[X_DEMO_URL]`
-- Entry form: <https://form.typeform.com/to/FwJLvOln>
-- Announcement: <https://x.com/NousResearch/status/2118094256438936062>
-- Catalog rules: <https://hermes-agent.nousresearch.com/docs/developer-guide/plugins/catalog-submission>
+The catalog entry must pin the published plugin's exact 40-character commit SHA.
+Catalog submission and hackathon registration are separate: the repository and
+PR do not establish that the entry form was submitted. The author will publish
+the video on X tagging `@NousResearch`, then provide that post and the catalog PR
+in the official form. Catalog listing remains subject to maintainer review.
 
 ## Suggested X post
 
-> Built Locus for the @NousResearch Hermes Agent Plugin Hackathon. It shows Hermes a change's affected callers, flags signature mismatches inside tool results, and tracks them as the agent repairs the code. Local analysis, no hosted index. Working demo below. Repo: [PUBLIC_REPO_URL]
-
-## Catalog PR body outline
-
-Use the final verified results, not the historical handoff's validation claims.
-
-```markdown
-## Summary
-
-Adds Locus, pinned to [FINAL_SHA] in [PUBLIC_REPO_URL].
-
-Locus connects a local code graph to Hermes's refactoring loop: inspect symbols
-and dependent modules before edits, receive caller-mismatch feedback in tool
-results, and inspect the same graph through web and desktop interfaces.
-
-## Disclosure
-
-- Reads supported source files in the selected workspace, with path, size,
-  hidden-file, symlink, and binary guards.
-- Stores structural metadata, short docstring summaries, and drift/activity
-  records in Hermes's profile-scoped Locus database; does not modify source.
-- Expands explicit context references and may append drift warnings to editing
-  tool results. Requested reports and source excerpts enter model context.
-- No external service calls, API credentials, telemetry, shell commands, or
-  background daemons in the analysis engine.
-- Python AST analysis is deepest; other language support is structural.
-
-## Validation
-
-[ACTUAL_COMMANDS_AND_RESULTS_FROM_FINAL_COMMIT]
-
-## Demo
-
-[WORKING_DEMO_URL]
-```
+> Built Locus Codegraph for the @NousResearch Hermes Agent Plugin Hackathon. It shows affected callers, flags signature drift inside edit results, and tracks the agent's repairs. Local analysis, no hosted index. Working demo below. https://github.com/atikur/hermes-locus

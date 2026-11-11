@@ -1,13 +1,18 @@
-# Verification — Locus 0.1.1
+# Verification — Locus Codegraph
 
 Verified on 11 November 2026 on macOS (Darwin 25.4.0, arm64).
+
+Version 0.1.2 uses the distinct plugin identity `locus-codegraph` to coexist with
+an unrelated plugin named Locus. The recorded model session below used 0.1.1;
+its event transcript is preserved unchanged. The refactoring engine is unchanged
+by the identity update.
 
 ## Reproducible checks
 
 | Check | Observed result |
 | --- | --- |
-| Standalone Python 3.11.16, `requirements-dev.txt` | 41 tests run: 38 passed, 3 Hermes-specific checks skipped |
-| Installed Hermes, Python 3.14.7 | 41 tests passed, no skips |
+| Standalone Python 3.11.16, `requirements-dev.txt` | 42 tests run: 39 passed, 3 Hermes-specific checks skipped |
+| Installed Hermes, Python 3.14.7 | 42 tests passed, no skips |
 | `hermes plugins validate . --install-deps` | Passed; security scan safe; declarations match registrations |
 | `hermes plugins doctor . --ci` | Passed; 4 tools and 3 hooks registered |
 | Hermes payload scanner | Passed |

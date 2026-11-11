@@ -1,4 +1,4 @@
-// Locus Native Hermes Desktop Plugin (@hermes/plugin-sdk, uncompiled ESM, 100% theme-variable styled)
+// Locus Codegraph Native Hermes Desktop Plugin (@hermes/plugin-sdk, uncompiled ESM, 100% theme-variable styled)
 import {
   Badge,
   Button,
@@ -126,8 +126,8 @@ function LocusDesktopPane({ ctx }) {
     return jsx('div', {
       className: 'flex h-full flex-col justify-center p-4',
       children: jsx(EmptyState, {
-        title: 'Locus backend inactive',
-        description: 'Enable the Locus Python plugin in Capabilities → Plugins to stream AST blast-radius graphs.'
+        title: 'Locus Codegraph backend inactive',
+        description: 'Enable the Locus Codegraph Python plugin in Capabilities → Plugins to stream AST blast-radius graphs.'
       })
     })
   }
@@ -144,11 +144,11 @@ function LocusDesktopPane({ ctx }) {
     try {
       await ctx.rest('/reindex', { method: 'POST', body: { force: true, workspace } })
       queryClient.invalidateQueries({ queryKey: [ctx.source] })
-      host.notify({ kind: 'info', message: 'Locus workspace graph re-indexed' })
+      host.notify({ kind: 'info', message: 'Locus Codegraph workspace graph re-indexed' })
     } catch (err) {
       host.notify({
         kind: 'error',
-        message: 'Locus re-index failed: ' + String((err && err.message) || err)
+        message: 'Locus Codegraph re-index failed: ' + String((err && err.message) || err)
       })
     }
   }
@@ -164,7 +164,7 @@ function LocusDesktopPane({ ctx }) {
             children: [
               jsx('span', {
                 className: 'font-semibold text-sm text-(--ui-text-secondary)',
-                children: (summary && summary.workspace_name) || 'Locus Graph'
+                children: (summary && summary.workspace_name) || 'Locus Codegraph'
               }),
               jsx('span', {
                 className: 'text-(--ui-text-tertiary)',
@@ -311,9 +311,9 @@ function LocusStatusChip({ ctx }) {
 
   const label = data
     ? data.open_drift_count > 0
-      ? `locus · ${data.open_drift_count} drift`
-      : `locus · ${data.file_count} files`
-    : 'locus'
+      ? `codegraph · ${data.open_drift_count} drift`
+      : `codegraph · ${data.file_count} files`
+    : 'codegraph'
 
   return jsx('button', {
     type: 'button',
@@ -324,7 +324,7 @@ function LocusStatusChip({ ctx }) {
       if (data) {
         host.notify({
           kind: 'info',
-          message: `Locus: ${data.file_count} files, ${data.symbol_count} symbols, ${data.open_drift_count} open drift alert(s)`
+          message: `Locus Codegraph: ${data.file_count} files, ${data.symbol_count} symbols, ${data.open_drift_count} open drift alert(s)`
         })
       }
     },
@@ -333,11 +333,11 @@ function LocusStatusChip({ ctx }) {
 }
 
 export default {
-  id: 'locus',
-  name: 'Locus Codebase Graph',
+  id: 'locus-codegraph',
+  name: 'Locus Codegraph',
   defaultEnabled: true,
   register(ctx) {
-    ctx.onEvent('plugin.locus.graph.updated', () => {
+    ctx.onEvent('plugin.locus-codegraph.graph.updated', () => {
       queryClient.invalidateQueries({ queryKey: [ctx.source] })
     })
 
@@ -345,7 +345,7 @@ export default {
       {
         id: 'pane',
         area: PANES_AREA,
-        title: 'Locus Graph',
+        title: 'Locus Codegraph',
         data: { placement: 'right', width: '310px' },
         render: () => jsx(LocusDesktopPane, { ctx })
       },
@@ -359,13 +359,13 @@ export default {
         id: 'reindex',
         area: PALETTE_AREA,
         data: {
-          id: 'locus.reindex',
-          label: 'Locus: Re-index Workspace Codebase Graph',
+          id: 'locus-codegraph.reindex',
+          label: 'Locus Codegraph: Re-index Workspace Codebase Graph',
           keywords: ['locus', 'ast', 'graph', 'blast', 'reindex'],
           run: async () => {
             await ctx.rest('/reindex', { method: 'POST', body: { force: true, workspace: host.state.cwd.get() } })
             queryClient.invalidateQueries({ queryKey: [ctx.source] })
-            host.notify({ kind: 'info', message: 'Locus graph re-indexed' })
+            host.notify({ kind: 'info', message: 'Locus Codegraph re-indexed' })
           }
         }
       },
@@ -373,8 +373,8 @@ export default {
         id: 'insert-hotspots',
         area: PALETTE_AREA,
         data: {
-          id: 'locus.insertHotspots',
-          label: 'Locus: Insert @hotspots:all into Chat Composer',
+          id: 'locus-codegraph.insertHotspots',
+          label: 'Locus Codegraph: Insert @hotspots:all into Chat Composer',
           keywords: ['locus', 'hotspots', 'cycles', 'drift'],
           run: () => void insertRefChip('@hotspots:all')
         }

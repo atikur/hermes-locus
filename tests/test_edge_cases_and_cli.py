@@ -204,19 +204,19 @@ class TestEdgeCasesAndCLI(unittest.IsolatedAsyncioTestCase):
                 reindex_edited_file(ws, "svc.py", db_path=db_file)
 
                 app = FastAPI()
-                app.include_router(locus_router, prefix="/api/plugins/locus")
+                app.include_router(locus_router, prefix="/api/plugins/locus-codegraph")
                 client = TestClient(app)
 
-                hot1 = client.get("/api/plugins/locus/hotspots", params={"workspace": str(ws)}).json()
+                hot1 = client.get("/api/plugins/locus-codegraph/hotspots", params={"workspace": str(ws)}).json()
                 self.assertEqual(len(hot1["open_drift_alerts"]), 1)
                 alert_id = hot1["open_drift_alerts"][0]["id"]
 
-                res = client.post("/api/plugins/locus/resolve-drift", json={"alert_id": alert_id})
+                res = client.post("/api/plugins/locus-codegraph/resolve-drift", json={"alert_id": alert_id})
                 self.assertEqual(res.status_code, 200)
                 self.assertTrue(res.json()["ok"])
                 self.assertEqual(res.json()["resolved_id"], alert_id)
 
-                hot2 = client.get("/api/plugins/locus/hotspots", params={"workspace": str(ws)}).json()
+                hot2 = client.get("/api/plugins/locus-codegraph/hotspots", params={"workspace": str(ws)}).json()
                 self.assertEqual(len(hot2["open_drift_alerts"]), 0)
             finally:
                 if old_env is None:
@@ -372,10 +372,10 @@ class TestEdgeCasesAndCLI(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(get_repo_map(ssh_keys, db_path=Path(tmp) / "sec.db")["ok"])
 
                 app = FastAPI()
-                app.include_router(locus_router, prefix="/api/plugins/locus")
+                app.include_router(locus_router, prefix="/api/plugins/locus-codegraph")
                 client = TestClient(app)
                 for blocked in (fake_home, ssh_keys, hermes_prof, hidden_leaf, sym_root):
-                    resp = client.get("/api/plugins/locus/summary", params={"workspace": str(blocked)})
+                    resp = client.get("/api/plugins/locus-codegraph/summary", params={"workspace": str(blocked)})
                     self.assertEqual(resp.status_code, 403, f"Expected 403 for {blocked}, got {resp.status_code}")
             finally:
                 if old_home is None:
