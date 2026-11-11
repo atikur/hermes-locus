@@ -1,0 +1,53 @@
+--- before/agent/chat_completion_nonstream.py
++++ after/agent/chat_completion_nonstream.py
+@@ -165,7 +165,7 @@
+                 phase = "reconnect"
+             elif last_event_ts is not None:
+                 phase = "post_event"
+-            watchdog = wn.codex_watchdog_deadline(stale_timeout=wd.stale_timeout,
++            watchdog = wn.codex_watchdog_deadline(silence_timeout=wd.stale_timeout,
+                 ttfb_enabled=wd.ttfb_enabled, ttfb_timeout=wd.ttfb_timeout,
+                 last_event_ts=last_event_ts, last_progress_ts=last_progress_ts,
+                 retry_started_ts=retry_started_ts,
+--- before/agent/chat_completion_wait_notice.py
++++ after/agent/chat_completion_wait_notice.py
+@@ -41,7 +41,7 @@
+     return text
+ 
+ 
+-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,
++def codex_watchdog_deadline(*, silence_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,
+     last_event_ts: Optional[float], last_progress_ts: Optional[float],
+     retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,
+     idle_timeout: float, idle_requires_progress: bool, elapsed: float,
+@@ -49,8 +49,8 @@
+     """Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when
+     none applies (disabled/infinite, or its deadline already passed)."""
+     deadlines: list[tuple[str, float]] = []
+-    if math.isfinite(stale_timeout):
+-        deadlines.append(("wall-clock stale", stale_timeout))
++    if math.isfinite(silence_timeout):
++        deadlines.append(("wall-clock stale", silence_timeout))
+     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0
+     if last_event_ts is None:
+         if ttfb_enabled and math.isfinite(ttfb_timeout):
+--- before/tests/agent/test_codex_ttfb_watchdog.py
++++ after/tests/agent/test_codex_ttfb_watchdog.py
+@@ -333,7 +333,7 @@
+     from agent import chat_completion_wait_notice as wn
+ 
+     deadline = wn.codex_watchdog_deadline(
+-        stale_timeout=900.0, ttfb_enabled=True, ttfb_timeout=300.0,
++        silence_timeout=900.0, ttfb_enabled=True, ttfb_timeout=300.0,
+         last_event_ts=280.0, last_progress_ts=None, retry_started_ts=None,
+         call_start=100.0, idle_enabled=True, idle_timeout=120.0,
+         idle_requires_progress=True, progress_timeout=300.0, elapsed=250.0,
+@@ -456,7 +456,7 @@
+     from agent import chat_completion_wait_notice as wn
+ 
+     recovery = wn.codex_watchdog_deadline(
+-        stale_timeout=stale_timeout,
++        silence_timeout=stale_timeout,
+         ttfb_enabled=False,
+         ttfb_timeout=float("nan"),
+         last_event_ts=None,

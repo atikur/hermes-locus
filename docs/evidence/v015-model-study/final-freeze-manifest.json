@@ -1,0 +1,376 @@
+{
+  "files": {
+    "LICENSE": [
+      false,
+      "2192ab136a18f3a18f49a20cef54c05cf13d8ab442c8b8896a607cff08403897"
+    ],
+    "plugin.yaml": [
+      false,
+      "8c5fb4ec6e816c5118c8a0afd4ecd57c8d254d52586866074ae5bd1d4414d009"
+    ],
+    "__init__.py": [
+      false,
+      "8eba0e6c47ca48d7b1019f360f65982ac4baf92ae418fc3557608b57087a13c1"
+    ],
+    "README.md": [
+      false,
+      "e699d96379bbf7135ab853d57f9da3dc82bff96a71599ec0eb4b3ab3119a9a60"
+    ],
+    "requirements-dev.txt": [
+      false,
+      "c4755da44676b6021a1095844548028a95cf9e7d96a4e1e07e184fdc20b99739"
+    ],
+    ".gitignore": [
+      false,
+      "8c072e77b0f7a32ad274416596ee36f53b2a695b6e4e442d855bce80a8ef90d3"
+    ],
+    "tests/test_storage_migration.py": [
+      false,
+      "a842d309d8ef8312b3d8e69f06cb62d8a882e3aa53f550416786818de68a85d4"
+    ],
+    "tests/test_drift_confidence.py": [
+      false,
+      "682e49d343a3927a4c380ca232b4e3768bf5abea6f6167cfbe7dfa8893f529b6"
+    ],
+    "tests/test_invalid_python_indexing.py": [
+      false,
+      "507d8b91f349ed0cccea1d118000b6616959bd9e071fd9241407bf35770869b9"
+    ],
+    "tests/test_indexing_boundaries.py": [
+      false,
+      "9535fdb16cbe62dce774671d0f4f6c05b1dd5b8156308303be90d38a6b57acdc"
+    ],
+    "tests/test_plugin_identity.py": [
+      false,
+      "53520a7d063300461f2e7018d5a8e5de64c273c096bacd4164744aac82c08d3b"
+    ],
+    "tests/test_report_integrity.py": [
+      false,
+      "967444088ce2d4e832258efc9589b9863bb7ebe2857382ac474f169392ea22a8"
+    ],
+    "tests/ui.test.cjs": [
+      false,
+      "11e8555b7f763aaba9b971fc061482c2515aba4c323ef59be98551b0116d0593"
+    ],
+    "tests/test_parsers_and_graph.py": [
+      false,
+      "2e758929952827f9489a04cc30e8f5de9ce2256684a1260359ada495419a524f"
+    ],
+    "tests/test_api_mutations.py": [
+      false,
+      "9aad6cf313414957cf9c6dce98748683e1373be6428d9d7e718919e521553114"
+    ],
+    "tests/test_api_and_validation.py": [
+      false,
+      "3d93169f7fc6b28aab36dec610b629497df0b42d6e013147ccc6a2d28098be24"
+    ],
+    "tests/__init__.py": [
+      false,
+      "d67d21a901f8ebe678670022a5b1625df005f7515ce4b841c862c2f08f2894a2"
+    ],
+    "tests/test_context_references.py": [
+      false,
+      "292f47d172b1184d75fa4ec932b4c838a7f7fe565a5fe74cec6cad0ce33cf535"
+    ],
+    "tests/test_hook_contracts.py": [
+      false,
+      "5bce01dd5de217dfd564d889c94760ae5898e5333fa12759cc8a0acf5216683b"
+    ],
+    "tests/test_large_graphs.py": [
+      false,
+      "837ab8134e867fb6cb12c0d3180069ad4bdea16eac1a7d78068d95e77442a4d5"
+    ],
+    "tests/test_python_resolution.py": [
+      false,
+      "99853d4be52bb89926506c08cb7b5807e92ddd2aeed6bd5d86f18b98d3244116"
+    ],
+    "tests/test_edge_cases_and_cli.py": [
+      false,
+      "9ebd64b471b0596e50a20dccf7419eca72e56362e2bf03c99d64a0160feb2c5d"
+    ],
+    "tests/test_test_reachability.py": [
+      false,
+      "21b96c4fed32bfe918bdf62cfa4b395bc827db107026589efd70c8237927d620"
+    ],
+    "tests/test_batch_indexing.py": [
+      false,
+      "0c30aa7d16491d20c4706da1325678e514ce1861a09b237246a09c6ed3f6371e"
+    ],
+    "tests/test_python_call_shapes.py": [
+      false,
+      "4fe2c621f6dc61e7de81d06f5f43d07a27cb76cb42dcc5ee1b2f2028b0d1f776"
+    ],
+    "tests/test_drift_and_hooks.py": [
+      false,
+      "71fc8c5fe9bbd64a865138a4f34d0e7a8f94d15e2a7ed6ae2afb42708ad0f54f"
+    ],
+    "tests/test_drift_regressions.py": [
+      false,
+      "c02dfa5d6ba0c93534300d57f6ef74d89e3fc97c65f973f96b6c91ac8948d9c7"
+    ],
+    "tests/integration/benchmark_relink.py": [
+      false,
+      "7aa5f4460e61f6a8967fceb9823593f425cf080feec53721751f000d885a4291"
+    ],
+    "tests/integration/test_evaluation_protocol.py": [
+      false,
+      "c43a1fd01d94d28a8e15a8a0fb05ba4519f681dcc29449cea86b49372bc3f232"
+    ],
+    "tests/integration/verify_hermes_refactor.py": [
+      false,
+      "6420d20892cbcb80b18dcdda04a24e3f37a63cbaac21fdd124b82c2d8d82123b"
+    ],
+    "tests/integration/evaluation_boundary.py": [
+      false,
+      "04160e3b3d1d5a403b7922d7f15d3a6a8dd9fa46516cde997bd7eaa50ffe04f2"
+    ],
+    "tests/integration/evaluate_refactor_feedback.py": [
+      false,
+      "7f5f2f29428ba5e26f2e2feea8dc2e0cf0a28cac00cd3ac341dbc2a766a8a36e"
+    ],
+    "tests/integration/verify_signature_corpus.py": [
+      false,
+      "62fa6150542fec707e8fb2f66f62804ef772471dd8506740071ec889cafe3139"
+    ],
+    "tests/integration/verify_resolution_corpus.py": [
+      false,
+      "ba1237b12b8fc208b4cd7aaf33f701204a09293165b1a3bc901832a4ff4643ac"
+    ],
+    "desktop/plugin.js": [
+      false,
+      "5e4e78f6acc1568c47a29993e3692f4e18ec8abd9df6ecb11197177ba28efc10"
+    ],
+    "docs/performance.md": [
+      false,
+      "dea5b27c4af2a85b54bc40ec2eca4a2f770b635e01bcae26bdef4024ed296d1c"
+    ],
+    "docs/verification.md": [
+      false,
+      "dab28a6ffe46e5aad720e01b05e88f6dcd3a5ea7fb4b98b46c539458fc3b86c2"
+    ],
+    "docs/submission.md": [
+      false,
+      "6502972cef3fbc80a439241917156729f707dd60dbe3dfebba2b594bd011883f"
+    ],
+    "docs/evidence/live-keyword-prompt.txt": [
+      false,
+      "fa4ea44818b33965f05c603b14d8bf32f65d1ea60ab3a5f3ed66605a13362eed"
+    ],
+    "docs/evidence/plugin-doctor.txt": [
+      false,
+      "38a577282cdc5ff7a2d7ed12169a1cef3869746f9873f28403b7ca5e44eed561"
+    ],
+    "docs/evidence/keyword-refactor-candidate.json": [
+      false,
+      "dc93d8a155741a794fd41b0ffeccf0bf1a5f14ea931b6c7b051cdba1436c7180"
+    ],
+    "docs/evidence/demo-prompt.txt": [
+      false,
+      "6f4c30d0209fc1ba1089e666e6811e3fe5248a3f8a80c9ca1f77836252bb83ae"
+    ],
+    "docs/evidence/tests-host.txt": [
+      false,
+      "5574a2eada755f856911a3d3fb88f9f9fd44518d634e7749bdb9d456c9cedd20"
+    ],
+    "docs/evidence/live-keyword-session.jsonl": [
+      false,
+      "ae919f00018037e6f78ed5e938a945f4e13c63b310330a5e4de50a378d22c9b2"
+    ],
+    "docs/evidence/benchmark-hermes.json": [
+      false,
+      "97b4724488656667fc1f6823b313cfbc737ba9beb6e756771eda416d0bf3cf4a"
+    ],
+    "docs/evidence/signature-corpus.json": [
+      false,
+      "89cf780465d61dee13dd70c616a1f469d479c777ef179493e4ebaf93969c1f21"
+    ],
+    "docs/evidence/live-hermes-session.jsonl": [
+      false,
+      "5169801a06732d562b99d8d6443cfac0850e5249d0419ed67e6db2f062db03fd"
+    ],
+    "docs/evidence/relink-benchmark.json": [
+      false,
+      "48a42d3f9f5860a41555a48b6a960d03c4bf53eeebd69a9c3b6e322e5850fc54"
+    ],
+    "docs/evidence/live-keyword-verification.json": [
+      false,
+      "ae38537771b8a9bbcece99eb0b2666470909704527fe9aba32407d7ccc83622b"
+    ],
+    "docs/evidence/keyword-refactor-baseline.json": [
+      false,
+      "8e1384d1b1cabc0748df6b44edd02677e345599267fa6ef923f8c69b05cc3a64"
+    ],
+    "docs/evidence/plugin-validation.txt": [
+      false,
+      "51c6b96e14f756a0d2cfe1e41b61ed53e988469b40c7ac1ac709f6af090467bc"
+    ],
+    "docs/evidence/tests-standalone.txt": [
+      false,
+      "97ccf4f47046863bd2a64700bad971f9d6177166903087f3f88679ecd2fd625b"
+    ],
+    "docs/evidence/syntax-warning.jpg": [
+      false,
+      "5cfaa679c8429516488069550318126796337ac9c0d0c2403250f03a9cf43f23"
+    ],
+    "docs/evidence/refactor-pairs/supplied-patch/summary.json": [
+      false,
+      "16cbca0d5c8cc80a0dcbad3b643febac0d2fc96723ba0996837602c48483fd58"
+    ],
+    "docs/evidence/refactor-pairs/supplied-patch/audit.json": [
+      false,
+      "dc91282f1a63dfd9f4b1a6419b6558f19f9cf653797bf7933c8c3813dbf549ef"
+    ],
+    "docs/evidence/refactor-pairs/supplied-patch/display-1-warning-off.jsonl": [
+      false,
+      "0e06832aca435d2f41024876df786983bd588030cadf7008c7c209519993f696"
+    ],
+    "docs/evidence/refactor-pairs/supplied-patch/display-1-warning-on.jsonl": [
+      false,
+      "c5f7d84b01a8a039c229890fb742598dad54f499e652964ad0d17a6a5228b07b"
+    ],
+    "docs/evidence/refactor-pairs/staged/summary.json": [
+      false,
+      "3a909b8dabc9e50b046b9b9d16e71410e713073d6d1b4459dd821ec4ece6c6ee"
+    ],
+    "docs/evidence/refactor-pairs/staged/replay-1-warning-on.jsonl": [
+      false,
+      "9c03e243a61b2baccb9bfe21143d35916dc76d8457418c658314abe08ba1b004"
+    ],
+    "docs/evidence/refactor-pairs/staged/audit.json": [
+      false,
+      "c6a816d305956abeea21fc3075f04284be27ef775bfb95dc6e8f591a317eb0e3"
+    ],
+    "docs/evidence/refactor-pairs/staged/display-1-warning-off.jsonl": [
+      false,
+      "79fe9b24ee4f0fdff780dfcfd649a2f15e34a63dfe902eec0e7420db85c3a0f0"
+    ],
+    "docs/evidence/refactor-pairs/staged/accounting-1-warning-on.jsonl": [
+      false,
+      "2c2af4980eb6524c9eca0888cfec616a00a5a655486d77e7cad2f49d146f838a"
+    ],
+    "docs/evidence/refactor-pairs/staged/accounting-1-warning-off.jsonl": [
+      false,
+      "8a74baa15297682685955fa31cca36e1108ff397adb87946ec6e71f514ef2ae9"
+    ],
+    "docs/evidence/refactor-pairs/staged/display-1-warning-on.jsonl": [
+      false,
+      "7e48cc8abc8a3c869225c63477157322b9956fbd1e2fd3d58dbda5e8257796b5"
+    ],
+    "docs/evidence/refactor-pairs/staged/replay-1-warning-off.jsonl": [
+      false,
+      "47fbb88900cdc50b3a6107c7f3e32455ba1c716a2f7718e72a77f81d0e1ab41f"
+    ],
+    "docs/evidence/refactor-pairs/replayed-helper/summary.json": [
+      false,
+      "30643355cc023c5d06394f3fdb2562e9c527994546771db0ebfb34387046a897"
+    ],
+    "docs/evidence/refactor-pairs/replayed-helper/display-1-warning-off.jsonl": [
+      false,
+      "764e999b59c698245da6036df9f83d5c19bb841db83695ea20884413288eceae"
+    ],
+    "docs/evidence/refactor-pairs/replayed-helper/display-1-warning-on-prompt.txt": [
+      false,
+      "8d4348a8a02d2353503c646317ad7601e42431f903dafb342955f19a96ccb97b"
+    ],
+    "docs/evidence/refactor-pairs/replayed-helper/display-1-warning-off-initial-edit.json": [
+      false,
+      "983421d5aefd7d00d6509ed84843c84447705f01afd92263e50a08c845195bac"
+    ],
+    "docs/evidence/refactor-pairs/replayed-helper/display-1-warning-on.jsonl": [
+      false,
+      "1b0c7a6d70faf7c1df7e721d76271dc338442525234124985e666c8391b21531"
+    ],
+    "docs/evidence/refactor-pairs/replayed-helper/control.json": [
+      false,
+      "57915bccaf3058a94c01fe7fff35901748bf3afe266e12e95ca4d756f1677653"
+    ],
+    "docs/evidence/refactor-pairs/replayed-helper/display-1-warning-off-prompt.txt": [
+      false,
+      "4b7a9e1f4546b0be6c042396ab5edae2185b38298eb57d5987ad20ce4fee090b"
+    ],
+    "docs/evidence/refactor-pairs/replayed-helper/display-1-warning-on-initial-edit.json": [
+      false,
+      "6844fd5a29dad02b1b0ef5392dcb941f3bae154894cd69bec1abc107062fdd4a"
+    ],
+    "dashboard/plugin_api.py": [
+      false,
+      "409e3409b9c15cb6dd891395902c7099d6bb137c1739336d5bf84c5c395e5ebf"
+    ],
+    "dashboard/manifest.json": [
+      false,
+      "9225edb84d16890ca7cebe93779ea825cd1932e5413ecabb3fd658c739600804"
+    ],
+    "dashboard/dist/index.js": [
+      false,
+      "5d67dcbb3f51cf284d92a1d06772ec7c99fc88031d34931dfca1053bf8848522"
+    ],
+    "dashboard/dist/style.css": [
+      false,
+      "8a92c635d2f6f7dffe6d8545f1b5400e929c1546a7d2622adb6ec8dbdfd99e8f"
+    ],
+    "scripts/run_demo.py": [
+      true,
+      "2cf3eed814a74189218a9bc9ed90c865cd593d1b707f50a9bb60511bc90e0293"
+    ],
+    "scripts/benchmark_workspace.py": [
+      false,
+      "dc9fe2ff5fb2699b4da461e098b0768020831ca6e9c5fa68b6706c0519ec6f26"
+    ],
+    "scripts/create_demo_workspace.py": [
+      false,
+      "228859acfe2bccf69f09328f5e7678fe9cc03182adf32bb6c1e73db16e43d726"
+    ],
+    ".github/workflows/tests.yml": [
+      false,
+      "ee2d1f54b436daf9a7926286671a737b08929ac018e63e32b19ccafedecf9c61"
+    ],
+    "locus_core/formatter.py": [
+      false,
+      "96892fd82233f4723d4e599bcb73bb55fec5cb96c0b5c96d1ed91e4f8f992a42"
+    ],
+    "locus_core/graph.py": [
+      false,
+      "50f3bd60594a493b3469d149bc8b02866ceec7ff198af49bc69762147b6d2ce1"
+    ],
+    "locus_core/drift.py": [
+      false,
+      "efec287075b3138dd688a9d63552b9a667754eae929d75c4aa5dcc51a022bb95"
+    ],
+    "locus_core/__init__.py": [
+      false,
+      "16b849ec97b05323bc71a2aa906c2738c21d62984c066f2523f9d68a389bc4b6"
+    ],
+    "locus_core/parsers.py": [
+      false,
+      "ecff207803cb707850ca792176bf0823fede6ab5d10dfe88eb43235c370e4ec2"
+    ],
+    "locus_core/indexer.py": [
+      false,
+      "2c9019213e7cfd9e744ac41c71e3202086128c45e45af00ead761b4f11825857"
+    ],
+    "locus_core/storage.py": [
+      false,
+      "494487d3113ad1f1cc0a918a975b655069360e8529886733426794b68889c3ad"
+    ],
+    "skills/locus-navigation/SKILL.md": [
+      false,
+      "2e8ff2867f70726db3e3f15ee8af80e58f3bfcffecdb92acca853e9e500410d4"
+    ],
+    "assets/locus-banner.svg": [
+      false,
+      "a8d2a872faf53d5aca931c134d26a24d54152538877f88e32180a2b7d40e2379"
+    ],
+    "assets/locus-dashboard-preview.svg": [
+      false,
+      "bb2a0fa8981328f7b9dbc1f9a562972d8f4b21e7748d3c52f5fd785a113d7a9a"
+    ],
+    "assets/locus-live-dashboard.jpg": [
+      false,
+      "1be56ebfff63b0d2605534ac1632e833c343f5af04c2d5a00864908eaa7a2a44"
+    ]
+  },
+  "engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
+  "snapshot_sha256": "0de949210326e6810aca269a7ca4f9c7cfd949cf0561213c6c52588fc03417e8",
+  "source": "private working tree frozen before model calls",
+  "model_calls_started": false
+}

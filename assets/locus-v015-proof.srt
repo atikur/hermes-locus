@@ -1,0 +1,29 @@
+1
+00:00:00,150 --> 00:00:07,900
+One controlled edit renames a required keyword.
+The argument count stays the same.
+
+2
+00:00:08,150 --> 00:00:19,900
+The actual patch response names three callers
+and suggests stale_timeout to silence_timeout.
+
+3
+00:00:20,150 --> 00:00:30,900
+The recorded repair follows the module alias,
+wn.codex_watchdog_deadline(...).
+
+4
+00:00:31,150 --> 00:00:39,900
+Two test calls are updated.
+Existing assertions stay unchanged.
+
+5
+00:00:40,150 --> 00:00:49,900
+Independent verification: 26 upstream tests pass.
+All three caller repairs pass the source audit.
+
+6
+00:00:50,150 --> 00:00:59,900
+Local Python analysis, inside Hermes edit results.
+One controlled session; static coverage has limits.

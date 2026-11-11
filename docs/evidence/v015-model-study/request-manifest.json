@@ -1,0 +1,176 @@
+{
+  "authorization": "User explicitly approved 24 OpenAI sessions carrying public pinned Hermes source, refactor prompts, and Locus tool descriptions/diagnostics; private Locus source excluded.",
+  "destination": "OpenAI API via Hermes openai-api provider",
+  "model": "gpt-5.4-mini",
+  "reasoning": "low",
+  "sessions": 24,
+  "public_source": {
+    "repository": "https://github.com/NousResearch/hermes-agent",
+    "commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+    "extraction": "git archive into a new disposable directory per session; no private repo, .git metadata, credentials or personal home copied into workspace"
+  },
+  "payload_categories": [
+    "Hermes public built-in system instructions and file-tool JSON schemas",
+    "Four explicit refactor repair prompts, actual helper patch diffs/results and warning-on diagnostics",
+    "Public Hermes source snippets/search results requested by the model",
+    "Prior conversation turns within each bounded session",
+    "Locus product-facing plugin/skill metadata descriptions, if included by Hermes; no implementation source"
+  ],
+  "excluded": [
+    "Private Locus source files and evaluation harness",
+    "User home and credentials files",
+    "Shell, browser, network, Python execution and non-file tools"
+  ],
+  "task_prompts": {
+    "display": "The keyword-only parameter `max_len` was renamed to `limit` in `prepare_tool_preview` in `agent/display.py`, with its body updated to match. Here is the actual Hermes patch result.\n\n```json\n{actual public helper patch result; warning-on includes exact callers}\n```\n\nUpdate every affected call while preserving behavior and the existing test assertions. Use file tools inside the current disposable checkout. A separate evaluator will run the tests. Summarize the changes.",
+    "replay": "The keyword-only parameter `now` was renamed to `clock_now` in `canonicalize_replay_history` in `agent/replay_cleanup.py`, with its body updated to match. Here is the actual Hermes patch result.\n\n```json\n{actual public helper patch result; warning-on includes exact callers}\n```\n\nUpdate every affected call while preserving behavior and the existing test assertions. Use file tools inside the current disposable checkout. A separate evaluator will run the tests. Summarize the changes.",
+    "accounting": "The keyword-only parameter `provider` was renamed to `provider_id` in `record_aux_usage` in `agent/aux_accounting.py`, with its body updated to match. Here is the actual Hermes patch result.\n\n```json\n{actual public helper patch result; warning-on includes exact callers}\n```\n\nUpdate every affected call while preserving behavior and the existing test assertions. Use file tools inside the current disposable checkout. A separate evaluator will run the tests. Summarize the changes.",
+    "watchdog": "The keyword-only parameter `stale_timeout` was renamed to `silence_timeout` in `codex_watchdog_deadline` in `agent/chat_completion_wait_notice.py`, with its body updated to match. Here is the actual Hermes patch result.\n\n```json\n{actual public helper patch result; warning-on includes exact callers}\n```\n\nUpdate every affected call while preserving behavior and the existing test assertions. Use file tools inside the current disposable checkout. A separate evaluator will run the tests. Summarize the changes."
+  },
+  "schedule": [
+    [
+      "replay",
+      2,
+      false
+    ],
+    [
+      "replay",
+      2,
+      true
+    ],
+    [
+      "watchdog",
+      2,
+      true
+    ],
+    [
+      "watchdog",
+      2,
+      false
+    ],
+    [
+      "accounting",
+      1,
+      true
+    ],
+    [
+      "accounting",
+      1,
+      false
+    ],
+    [
+      "replay",
+      1,
+      true
+    ],
+    [
+      "replay",
+      1,
+      false
+    ],
+    [
+      "accounting",
+      3,
+      true
+    ],
+    [
+      "accounting",
+      3,
+      false
+    ],
+    [
+      "display",
+      1,
+      false
+    ],
+    [
+      "display",
+      1,
+      true
+    ],
+    [
+      "watchdog",
+      1,
+      false
+    ],
+    [
+      "watchdog",
+      1,
+      true
+    ],
+    [
+      "display",
+      2,
+      true
+    ],
+    [
+      "display",
+      2,
+      false
+    ],
+    [
+      "watchdog",
+      3,
+      false
+    ],
+    [
+      "watchdog",
+      3,
+      true
+    ],
+    [
+      "accounting",
+      2,
+      false
+    ],
+    [
+      "accounting",
+      2,
+      true
+    ],
+    [
+      "display",
+      3,
+      false
+    ],
+    [
+      "display",
+      3,
+      true
+    ],
+    [
+      "replay",
+      3,
+      true
+    ],
+    [
+      "replay",
+      3,
+      false
+    ]
+  ],
+  "boundary": {
+    "guard_sha256": "04160e3b3d1d5a403b7922d7f15d3a6a8dd9fa46516cde997bd7eaa50ffe04f2",
+    "same_in_both_arms": true,
+    "permitted_tools": [
+      "read_file",
+      "search_files",
+      "write_file",
+      "patch"
+    ],
+    "path_policy": "resolve paths and symlinks inside public workspace only; validate every multi-file patch header; reject unknown tools",
+    "write_safe_root": true,
+    "proof_artifact": "privacy-boundary-proof.json",
+    "pre_model_probe": "Actual private plugin read must return Evaluation file boundary block before each helper patch"
+  },
+  "limits": {
+    "parallel_sessions": 1,
+    "max_turns": 20,
+    "model_seconds": 420,
+    "process_seconds": 465,
+    "stop_after_session_tokens_above": 500000,
+    "stop_after_total_tokens_above": 5000000,
+    "stop_after_consecutive_infrastructure_failures": 2
+  },
+  "records": "All sessions retained; tokens and dollar fields only if emitted; complete diffs, audit, tests, redacted events and stderr; no tuning after model outcomes."
+}

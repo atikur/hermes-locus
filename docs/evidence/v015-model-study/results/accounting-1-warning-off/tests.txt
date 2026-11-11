@@ -1,0 +1,10 @@
+........F..                                                              [100%]
+=================================== FAILURES ===================================
+_______ TestAmbientAccountingContext.test_validate_llm_response_records ________
+tests/hermes_state/test_aux_usage_accounting.py:241: in test_validate_llm_response_records
+    out = _validate_llm_response(_mk_response(), "web_extract", provider_id="openrouter")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: _validate_llm_response() got an unexpected keyword argument 'provider_id'. Did you mean 'provider'?
+=========================== short test summary info ============================
+FAILED tests/hermes_state/test_aux_usage_accounting.py::TestAmbientAccountingContext::test_validate_llm_response_records
+1 failed, 10 passed in 2.08s

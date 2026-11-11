@@ -1,0 +1,17 @@
+......F.F..                                                              [100%]
+=================================== FAILURES ===================================
+__ TestAmbientAccountingContext.test_record_aux_usage_writes_through_context ___
+tests/hermes_state/test_aux_usage_accounting.py:199: in test_record_aux_usage_writes_through_context
+    record_aux_usage(_mk_response(model="aux-m"), "vision", provider="gemini")
+E   TypeError: record_aux_usage() got an unexpected keyword argument 'provider'. Did you mean 'provider_id'?
+_______ TestAmbientAccountingContext.test_validate_llm_response_records ________
+tests/hermes_state/test_aux_usage_accounting.py:241: in test_validate_llm_response_records
+    out = _validate_llm_response(_mk_response(), "web_extract", provider="openrouter")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+agent/auxiliary_client.py:6647: in _validate_llm_response
+    record_aux_usage(response, task, provider=provider, base_url=base_url)
+E   TypeError: record_aux_usage() got an unexpected keyword argument 'provider'. Did you mean 'provider_id'?
+=========================== short test summary info ============================
+FAILED tests/hermes_state/test_aux_usage_accounting.py::TestAmbientAccountingContext::test_record_aux_usage_writes_through_context
+FAILED tests/hermes_state/test_aux_usage_accounting.py::TestAmbientAccountingContext::test_validate_llm_response_records
+2 failed, 9 passed in 2.02s

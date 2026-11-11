@@ -1,0 +1,170 @@
+{
+  "runs": [
+    {
+      "run": "accounting-1-warning-off",
+      "tool_calls_audited": 16,
+      "tools": {
+        "search_files": 5,
+        "read_file": 7,
+        "patch": 4
+      },
+      "event_types": {
+        "system": 1,
+        "tool_use": 16,
+        "tool_result": 16,
+        "text": 118,
+        "result": 1
+      },
+      "trace_sha256": "cc0330c6ecd4a70824d4666416cc2993ceec6b5a60e6dff48be848de1a317e9d"
+    },
+    {
+      "run": "accounting-1-warning-on",
+      "tool_calls_audited": 11,
+      "tools": {
+        "read_file": 4,
+        "patch": 3,
+        "search_files": 4
+      },
+      "event_types": {
+        "system": 1,
+        "tool_use": 11,
+        "tool_result": 11,
+        "text": 106,
+        "result": 1
+      },
+      "trace_sha256": "cba5c1888c2a8f9df66f6069d7ea0d2d747dffddda7cfb63aa0b0fc772a55651"
+    },
+    {
+      "run": "accounting-3-warning-off",
+      "tool_calls_audited": 0,
+      "tools": {},
+      "event_types": {
+        "system": 1
+      },
+      "trace_sha256": "e39df0ee6ae9a797574a5e67cce6b7359c81c2aacdb59d8c5720caa5915c8b89"
+    },
+    {
+      "run": "accounting-3-warning-on",
+      "tool_calls_audited": 6,
+      "tools": {
+        "read_file": 3,
+        "patch": 3
+      },
+      "event_types": {
+        "system": 1,
+        "tool_use": 6,
+        "tool_result": 6,
+        "text": 77,
+        "result": 1
+      },
+      "trace_sha256": "23078a551bbb865a6a616eb2b34f09f8ea4f31118f0c6bb07562086f99bb9e3f"
+    },
+    {
+      "run": "replay-1-warning-off",
+      "tool_calls_audited": 19,
+      "tools": {
+        "search_files": 8,
+        "read_file": 6,
+        "patch": 5
+      },
+      "event_types": {
+        "system": 1,
+        "tool_use": 19,
+        "tool_result": 19,
+        "text": 119,
+        "result": 1
+      },
+      "trace_sha256": "dd7c01104c6695816609ecbb89122c6edf1091fa376b33433eb749adf09e63f3"
+    },
+    {
+      "run": "replay-1-warning-on",
+      "tool_calls_audited": 14,
+      "tools": {
+        "read_file": 5,
+        "search_files": 4,
+        "patch": 5
+      },
+      "event_types": {
+        "system": 1,
+        "tool_use": 14,
+        "tool_result": 14,
+        "text": 61,
+        "result": 1
+      },
+      "trace_sha256": "eecfcc026e169656db4755bf9bba390b0c523f8709f16adb6dd93674beeb830d"
+    },
+    {
+      "run": "replay-2-warning-off",
+      "tool_calls_audited": 17,
+      "tools": {
+        "search_files": 6,
+        "read_file": 6,
+        "patch": 5
+      },
+      "event_types": {
+        "system": 1,
+        "tool_use": 17,
+        "tool_result": 17,
+        "text": 108,
+        "result": 1
+      },
+      "trace_sha256": "207e4595f69616dc9c0e9bc787de8aea274d4189364c1a3a8962d4f813051f89"
+    },
+    {
+      "run": "replay-2-warning-on",
+      "tool_calls_audited": 9,
+      "tools": {
+        "read_file": 2,
+        "search_files": 2,
+        "patch": 5
+      },
+      "event_types": {
+        "system": 1,
+        "tool_use": 9,
+        "tool_result": 9,
+        "text": 87,
+        "result": 1
+      },
+      "trace_sha256": "a5d380459aa2490d84b33063595a60e0e6d9fe35164ff23962c5a30b7b55c89c"
+    },
+    {
+      "run": "watchdog-2-warning-off",
+      "tool_calls_audited": 12,
+      "tools": {
+        "read_file": 4,
+        "search_files": 5,
+        "patch": 3
+      },
+      "event_types": {
+        "system": 1,
+        "tool_use": 12,
+        "tool_result": 12,
+        "text": 112,
+        "result": 1
+      },
+      "trace_sha256": "31232fcc1938795fe659318fa407fd216e9f913fa4e3a0d31872375165298a3c"
+    },
+    {
+      "run": "watchdog-2-warning-on",
+      "tool_calls_audited": 8,
+      "tools": {
+        "read_file": 3,
+        "search_files": 2,
+        "patch": 3
+      },
+      "event_types": {
+        "system": 1,
+        "tool_use": 8,
+        "tool_result": 8,
+        "text": 93,
+        "result": 1
+      },
+      "trace_sha256": "2a19f7fb8cfca738270dd3de0dc55df40f57d758bd28d65de5f6be9deba6209a"
+    }
+  ],
+  "all_prior_requests_allowed_by_stricter_guard": true,
+  "outside_access_requests": [],
+  "host_lenient_patch_headers_independently_audited": true,
+  "helper_patches_audited": 4,
+  "network_used": false
+}

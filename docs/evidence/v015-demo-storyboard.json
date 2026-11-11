@@ -1,0 +1,60 @@
+{
+  "duration_seconds": 60,
+  "evidence": "One selected controlled session, not a live screen capture or an aggregate/typical-success claim.",
+  "scenes": [
+    {
+      "id": "01_same_arity",
+      "duration": 8,
+      "caption": "One controlled edit renames a required keyword.\nThe argument count stays the same.",
+      "narration": "One controlled Hermes edit renames a required keyword without changing the argument count. This is one recorded watchdog refactor.",
+      "start": 0,
+      "end": 8,
+      "frame": "01_same_arity.png"
+    },
+    {
+      "id": "02_warning",
+      "duration": 12,
+      "caption": "The actual patch response names three callers\nand suggests stale_timeout to silence_timeout.",
+      "narration": "The real patch result includes a Locus warning. It names three affected callers, including a module alias, and suggests replacing stale timeout with silence timeout.",
+      "start": 8,
+      "end": 20,
+      "frame": "02_warning.png"
+    },
+    {
+      "id": "03_alias_repair",
+      "duration": 11,
+      "caption": "The recorded repair follows the module alias,\nwn.codex_watchdog_deadline(...).",
+      "narration": "The model reads the named files, then repairs the production call through the module alias, W N. This is the recorded patch diff.",
+      "start": 20,
+      "end": 31,
+      "frame": "03_alias_repair.png"
+    },
+    {
+      "id": "04_test_repairs",
+      "duration": 9,
+      "caption": "Two test calls are updated.\nExisting assertions stay unchanged.",
+      "narration": "The model updates both upstream test calls. It changes the keyword while preserving the surrounding code and existing test assertions.",
+      "start": 31,
+      "end": 40,
+      "frame": "04_test_repairs.png"
+    },
+    {
+      "id": "05_verification",
+      "duration": 10,
+      "caption": "Independent verification: 26 upstream tests pass.\nAll three caller repairs pass the source audit.",
+      "narration": "All twenty-six upstream tests pass. Independent checks confirm three caller repairs, unchanged assertions, and only the expected files changed.",
+      "start": 40,
+      "end": 50,
+      "frame": "05_verification.png"
+    },
+    {
+      "id": "06_scope",
+      "duration": 10,
+      "caption": "Local Python analysis, inside Hermes edit results.\nOne controlled session; static coverage has limits.",
+      "narration": "Locus Codegraph brings local Python analysis into Hermes edit results. This is one controlled session. Unknown calls are not proven safe.",
+      "start": 50,
+      "end": 60,
+      "frame": "06_scope.png"
+    }
+  ]
+}

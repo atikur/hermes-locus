@@ -1,0 +1,513 @@
+{
+  "protocol_version": 2,
+  "state": "preregistered before model calls",
+  "model": "gpt-5.4-mini",
+  "workspace_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+  "plugin_base_commit": "af1d9030d6e7b3cf9366e886d19dffdcc42a4de9",
+  "plugin_source": "frozen-snapshot",
+  "plugin_engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
+  "plugin_snapshot_sha256": "0de949210326e6810aca269a7ca4f9c7cfd949cf0561213c6c52588fc03417e8",
+  "harness_sha256": "7f5f2f29428ba5e26f2e2feea8dc2e0cf0a28cac00cd3ac341dbc2a766a8a36e",
+  "file_boundary_sha256": "04160e3b3d1d5a403b7922d7f15d3a6a8dd9fa46516cde997bd7eaa50ffe04f2",
+  "privacy_boundary": "Identical pre-tool guard permits only read/search/write/patch paths inside the disposable pinned public checkout, resolving symlinks. Private installed plugin/profile paths and other tools are blocked. HERMES_WRITE_SAFE_ROOT is also set.",
+  "baseline_files_sha256": "aa72818823e75a574dfbc9db447baa42f996303b7420ab90cf7f11967e109d63",
+  "tasks": {
+    "display": {
+      "helper": "agent/display.py",
+      "symbol": "prepare_tool_preview",
+      "old": "max_len",
+      "new": "limit",
+      "sites": [
+        "gateway/platforms/base.py:2014",
+        "gateway/run_turn_progress.py:375",
+        "tests/agent/test_display.py:142",
+        "tests/agent/test_display.py:155",
+        "tests/agent/test_display.py:164"
+      ],
+      "test": "tests/agent/test_display.py",
+      "helper_patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    text = _tail_trunc(full_text, limit)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n*** End Patch"
+    },
+    "replay": {
+      "helper": "agent/replay_cleanup.py",
+      "symbol": "canonicalize_replay_history",
+      "old": "now",
+      "new": "clock_now",
+      "sites": [
+        "agent/turn_context.py:1454",
+        "tests/agent/test_replay_cleanup.py:159",
+        "tests/agent/test_replay_cleanup.py:200",
+        "tests/agent/test_replay_cleanup.py:215",
+        "tests/agent/test_replay_cleanup.py:217"
+      ],
+      "test": "tests/agent/test_replay_cleanup.py",
+      "helper_patch": "*** Begin Patch\n*** Update File: agent/replay_cleanup.py\n@@\n \n \n def canonicalize_replay_history(\n-    agent_history: list[dict[str, Any]], *, now: Optional[float] = None\n+    agent_history: list[dict[str, Any]], *, clock_now: Optional[float] = None\n ) -> list[dict[str, Any]]:\n     \"\"\"Apply every destructive replay transform in the shared, fixed order.\n \n@@\n     \"\"\"\n     if not agent_history:\n         return agent_history\n-    if now is None:\n-        now = time.time()\n+    if clock_now is None:\n+        clock_now = time.time()\n     cleaned = strip_interrupted_tool_tails(agent_history)\n     cleaned = strip_dangling_tool_call_tail(cleaned)\n-    return strip_stale_dangerous_confirmations(cleaned, now=now)\n+    return strip_stale_dangerous_confirmations(cleaned, now=clock_now)\n \n \n # --- Stale dangerous-confirmation text expiry ---\n*** End Patch"
+    },
+    "accounting": {
+      "helper": "agent/aux_accounting.py",
+      "symbol": "record_aux_usage",
+      "old": "provider",
+      "new": "provider_id",
+      "sites": [
+        "agent/auxiliary_client.py:6647",
+        "plugins/image_gen/_common.py:270",
+        "tests/hermes_state/test_aux_usage_accounting.py:199"
+      ],
+      "test": "tests/hermes_state/test_aux_usage_accounting.py",
+      "helper_patch": "*** Begin Patch\n*** Update File: agent/aux_accounting.py\n@@\n \n \n def record_aux_usage(\n-    response: Any, task: Optional[str], *, provider: Optional[str] = None,\n+    response: Any, task: Optional[str], *, provider_id: Optional[str] = None,\n     base_url: Optional[str] = None,\n ) -> None:\n     \"\"\"Record an auxiliary response's token usage against the ambient session.\n@@\n \n         from agent.usage_pricing import estimate_usage_cost, normalize_usage, with_served_service_tier\n \n-        usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider), response)\n+        usage = with_served_service_tier(normalize_usage(raw_usage, provider=provider_id), response)\n         if not (\n             usage.input_tokens or usage.output_tokens\n             or usage.cache_read_tokens or usage.cache_write_tokens\n@@\n         model = str(getattr(response, \"model\", \"\") or \"\") or \"unknown\"\n         estimated_cost = None\n         try:\n-            cost = estimate_usage_cost(model, usage, provider=provider, base_url=base_url)\n+            cost = estimate_usage_cost(model, usage, provider=provider_id, base_url=base_url)\n             if cost.amount_usd is not None:\n                 estimated_cost = float(cost.amount_usd)\n         except Exception:\n@@\n         from agent.runtime_session_store import call_off_event_loop\n         call_off_event_loop(\n             session_db.record_auxiliary_usage,\n-            session_id, task, model=model, billing_provider=provider, billing_base_url=base_url,\n+            session_id, task, model=model, billing_provider=provider_id, billing_base_url=base_url,\n             input_tokens=usage.input_tokens, output_tokens=usage.output_tokens,\n             cache_read_tokens=usage.cache_read_tokens, cache_write_tokens=usage.cache_write_tokens,\n             reasoning_tokens=usage.reasoning_tokens, estimated_cost_usd=estimated_cost,\n*** End Patch"
+    },
+    "watchdog": {
+      "helper": "agent/chat_completion_wait_notice.py",
+      "symbol": "codex_watchdog_deadline",
+      "old": "stale_timeout",
+      "new": "silence_timeout",
+      "sites": [
+        "agent/chat_completion_nonstream.py:168",
+        "tests/agent/test_codex_ttfb_watchdog.py:335",
+        "tests/agent/test_codex_ttfb_watchdog.py:458"
+      ],
+      "test": "tests/agent/test_codex_ttfb_watchdog.py",
+      "call_form": "module alias",
+      "helper_patch": "*** Begin Patch\n*** Update File: agent/chat_completion_wait_notice.py\n@@\n     return text\n \n \n-def codex_watchdog_deadline(*, stale_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n+def codex_watchdog_deadline(*, silence_timeout: float, ttfb_enabled: bool, ttfb_timeout: float,\n     last_event_ts: Optional[float], last_progress_ts: Optional[float],\n     retry_started_ts: Optional[float], call_start: float, idle_enabled: bool,\n     idle_timeout: float, idle_requires_progress: bool, elapsed: float,\n@@\n     \"\"\"Earliest enabled Codex watchdog as ``(label, seconds_until_it_fires)``; None when\n     none applies (disabled/infinite, or its deadline already passed).\"\"\"\n     deadlines: list[tuple[str, float]] = []\n-    if math.isfinite(stale_timeout):\n-        deadlines.append((\"wall-clock stale\", stale_timeout))\n+    if math.isfinite(silence_timeout):\n+        deadlines.append((\"wall-clock stale\", silence_timeout))\n     attempt_offset = max(0.0, retry_started_ts - call_start) if retry_started_ts is not None else 0.0\n     if last_event_ts is None:\n         if ttfb_enabled and math.isfinite(ttfb_timeout):\n*** End Patch"
+    }
+  },
+  "randomization_seed": 20261111,
+  "schedule": [
+    [
+      "replay",
+      2,
+      false
+    ],
+    [
+      "replay",
+      2,
+      true
+    ],
+    [
+      "watchdog",
+      2,
+      true
+    ],
+    [
+      "watchdog",
+      2,
+      false
+    ],
+    [
+      "accounting",
+      1,
+      true
+    ],
+    [
+      "accounting",
+      1,
+      false
+    ],
+    [
+      "replay",
+      1,
+      true
+    ],
+    [
+      "replay",
+      1,
+      false
+    ],
+    [
+      "accounting",
+      3,
+      true
+    ],
+    [
+      "accounting",
+      3,
+      false
+    ],
+    [
+      "display",
+      1,
+      false
+    ],
+    [
+      "display",
+      1,
+      true
+    ],
+    [
+      "watchdog",
+      1,
+      false
+    ],
+    [
+      "watchdog",
+      1,
+      true
+    ],
+    [
+      "display",
+      2,
+      true
+    ],
+    [
+      "display",
+      2,
+      false
+    ],
+    [
+      "watchdog",
+      3,
+      false
+    ],
+    [
+      "watchdog",
+      3,
+      true
+    ],
+    [
+      "accounting",
+      2,
+      false
+    ],
+    [
+      "accounting",
+      2,
+      true
+    ],
+    [
+      "display",
+      3,
+      false
+    ],
+    [
+      "display",
+      3,
+      true
+    ],
+    [
+      "replay",
+      3,
+      true
+    ],
+    [
+      "replay",
+      3,
+      false
+    ]
+  ],
+  "preflight_outcome_oracle": {
+    "display": {
+      "helper_only_test_exit": 1,
+      "reference_repair_test_exit": 0,
+      "reference_repair_audit_pass": true,
+      "reference_repair_source_audit": {
+        "changed_files": [
+          "agent/display.py",
+          "gateway/platforms/base.py",
+          "gateway/run_turn_progress.py",
+          "tests/agent/test_display.py"
+        ],
+        "expected_files_only": true,
+        "unexpected_files": [],
+        "changed_file_fingerprints": {
+          "agent/display.py": {
+            "before": [
+              false,
+              "7fc2ae84b600cc7da7359a7a578ae5f4ca278fcc519c51911995f99e81969424"
+            ],
+            "after": [
+              false,
+              "232d78e63f7159a103c09bd0cea085a772a95557e45cdcc1c648e3b0612a4c26"
+            ]
+          },
+          "gateway/platforms/base.py": {
+            "before": [
+              false,
+              "a6f7a2e86c17d3a99d899742f64b7c04d8103cf1dc1c8120985365b47f96825b"
+            ],
+            "after": [
+              false,
+              "ba4464d5b2a630b947b9097621bb9676f6680a46d5ba34c041ed583aecf8115d"
+            ]
+          },
+          "gateway/run_turn_progress.py": {
+            "before": [
+              false,
+              "39867955503b7e1fd7259969d877c42ba821bdb4c2c3d2f7141155008df48be5"
+            ],
+            "after": [
+              false,
+              "f6c0098db657157420d8b920ff2ce280f0cd8cc206f4253f8222eb28b039dcaf"
+            ]
+          },
+          "tests/agent/test_display.py": {
+            "before": [
+              false,
+              "9514e45ada4b5e6708fe1feaa74121c67c780ba74cf03b5181cd89466fa24ed9"
+            ],
+            "after": [
+              false,
+              "71bc64b79800466b238c06973f2eb5b45cce57c9690cf51fe94a2d7e3ffa4d4f"
+            ]
+          }
+        },
+        "helper_signature_ok": true,
+        "helper_rename_ok": true,
+        "verified_caller_sites": [
+          "gateway/platforms/base.py:2014",
+          "gateway/run_turn_progress.py:375",
+          "tests/agent/test_display.py:142",
+          "tests/agent/test_display.py:155",
+          "tests/agent/test_display.py:164"
+        ],
+        "expected_caller_sites": [
+          "gateway/platforms/base.py:2014",
+          "gateway/run_turn_progress.py:375",
+          "tests/agent/test_display.py:142",
+          "tests/agent/test_display.py:155",
+          "tests/agent/test_display.py:164"
+        ],
+        "repaired_call_binding_errors": {
+          "gateway/platforms/base.py:2014": null,
+          "gateway/run_turn_progress.py:375": null,
+          "tests/agent/test_display.py:142": null,
+          "tests/agent/test_display.py:155": null,
+          "tests/agent/test_display.py:164": null
+        },
+        "source_file_count_compared": 24306
+      }
+    },
+    "replay": {
+      "helper_only_test_exit": 1,
+      "reference_repair_test_exit": 0,
+      "reference_repair_audit_pass": true,
+      "reference_repair_source_audit": {
+        "changed_files": [
+          "agent/replay_cleanup.py",
+          "agent/turn_context.py",
+          "tests/agent/test_replay_cleanup.py"
+        ],
+        "expected_files_only": true,
+        "unexpected_files": [],
+        "changed_file_fingerprints": {
+          "agent/replay_cleanup.py": {
+            "before": [
+              false,
+              "59a1a52691283536848c1f77b6aa14f1a76d22011707edf3298a17413b8bcb85"
+            ],
+            "after": [
+              false,
+              "cb409b3d52cc9625209d76bfd837f391461a55399a4e0618c0c422c10c797ef9"
+            ]
+          },
+          "agent/turn_context.py": {
+            "before": [
+              false,
+              "196c75c36cb775ef2da9b01de92f3846c3db678517a0a61a3ff96870511e45b2"
+            ],
+            "after": [
+              false,
+              "0c1ed3d7dfe3cd65d482114a31c97f82684d27cd9f2ca24492a01f3974359096"
+            ]
+          },
+          "tests/agent/test_replay_cleanup.py": {
+            "before": [
+              false,
+              "2fde6b3b274393e60883a5ce126adecbc00e01119d2944f9e57c69c814dabe3c"
+            ],
+            "after": [
+              false,
+              "31445d6859b8f4c1b7e3386844c5824efec2e414e77c7a5aac1681318c0d2bf5"
+            ]
+          }
+        },
+        "helper_signature_ok": true,
+        "helper_rename_ok": true,
+        "verified_caller_sites": [
+          "agent/turn_context.py:1454",
+          "tests/agent/test_replay_cleanup.py:159",
+          "tests/agent/test_replay_cleanup.py:200",
+          "tests/agent/test_replay_cleanup.py:215",
+          "tests/agent/test_replay_cleanup.py:217"
+        ],
+        "expected_caller_sites": [
+          "agent/turn_context.py:1454",
+          "tests/agent/test_replay_cleanup.py:159",
+          "tests/agent/test_replay_cleanup.py:200",
+          "tests/agent/test_replay_cleanup.py:215",
+          "tests/agent/test_replay_cleanup.py:217"
+        ],
+        "repaired_call_binding_errors": {
+          "agent/turn_context.py:1454": null,
+          "tests/agent/test_replay_cleanup.py:159": null,
+          "tests/agent/test_replay_cleanup.py:200": null,
+          "tests/agent/test_replay_cleanup.py:215": null,
+          "tests/agent/test_replay_cleanup.py:217": null
+        },
+        "source_file_count_compared": 24306
+      }
+    },
+    "accounting": {
+      "helper_only_test_exit": 1,
+      "reference_repair_test_exit": 0,
+      "reference_repair_audit_pass": true,
+      "reference_repair_source_audit": {
+        "changed_files": [
+          "agent/aux_accounting.py",
+          "agent/auxiliary_client.py",
+          "plugins/image_gen/_common.py",
+          "tests/hermes_state/test_aux_usage_accounting.py"
+        ],
+        "expected_files_only": true,
+        "unexpected_files": [],
+        "changed_file_fingerprints": {
+          "agent/aux_accounting.py": {
+            "before": [
+              false,
+              "162711ae15f31d1562a5a76a3f7f82840d8b92ccfcde834ee759404e407c2e83"
+            ],
+            "after": [
+              false,
+              "76ccf6cca106c9025ca2c4366199be76a006c7cd2b016fa339e64e2c0a15831d"
+            ]
+          },
+          "agent/auxiliary_client.py": {
+            "before": [
+              false,
+              "34ed4b8328df4f3bc776835a88e0883e64c118edb9117df0ca2f9ad2300a5cdd"
+            ],
+            "after": [
+              false,
+              "a66e8a46b6833961d6b636d02262709e505559bdee8fa9303c708ef34fe8fb02"
+            ]
+          },
+          "plugins/image_gen/_common.py": {
+            "before": [
+              false,
+              "d68ec699126f8146f876fb864432dc1ad5c810f1f9312a74ef189c0578a34f6e"
+            ],
+            "after": [
+              false,
+              "ae31859b9d0ec85403a6752673f8a7e746c154b968f0f914c59115182d7d8117"
+            ]
+          },
+          "tests/hermes_state/test_aux_usage_accounting.py": {
+            "before": [
+              false,
+              "c19e5ed4f83b3f00f02e6d9a9b6d2b107dfd8a9bc9536b2df60a8433291c23f0"
+            ],
+            "after": [
+              false,
+              "0a64ee519e7fd6b9b484176b7d087b4c18fd36053a2f531e28296dfc85442651"
+            ]
+          }
+        },
+        "helper_signature_ok": true,
+        "helper_rename_ok": true,
+        "verified_caller_sites": [
+          "agent/auxiliary_client.py:6647",
+          "plugins/image_gen/_common.py:270",
+          "tests/hermes_state/test_aux_usage_accounting.py:199"
+        ],
+        "expected_caller_sites": [
+          "agent/auxiliary_client.py:6647",
+          "plugins/image_gen/_common.py:270",
+          "tests/hermes_state/test_aux_usage_accounting.py:199"
+        ],
+        "repaired_call_binding_errors": {
+          "agent/auxiliary_client.py:6647": null,
+          "plugins/image_gen/_common.py:270": null,
+          "tests/hermes_state/test_aux_usage_accounting.py:199": null
+        },
+        "source_file_count_compared": 24306
+      }
+    },
+    "watchdog": {
+      "helper_only_test_exit": 1,
+      "reference_repair_test_exit": 0,
+      "reference_repair_audit_pass": true,
+      "reference_repair_source_audit": {
+        "changed_files": [
+          "agent/chat_completion_nonstream.py",
+          "agent/chat_completion_wait_notice.py",
+          "tests/agent/test_codex_ttfb_watchdog.py"
+        ],
+        "expected_files_only": true,
+        "unexpected_files": [],
+        "changed_file_fingerprints": {
+          "agent/chat_completion_nonstream.py": {
+            "before": [
+              false,
+              "34d4afad0a0c7228a0518eed4a2521ba1a340f509c83784c74abceb56f1becb7"
+            ],
+            "after": [
+              false,
+              "7b04f17fb08184d30234f3861a8d21a67627789e958a1cca70a4fa7c260d81c6"
+            ]
+          },
+          "agent/chat_completion_wait_notice.py": {
+            "before": [
+              false,
+              "26aa4d603687f365729e4d8108efda7be627ea5482fa10c56f225c2a6cbc8c84"
+            ],
+            "after": [
+              false,
+              "09063ed06d6f95fc25878859b00f39d4690f1ce1b7737a5266478afb8d9f5937"
+            ]
+          },
+          "tests/agent/test_codex_ttfb_watchdog.py": {
+            "before": [
+              false,
+              "eb91abc5498264e88543d443680a76f1e871fea50654fb53efec3e43243b4942"
+            ],
+            "after": [
+              false,
+              "c93f19468161d215dc2a6910f3cfc46c2ec4e7783439503911aa64f527b2d7e0"
+            ]
+          }
+        },
+        "helper_signature_ok": true,
+        "helper_rename_ok": true,
+        "verified_caller_sites": [
+          "agent/chat_completion_nonstream.py:168",
+          "tests/agent/test_codex_ttfb_watchdog.py:335",
+          "tests/agent/test_codex_ttfb_watchdog.py:458"
+        ],
+        "expected_caller_sites": [
+          "agent/chat_completion_nonstream.py:168",
+          "tests/agent/test_codex_ttfb_watchdog.py:335",
+          "tests/agent/test_codex_ttfb_watchdog.py:458"
+        ],
+        "repaired_call_binding_errors": {
+          "agent/chat_completion_nonstream.py:168": null,
+          "tests/agent/test_codex_ttfb_watchdog.py:335": null,
+          "tests/agent/test_codex_ttfb_watchdog.py:458": null
+        },
+        "source_file_count_compared": 24306
+      }
+    }
+  },
+  "stopping_rules": {
+    "max_session_tokens": 500000,
+    "max_total_tokens": 5000000,
+    "max_consecutive_infra_errors": 2,
+    "max_model_turns": 20,
+    "model_budget_seconds": 420,
+    "subprocess_timeout_seconds": 465,
+    "check_after": "each session; an in-progress bounded session can exceed a token threshold",
+    "paired_input_mismatch": "stop after a completed pair if inputs differ beyond warning"
+  },
+  "primary_outcome": "Successful CLI and model exit, all expected caller keyword repairs, preserved whole-file ASTs including assertions, no unexpected file changes, and upstream tests passing.",
+  "secondary_outcomes": [
+    "Exact sites delivered before lookup",
+    "tool/search/read calls",
+    "trace tokens",
+    "trace-reported costs"
+  ],
+  "limits": [
+    "Purposively selected tasks, not a representative agent-success benchmark.",
+    "Existing display/replay/accounting tasks were used in development; watchdog is a new evaluation task, not a blind held-out benchmark.",
+    "Only warning delivery differs; both arms load and compute Locus drift, so this is not overhead versus no plugin.",
+    "Both arms use file tools; independent evaluator runs tests after completion, so the model has no test-repair loop.",
+    "Small stochastic sample; report every run and both paired outcomes, not a general percentage improvement.",
+    "Source equivalence is AST-based in expected files; formatting/comments and helper docstrings may differ."
+  ]
+}

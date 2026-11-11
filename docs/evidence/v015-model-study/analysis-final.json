@@ -1,0 +1,926 @@
+{
+  "study_engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
+  "model": "gpt-5.4-mini",
+  "planned_attempts": 24,
+  "recorded_attempts": 24,
+  "completed_sessions": 23,
+  "not_started": [],
+  "interrupted_attempts": [
+    {
+      "task": "accounting",
+      "repeat": 3,
+      "warning_enabled": false,
+      "classification": "evaluator_privacy_interruption",
+      "task_pass": null,
+      "raw_attempt_pass": false,
+      "test_summary": "2 failed, 9 passed in 2.16s",
+      "tokens": null,
+      "tool_calls": 0,
+      "search_calls": 0,
+      "read_calls": 0,
+      "edit_calls": 0,
+      "model_duration_ms": null
+    }
+  ],
+  "other_incomplete_attempts": [],
+  "all_recorded_usage": {
+    "sessions": 24,
+    "passed": 22,
+    "sessions_with_token_accounting": 23,
+    "reported_tokens": {
+      "cache_read": 1957376,
+      "cache_write": 0,
+      "input": 2355793,
+      "output": 29791,
+      "total": 2385584
+    },
+    "trace_reported_cost_fields": null,
+    "tool_calls": {
+      "observations": 24,
+      "sum": 287,
+      "median": 11.5
+    },
+    "search_calls": {
+      "observations": 24,
+      "sum": 99,
+      "median": 4.0
+    },
+    "read_calls": {
+      "observations": 24,
+      "sum": 94,
+      "median": 4.0
+    },
+    "edit_calls": {
+      "observations": 24,
+      "sum": 94,
+      "median": 4.5
+    },
+    "model_duration_ms": {
+      "observations": 23,
+      "sum": 1392501,
+      "median": 56293
+    }
+  },
+  "completed_sessions_by_arm": {
+    "on": {
+      "sessions": 12,
+      "passed": 12,
+      "sessions_with_token_accounting": 12,
+      "reported_tokens": {
+        "cache_read": 683648,
+        "cache_write": 0,
+        "input": 842884,
+        "output": 13033,
+        "total": 855917
+      },
+      "trace_reported_cost_fields": null,
+      "tool_calls": {
+        "observations": 12,
+        "sum": 118,
+        "median": 10.5
+      },
+      "search_calls": {
+        "observations": 12,
+        "sum": 32,
+        "median": 2.0
+      },
+      "read_calls": {
+        "observations": 12,
+        "sum": 38,
+        "median": 3.0
+      },
+      "edit_calls": {
+        "observations": 12,
+        "sum": 48,
+        "median": 4.0
+      },
+      "model_duration_ms": {
+        "observations": 12,
+        "sum": 673746,
+        "median": 54150.5
+      }
+    },
+    "off": {
+      "sessions": 11,
+      "passed": 10,
+      "sessions_with_token_accounting": 11,
+      "reported_tokens": {
+        "cache_read": 1273728,
+        "cache_write": 0,
+        "input": 1512909,
+        "output": 16758,
+        "total": 1529667
+      },
+      "trace_reported_cost_fields": null,
+      "tool_calls": {
+        "observations": 11,
+        "sum": 169,
+        "median": 15
+      },
+      "search_calls": {
+        "observations": 11,
+        "sum": 67,
+        "median": 5
+      },
+      "read_calls": {
+        "observations": 11,
+        "sum": 56,
+        "median": 5
+      },
+      "edit_calls": {
+        "observations": 11,
+        "sum": 46,
+        "median": 5
+      },
+      "model_duration_ms": {
+        "observations": 11,
+        "sum": 718755,
+        "median": 67771
+      }
+    }
+  },
+  "complete_matched_pairs": 11,
+  "matched_pairs": [
+    {
+      "task": "accounting",
+      "repeat": 1,
+      "on_pass": true,
+      "off_pass": false,
+      "same_input_except_warning": true,
+      "on_tools": 11,
+      "off_tools": 16,
+      "on_searches": 4,
+      "off_searches": 5,
+      "on_tokens": 49696,
+      "off_tokens": 192926
+    },
+    {
+      "task": "accounting",
+      "repeat": 2,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 11,
+      "off_tools": 12,
+      "on_searches": 4,
+      "off_searches": 4,
+      "on_tokens": 50771,
+      "off_tokens": 71630
+    },
+    {
+      "task": "display",
+      "repeat": 1,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 10,
+      "off_tools": 16,
+      "on_searches": 2,
+      "off_searches": 7,
+      "on_tokens": 36780,
+      "off_tokens": 75876
+    },
+    {
+      "task": "display",
+      "repeat": 2,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 13,
+      "off_tools": 24,
+      "on_searches": 4,
+      "off_searches": 11,
+      "on_tokens": 131210,
+      "off_tokens": 222344
+    },
+    {
+      "task": "display",
+      "repeat": 3,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 11,
+      "off_tools": 14,
+      "on_searches": 2,
+      "off_searches": 5,
+      "on_tokens": 54250,
+      "off_tokens": 74528
+    },
+    {
+      "task": "replay",
+      "repeat": 1,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 14,
+      "off_tools": 19,
+      "on_searches": 4,
+      "off_searches": 8,
+      "on_tokens": 117038,
+      "off_tokens": 211405
+    },
+    {
+      "task": "replay",
+      "repeat": 2,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 9,
+      "off_tools": 17,
+      "on_searches": 2,
+      "off_searches": 6,
+      "on_tokens": 79976,
+      "off_tokens": 249289
+    },
+    {
+      "task": "replay",
+      "repeat": 3,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 11,
+      "off_tools": 15,
+      "on_searches": 4,
+      "off_searches": 5,
+      "on_tokens": 98196,
+      "off_tokens": 114399
+    },
+    {
+      "task": "watchdog",
+      "repeat": 1,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 7,
+      "off_tools": 11,
+      "on_searches": 2,
+      "off_searches": 5,
+      "on_tokens": 66205,
+      "off_tokens": 70497
+    },
+    {
+      "task": "watchdog",
+      "repeat": 2,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 8,
+      "off_tools": 12,
+      "on_searches": 2,
+      "off_searches": 5,
+      "on_tokens": 81840,
+      "off_tokens": 155655
+    },
+    {
+      "task": "watchdog",
+      "repeat": 3,
+      "on_pass": true,
+      "off_pass": true,
+      "same_input_except_warning": true,
+      "on_tools": 7,
+      "off_tools": 13,
+      "on_searches": 2,
+      "off_searches": 6,
+      "on_tokens": 58402,
+      "off_tokens": 91118
+    }
+  ],
+  "unpaired": [
+    {
+      "task": "accounting",
+      "repeat": 3,
+      "on": "completed",
+      "off": "evaluator_privacy_interruption"
+    }
+  ],
+  "matched_outcomes": {
+    "both_pass": 10,
+    "on_only_pass": 1,
+    "off_only_pass": 0,
+    "neither_pass": 0
+  },
+  "matched_metrics": {
+    "on": {
+      "sessions": 11,
+      "passed": 11,
+      "sessions_with_token_accounting": 11,
+      "reported_tokens": {
+        "cache_read": 662784,
+        "cache_write": 0,
+        "input": 812061,
+        "output": 12303,
+        "total": 824364
+      },
+      "trace_reported_cost_fields": null,
+      "tool_calls": {
+        "observations": 11,
+        "sum": 112,
+        "median": 11
+      },
+      "search_calls": {
+        "observations": 11,
+        "sum": 32,
+        "median": 2
+      },
+      "read_calls": {
+        "observations": 11,
+        "sum": 35,
+        "median": 3
+      },
+      "edit_calls": {
+        "observations": 11,
+        "sum": 45,
+        "median": 5
+      },
+      "model_duration_ms": {
+        "observations": 11,
+        "sum": 637011,
+        "median": 55889
+      }
+    },
+    "off": {
+      "sessions": 11,
+      "passed": 10,
+      "sessions_with_token_accounting": 11,
+      "reported_tokens": {
+        "cache_read": 1273728,
+        "cache_write": 0,
+        "input": 1512909,
+        "output": 16758,
+        "total": 1529667
+      },
+      "trace_reported_cost_fields": null,
+      "tool_calls": {
+        "observations": 11,
+        "sum": 169,
+        "median": 15
+      },
+      "search_calls": {
+        "observations": 11,
+        "sum": 67,
+        "median": 5
+      },
+      "read_calls": {
+        "observations": 11,
+        "sum": 56,
+        "median": 5
+      },
+      "edit_calls": {
+        "observations": 11,
+        "sum": 46,
+        "median": 5
+      },
+      "model_duration_ms": {
+        "observations": 11,
+        "sum": 718755,
+        "median": 67771
+      }
+    }
+  },
+  "paired_resource_comparisons": {
+    "tool_calls": {
+      "paired_observations": 11,
+      "lower_on": 11,
+      "same": 0,
+      "higher_on": 0
+    },
+    "search_calls": {
+      "paired_observations": 11,
+      "lower_on": 10,
+      "same": 1,
+      "higher_on": 0
+    },
+    "read_calls": {
+      "paired_observations": 11,
+      "lower_on": 10,
+      "same": 1,
+      "higher_on": 0
+    },
+    "edit_calls": {
+      "paired_observations": 11,
+      "lower_on": 1,
+      "same": 10,
+      "higher_on": 0
+    },
+    "model_duration_ms": {
+      "paired_observations": 11,
+      "lower_on": 8,
+      "same": 0,
+      "higher_on": 3
+    },
+    "tokens_total": {
+      "paired_observations": 11,
+      "lower_on": 11,
+      "same": 0,
+      "higher_on": 0
+    }
+  },
+  "sessions": [
+    {
+      "task": "replay",
+      "repeat": 2,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "6 passed in 1.12s",
+      "tokens": {
+        "input": 247913,
+        "output": 1376,
+        "total": 249289,
+        "cache_read": 220160,
+        "cache_write": 0
+      },
+      "tool_calls": 17,
+      "search_calls": 6,
+      "read_calls": 6,
+      "edit_calls": 5,
+      "model_duration_ms": 78966
+    },
+    {
+      "task": "replay",
+      "repeat": 2,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "6 passed in 1.17s",
+      "tokens": {
+        "input": 79140,
+        "output": 836,
+        "total": 79976,
+        "cache_read": 66048,
+        "cache_write": 0
+      },
+      "tool_calls": 9,
+      "search_calls": 2,
+      "read_calls": 2,
+      "edit_calls": 5,
+      "model_duration_ms": 63483
+    },
+    {
+      "task": "watchdog",
+      "repeat": 2,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 26.42s",
+      "tokens": {
+        "input": 80663,
+        "output": 1177,
+        "total": 81840,
+        "cache_read": 67968,
+        "cache_write": 0
+      },
+      "tool_calls": 8,
+      "search_calls": 2,
+      "read_calls": 3,
+      "edit_calls": 3,
+      "model_duration_ms": 52412
+    },
+    {
+      "task": "watchdog",
+      "repeat": 2,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 26.61s",
+      "tokens": {
+        "input": 153833,
+        "output": 1822,
+        "total": 155655,
+        "cache_read": 131584,
+        "cache_write": 0
+      },
+      "tool_calls": 12,
+      "search_calls": 5,
+      "read_calls": 4,
+      "edit_calls": 3,
+      "model_duration_ms": 56293
+    },
+    {
+      "task": "accounting",
+      "repeat": 1,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "11 passed in 2.12s",
+      "tokens": {
+        "input": 48858,
+        "output": 838,
+        "total": 49696,
+        "cache_read": 38016,
+        "cache_write": 0
+      },
+      "tool_calls": 11,
+      "search_calls": 4,
+      "read_calls": 4,
+      "edit_calls": 3,
+      "model_duration_ms": 44593
+    },
+    {
+      "task": "accounting",
+      "repeat": 1,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": false,
+      "raw_attempt_pass": false,
+      "test_summary": "1 failed, 10 passed in 2.08s",
+      "tokens": {
+        "input": 191820,
+        "output": 1106,
+        "total": 192926,
+        "cache_read": 159488,
+        "cache_write": 0
+      },
+      "tool_calls": 16,
+      "search_calls": 5,
+      "read_calls": 7,
+      "edit_calls": 4,
+      "model_duration_ms": 53487
+    },
+    {
+      "task": "replay",
+      "repeat": 1,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "6 passed in 1.10s",
+      "tokens": {
+        "input": 115954,
+        "output": 1084,
+        "total": 117038,
+        "cache_read": 94080,
+        "cache_write": 0
+      },
+      "tool_calls": 14,
+      "search_calls": 4,
+      "read_calls": 5,
+      "edit_calls": 5,
+      "model_duration_ms": 64768
+    },
+    {
+      "task": "replay",
+      "repeat": 1,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "6 passed in 1.37s",
+      "tokens": {
+        "input": 209990,
+        "output": 1415,
+        "total": 211405,
+        "cache_read": 183808,
+        "cache_write": 0
+      },
+      "tool_calls": 19,
+      "search_calls": 8,
+      "read_calls": 6,
+      "edit_calls": 5,
+      "model_duration_ms": 67771
+    },
+    {
+      "task": "accounting",
+      "repeat": 3,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "11 passed in 2.84s",
+      "tokens": {
+        "input": 30823,
+        "output": 730,
+        "total": 31553,
+        "cache_read": 20864,
+        "cache_write": 0
+      },
+      "tool_calls": 6,
+      "search_calls": 0,
+      "read_calls": 3,
+      "edit_calls": 3,
+      "model_duration_ms": 36735
+    },
+    {
+      "task": "accounting",
+      "repeat": 3,
+      "warning_enabled": false,
+      "classification": "evaluator_privacy_interruption",
+      "task_pass": null,
+      "raw_attempt_pass": false,
+      "test_summary": "2 failed, 9 passed in 2.16s",
+      "tokens": null,
+      "tool_calls": 0,
+      "search_calls": 0,
+      "read_calls": 0,
+      "edit_calls": 0,
+      "model_duration_ms": null
+    },
+    {
+      "task": "display",
+      "repeat": 1,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 0.23s",
+      "tokens": {
+        "input": 74692,
+        "output": 1184,
+        "total": 75876,
+        "cache_read": 59904,
+        "cache_write": 0
+      },
+      "tool_calls": 16,
+      "search_calls": 7,
+      "read_calls": 4,
+      "edit_calls": 5,
+      "model_duration_ms": 71176
+    },
+    {
+      "task": "display",
+      "repeat": 1,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 0.24s",
+      "tokens": {
+        "input": 35531,
+        "output": 1249,
+        "total": 36780,
+        "cache_read": 25600,
+        "cache_write": 0
+      },
+      "tool_calls": 10,
+      "search_calls": 2,
+      "read_calls": 3,
+      "edit_calls": 5,
+      "model_duration_ms": 46860
+    },
+    {
+      "task": "watchdog",
+      "repeat": 1,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 26.30s",
+      "tokens": {
+        "input": 68977,
+        "output": 1520,
+        "total": 70497,
+        "cache_read": 53248,
+        "cache_write": 0
+      },
+      "tool_calls": 11,
+      "search_calls": 5,
+      "read_calls": 3,
+      "edit_calls": 3,
+      "model_duration_ms": 37501
+    },
+    {
+      "task": "watchdog",
+      "repeat": 1,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 26.30s",
+      "tokens": {
+        "input": 64799,
+        "output": 1406,
+        "total": 66205,
+        "cache_read": 50816,
+        "cache_write": 0
+      },
+      "tool_calls": 7,
+      "search_calls": 2,
+      "read_calls": 2,
+      "edit_calls": 3,
+      "model_duration_ms": 45649
+    },
+    {
+      "task": "display",
+      "repeat": 2,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 0.24s",
+      "tokens": {
+        "input": 129748,
+        "output": 1462,
+        "total": 131210,
+        "cache_read": 115584,
+        "cache_write": 0
+      },
+      "tool_calls": 13,
+      "search_calls": 4,
+      "read_calls": 4,
+      "edit_calls": 5,
+      "model_duration_ms": 60683
+    },
+    {
+      "task": "display",
+      "repeat": 2,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 0.25s",
+      "tokens": {
+        "input": 220427,
+        "output": 1917,
+        "total": 222344,
+        "cache_read": 195584,
+        "cache_write": 0
+      },
+      "tool_calls": 24,
+      "search_calls": 11,
+      "read_calls": 8,
+      "edit_calls": 5,
+      "model_duration_ms": 81124
+    },
+    {
+      "task": "watchdog",
+      "repeat": 3,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 26.28s",
+      "tokens": {
+        "input": 89103,
+        "output": 2015,
+        "total": 91118,
+        "cache_read": 67328,
+        "cache_write": 0
+      },
+      "tool_calls": 13,
+      "search_calls": 6,
+      "read_calls": 4,
+      "edit_calls": 3,
+      "model_duration_ms": 52776
+    },
+    {
+      "task": "watchdog",
+      "repeat": 3,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 26.26s",
+      "tokens": {
+        "input": 57281,
+        "output": 1121,
+        "total": 58402,
+        "cache_read": 45056,
+        "cache_write": 0
+      },
+      "tool_calls": 7,
+      "search_calls": 2,
+      "read_calls": 2,
+      "edit_calls": 3,
+      "model_duration_ms": 55889
+    },
+    {
+      "task": "accounting",
+      "repeat": 2,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "11 passed in 2.27s",
+      "tokens": {
+        "input": 70386,
+        "output": 1244,
+        "total": 71630,
+        "cache_read": 54912,
+        "cache_write": 0
+      },
+      "tool_calls": 12,
+      "search_calls": 4,
+      "read_calls": 5,
+      "edit_calls": 3,
+      "model_duration_ms": 50328
+    },
+    {
+      "task": "accounting",
+      "repeat": 2,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "11 passed in 2.38s",
+      "tokens": {
+        "input": 49948,
+        "output": 823,
+        "total": 50771,
+        "cache_read": 38016,
+        "cache_write": 0
+      },
+      "tool_calls": 11,
+      "search_calls": 4,
+      "read_calls": 4,
+      "edit_calls": 3,
+      "model_duration_ms": 43915
+    },
+    {
+      "task": "display",
+      "repeat": 3,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 0.27s",
+      "tokens": {
+        "input": 72845,
+        "output": 1683,
+        "total": 74528,
+        "cache_read": 58112,
+        "cache_write": 0
+      },
+      "tool_calls": 14,
+      "search_calls": 5,
+      "read_calls": 4,
+      "edit_calls": 5,
+      "model_duration_ms": 97776
+    },
+    {
+      "task": "display",
+      "repeat": 3,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "26 passed in 0.28s",
+      "tokens": {
+        "input": 53001,
+        "output": 1249,
+        "total": 54250,
+        "cache_read": 39168,
+        "cache_write": 0
+      },
+      "tool_calls": 11,
+      "search_calls": 2,
+      "read_calls": 4,
+      "edit_calls": 5,
+      "model_duration_ms": 84981
+    },
+    {
+      "task": "replay",
+      "repeat": 3,
+      "warning_enabled": true,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "6 passed in 1.23s",
+      "tokens": {
+        "input": 97138,
+        "output": 1058,
+        "total": 98196,
+        "cache_read": 82432,
+        "cache_write": 0
+      },
+      "tool_calls": 11,
+      "search_calls": 4,
+      "read_calls": 2,
+      "edit_calls": 5,
+      "model_duration_ms": 73778
+    },
+    {
+      "task": "replay",
+      "repeat": 3,
+      "warning_enabled": false,
+      "classification": "completed",
+      "task_pass": true,
+      "raw_attempt_pass": true,
+      "test_summary": "6 passed in 1.21s",
+      "tokens": {
+        "input": 112923,
+        "output": 1476,
+        "total": 114399,
+        "cache_read": 89600,
+        "cache_write": 0
+      },
+      "tool_calls": 15,
+      "search_calls": 5,
+      "read_calls": 5,
+      "edit_calls": 5,
+      "model_duration_ms": 71557
+    }
+  ],
+  "limits": [
+    "Descriptive results for four purposively selected tasks; not a representative benchmark.",
+    "Interrupted attempts remain in raw evidence, but do not contribute a comparative task failure.",
+    "Reported token totals include cached input; missing final usage is unknown, never zero.",
+    "No dollar estimate is inferred when provider cost fields are absent.",
+    "Both arms load and compute Locus drift; the comparison isolates warning delivery.",
+    "Protocol amendment narrows file access without changing candidate engine, tasks or scoring."
+  ]
+}

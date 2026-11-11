@@ -1,0 +1,27 @@
+...FFF                                                                   [100%]
+=================================== FAILURES ===================================
+____________ test_send_wire_matches_replay_wire_after_db_round_trip ____________
+tests/agent/test_replay_cleanup.py:159: in test_send_wire_matches_replay_wire_after_db_round_trip
+    for m in canonicalize_replay_history(persisted, now=now)]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: canonicalize_replay_history() got an unexpected keyword argument 'now'
+_____________ test_confirmation_expiry_uses_frozen_admission_clock _____________
+tests/agent/test_replay_cleanup.py:198: in test_confirmation_expiry_uses_frozen_admission_clock
+    request = _send(agent, history)
+              ^^^^^^^^^^^^^^^^^^^^^
+tests/agent/test_replay_cleanup.py:125: in _send
+    request, _ = build_api_messages(
+agent/turn_context.py:1454: in build_api_messages
+    canonical_messages = canonicalize_replay_history(messages[:split], now=turn_now) + messages[split:]
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: canonicalize_replay_history() got an unexpected keyword argument 'now'
+______________ test_untrustworthy_confirmation_stamp_fails_closed ______________
+tests/agent/test_replay_cleanup.py:215: in test_untrustworthy_confirmation_stamp_fails_closed
+    out = canonicalize_replay_history(row, now=10_000.0)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: canonicalize_replay_history() got an unexpected keyword argument 'now'
+=========================== short test summary info ============================
+FAILED tests/agent/test_replay_cleanup.py::test_send_wire_matches_replay_wire_after_db_round_trip
+FAILED tests/agent/test_replay_cleanup.py::test_confirmation_expiry_uses_frozen_admission_clock
+FAILED tests/agent/test_replay_cleanup.py::test_untrustworthy_confirmation_stamp_fails_closed
+3 failed, 3 passed in 1.14s

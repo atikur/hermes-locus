@@ -1,0 +1,67 @@
+--- before/agent/display.py
++++ after/agent/display.py
+@@ -509,11 +509,11 @@
+     return _tail_trunc(preview, max_len) if preview else None
+ 
+ 
+-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:
++def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview:
+     """Compact preview plus explicit truncation/URL facts (the uncapped preview is
+     rebuilt from the arguments so an upstream display cap cannot drop its link target)."""
+     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback
+-    text = _tail_trunc(full_text, max_len)
++    text = _tail_trunc(full_text, limit)
+     truncated = text != full_text
+     url = _http_url(_display_url(full_text)) if truncated else None
+     return ToolPreview(text=text, truncated=truncated, url=url)
+--- before/gateway/platforms/base.py
++++ after/gateway/platforms/base.py
+@@ -2012,7 +2012,7 @@
+         # "all" / "new": short capped preview (default 40; progress bubbles persist as messages).
+         cap = preview_max_len if preview_max_len > 0 else 40
+         prepared = prepare_tool_preview(
+-            event.tool_name, event.args, fallback=event.preview, max_len=cap)
++            event.tool_name, event.args, fallback=event.preview, limit=cap)
+         return t("gateway.progress.tool_preview", emoji=emoji, tool=tool, preview=self.format_tool_preview(prepared))
+ 
+ 
+--- before/gateway/run_turn_progress.py
++++ after/gateway/run_turn_progress.py
+@@ -372,7 +372,7 @@
+         if not preview:
+             return t("gateway.progress.tool_pending", emoji=emoji, tool=tool_name)
+         from agent.display import get_tool_verb, prepare_tool_preview, tool_verb_connector, verb_drops_preview
+-        prepared = prepare_tool_preview(tool_name, args, fallback=preview, max_len=self._preview_cap())
++        prepared = prepare_tool_preview(tool_name, args, fallback=preview, limit=self._preview_cap())
+         preview = adapter.format_tool_preview(prepared) if adapter is not None else prepared.text
+         # Friendly labels: human-phrased line for built-in tools ("🔍 Searching the web for ...")
+         # by prefixing the verb onto the computed preview, so the command/url/query is kept.
+--- before/tests/agent/test_display.py
++++ after/tests/agent/test_display.py
+@@ -143,7 +143,7 @@
+             "web_extract",
+             {"urls": [url]},
+             fallback=url[:17] + "...",
+-            max_len=20,
++            limit=20,
+         )
+ 
+         assert preview.text == url[:17] + "..."
+@@ -153,7 +153,7 @@
+     def test_untruncated_url_has_no_link_target(self):
+         url = "https://example.com/page"
+         preview = prepare_tool_preview(
+-            "browser_navigate", None, fallback=url, max_len=40
++            "browser_navigate", None, fallback=url, limit=40
+         )
+ 
+         assert preview.text == url
+@@ -165,7 +165,7 @@
+             "web_search",
+             {"query": "how to parse a URL"},
+             fallback="how to parse a URL",
+-            max_len=12,
++            limit=12,
+         )
+ 
+         assert preview.truncated is True

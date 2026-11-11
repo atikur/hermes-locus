@@ -34,17 +34,28 @@ acknowledgment, and closed history does not imply passing tests.
 | Candidate check | Status |
 | --- | --- |
 | Hermes catalog admission | [`plugins validate --install-deps` passed](evidence/v015-admission-release.json), with zero warnings, safe security scan, matching registrations, and accepted Desktop SDK surface; [stderr is empty](evidence/v015-admission-release-stderr.txt). This local check does not establish catalog eligibility or acceptance |
+| Fresh exact-commit local Git install and replay | [Passed at `e71824bc` / `c622b20c`](evidence/v015-install-replay.json): 17,025 files indexed; edit named five callers; broken state had 3 failing/23 passing tests; repair restored 26 passing tests and zero alerts |
 | Hermes runtime doctor | [`plugins doctor --ci` passed](evidence/v015-doctor-release.txt), with four tools and three hooks |
 | Dashboard API regressions | [10 local checks passed](evidence/v015-tests-stale-api.txt), including exact totals, workspace-scoped mutations, persistent parse/cap/stale warnings, retained scan caps, and stale → rechecked-but-broken → repaired alert transitions |
 | Shipped Web/Desktop component contracts | [10 local Node checks passed](evidence/v015-tests-stale-ui.txt): all stored caller rows, repair context, exact symbol selection, incomplete/error states, explicit uncertainty, bounded stale-path rendering with total disclosure, keyboard navigation, and profile/connection cache isolation |
 | JavaScript syntax | Both shipped bundles pass `node --check` |
 | Complete Python suite in Hermes, Python 3.14.7 | [123 checks passed, no skips](evidence/v015-tests-release-host.txt); the earlier [109-check](evidence/v015-tests-postfreeze-host.txt) and [106-check](evidence/v015-tests-host.txt) runs are preserved. Logs retain environment/deprecation/resource diagnostics |
 | Minimum supported Python 3.10.22, standalone with pinned development requirements | [120 passed and 3 Hermes-runtime-only checks skipped](evidence/v015-tests-release-python310.txt), out of 123 discovered tests; the [earlier 106-pass/3-skip record](evidence/v015-tests-python310.txt) is preserved. Python 3.10 is included in the Ubuntu CI matrix |
-| Evaluation-protocol validity | [7 checks passed](evidence/v015-tests-evaluator-release.txt), including paired input control, source-integrity oracle, multi-path file boundary, stopping rules, and excluding interrupted pairs from comparisons |
-| Pinned source and resolution corpora | Completed against the frozen engine below; results include same-file misses. Full reruns on the final post-freeze engine remain pending |
-| Matched model study | 24-session study in progress against a separate frozen plugin snapshot; outcomes pending |
+| Evaluation-protocol validity | [7 checks passed](evidence/v015-tests-evaluator-complete.txt), including paired input control, source-integrity oracle, multi-path file boundary, stopping rules, and excluding interrupted pairs from comparisons |
+| Pinned source and resolution corpora | Final reruns complete at `e71824bc` / `c622b20c`; all counts below reproduced, including the two same-file misses |
+| Matched model study | [24 attempts preserved: 23 completed and one privacy interruption](evidence/v015-model-study/analysis-final.json). Eleven complete pairs: 10 both pass, one warning-on-only pass, none warning-off-only |
 | Actual Web and native Desktop interaction | Passed the [synthetic-fixture interaction checklist](evidence/v015-native-verification.md), including eight callers, complete unsent repair draft, keyboard navigation, live parse warnings, repair, and dismissal; [structured record](evidence/v015-native-verification.json) |
 | Actual stale-source Web/Desktop follow-up on the final engine | Passed the [oversized-caller workflow](evidence/v015-native-stale-verification.md): six stale caller records retained alongside two confirmed failures, persistent warnings after Web reload, recheck without false clearance, and cleanup with three passing fixture tests |
+
+The exact-commit install replay used a fresh profile, local Git source, a
+20,000-file cap, and a 120-second hook timeout. It made zero model calls. The
+[first attempt](evidence/v015-install-environment-failure.json) stopped during
+Hermes's isolated-runtime setup because sandbox DNS blocked downloading its
+`packaging` dependency. Retrying with network access used unchanged source and
+passed all eight replay steps; [installer/replay log](evidence/v015-install-replay.txt).
+This establishes local installation and integration, not public catalog admission.
+The separate [final performance trial](performance.md#final-v015-exact-commit-observation)
+kept the default 30-second edit-hook timeout.
 
 Native setup exposed a host limitation in the packaged Desktop 0.22 build:
 a plugin installed and enabled only in a selected named profile rendered its
@@ -73,42 +84,90 @@ and the API transition check. This is separate evidence from the frozen model
 study; its engine and observations have not been replaced.
 
 The deterministic corpora below executed through real Hermes editing hooks with
-zero model calls. Their frozen engine SHA-256 is
-`efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac`.
-The recorded Git revision is the snapshot's base commit, not a claim that the
-working changes were committed. [Artifact checksums and sanitization record](evidence/v015-evidence-manifest.json).
+zero model calls using exact Git checkpoint
+`e71824bc12d6cde8951d95c8545ad6eda4ca1263`, engine
+`c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c`.
+The earlier frozen-engine [signature](evidence/v015-signature-corpus.json) and
+[resolution](evidence/v015-resolution-corpus.json) results remain unchanged.
+[Artifact checksums and sanitization record](evidence/v015-evidence-manifest.json).
 
 | Selected corpus | Cases | Incompatible call instances named | Compatible call instances named |
 | --- | ---: | ---: | ---: |
-| [Pinned Hermes / HTTPX / Requests signature edits](evidence/v015-signature-corpus.json) | 19 | 42 / 42 | 0 / 34 |
-| [Additional pinned real-source resolution edits](evidence/v015-resolution-corpus.json) | 12 | 22 / 24 | 0 / 28 |
-| [Separately authored executable resolution controls](evidence/v015-resolution-corpus.json) | 25 | 16 / 16 | 0 / 13 |
+| [Pinned Hermes / HTTPX / Requests signature edits](evidence/v015-signature-corpus-release.json) | 19 | 42 / 42 | 0 / 34 |
+| [Additional pinned real-source resolution edits](evidence/v015-resolution-corpus-release.json) | 12 | 22 / 24 | 0 / 28 |
+| [Separately authored executable resolution controls](evidence/v015-resolution-corpus-release.json) | 25 | 16 / 16 | 0 / 13 |
 
 The two missed instances are the same source location,
 `agent/retry_utils.py:167`, under two different mutations. That call is in the
 edited file, outside the external-caller guard. All 22 cross-file incompatible
 instances in that corpus were named. Counts repeat source calls across edits;
-they are not counts of independent repositories or agent tasks. The original
-19-case rerun includes one compatible module-qualified call in its all-case
-denominator; the preserved direct-import comparison below has 33 compatible
-instances. No historical result file was overwritten.
+they are not counts of independent repositories or agent tasks. The 19-case
+rerun includes one compatible module-qualified call in its all-case denominator;
+the preserved direct-import comparison below has 33 compatible instances.
 
-The new [resolution corpus](../tests/integration/verify_resolution_corpus.py)
-uses pinned source projections and separately authored executable controls.
-It reports missed same-file calls separately instead of excluding them from
-the overall result. These targeted regression cases were selected during
-development; they are not a representative or blind benchmark.
+The first final-commit resolution attempt stopped during archive setup before
+any candidate case executed. Its [declaration](evidence/v015-resolution-corpus-release-setup.json)
+and [error record](evidence/v015-resolution-corpus-release-setup-error.txt)
+remain separate. Creating the missing installation parent directory fixed the
+harness; the rerun used identical declared cases, labels, and candidate engine.
 
-The [current model evaluator](../tests/integration/evaluate_refactor_feedback.py)
-freezes source inputs, writes a protocol before model calls, randomizes paired
-order with a recorded seed, and uses the same pre-applied helper edit in each
-arm. Independent checks require the intended repairs, retained assertions,
-no unexpected file edits, and passing upstream tests. Both arms compute Locus
-drift; only delivery of its warning differs. This is not an overhead comparison
-against running without Locus. Final outcomes must include every run, failures,
-protocol checks, and source digests; no success-rate uplift is claimed here.
+The [resolution corpus](../tests/integration/verify_resolution_corpus.py) uses
+pinned source projections and separately authored executable controls. It keeps
+same-file misses in the overall denominator. These targeted cases were selected
+during development; they are not a representative or blind accuracy benchmark.
 
-To prepare a current study without model calls, use new empty output and scratch
+### Paired model study on the frozen engine
+
+The completed study used `gpt-5.4-mini` on four selected Hermes refactor tasks,
+with three repeats and two warning conditions: 24 planned attempts. It preserved
+**23 completed sessions and one deliberately interrupted control attempt**.
+The primary comparison uses only **11 complete pairs**: ten passed in both arms,
+one passed only with the warning, and none passed only without it. This is a
+small repeated-task study, not evidence of a general success-rate improvement.
+[All outcomes and paired measurements](evidence/v015-model-study/analysis-final.json).
+
+| Measure, across the same 11 complete pairs | Warning on | Warning off |
+| --- | ---: | ---: |
+| Repairs passing the independent checks | 11 / 11 | 10 / 11 |
+| Model file-tool calls | 112 | 169 |
+| Search calls | 32 | 67 |
+| Read calls | 35 | 56 |
+| Edit calls | 45 | 46 |
+| Trace-reported total tokens, including cached input | 824,364 | 1,529,667 |
+
+Warning-on used fewer tool calls and reported tokens in all 11 pairs, fewer
+search/read calls in ten pairs with one tie, and fewer edits in one pair with
+ten ties. Trace-reported model duration was lower in eight pairs and higher in
+three. These are observations on the selected tasks, not savings or latency
+guarantees. Dollar costs were absent from the traces and are not estimated.
+
+For completeness, all twelve completed warning-on sessions passed; ten of the
+eleven completed warning-off sessions passed. The extra warning-on session is
+excluded from the matched comparison. The known 23-session token subtotal is
+2,385,584; the interrupted attempt's final usage is unknown, not zero.
+
+The [evaluator](../tests/integration/evaluate_refactor_feedback.py) freezes inputs,
+records the protocol before model calls, randomizes paired order with a fixed
+seed, and uses the same pre-applied helper edit in each arm. Independent checks
+require the intended repairs, retained assertions, no unexpected file edits,
+and passing upstream tests. The model had file tools only; the evaluator ran
+tests separately. Both arms load and compute Locus drift; only warning
+delivery differs. This does not measure overhead against running without Locus.
+
+The study retains engine
+`efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac`;
+its results are not reruns of the final `c622b20c` candidate. A documented
+[privacy amendment](evidence/v015-model-study/protocol-amendment-1.json) interrupted
+one control before any tool calls to harden multi-path search and lenient patch
+parsing boundaries. No replacement was run; that incomplete pair is excluded
+rather than counted as a control failure. The
+[all-session request audit](evidence/v015-model-study/all-session-request-boundary-audit.json)
+records 287 tool requests and no outside-workspace requests or boundary denials.
+The amendment changed the evaluator's file boundary, not the candidate engine,
+tasks, or scoring. Protocol, traces, checks, and redaction checksums are retained
+in the [study evidence](evidence/v015-model-study/checksum-manifest.json).
+
+To prepare a new study without model calls, use new empty output and scratch
 directories:
 
 ```bash
@@ -119,11 +178,8 @@ directories:
   --output candidate-model-study
 ```
 
-`--run-models` explicitly enables the API requests with a configured key.
-Four tasks, three repeats and two warning conditions schedule 24 sessions;
-scheduled sessions are not completed evidence. The evaluator records token and
-infrastructure stopping limits. Small selected samples do not establish a
-general repair-success improvement.
+`--run-models` explicitly enables API requests with a configured key. Scheduled
+sessions are not completed evidence; retain interruptions and stopping reasons.
 
 ## Historical v0.1.4 reproducible checks
 
@@ -169,11 +225,12 @@ edit and five keyword repairs. This was one staged session to show when the
 warning arrives. The [scripted comparison](#keyword-rename-on-hermes-agent)
 tests the same edit on two versions of Locus.
 
-The 60-second demo opens with the recorded run. Its final nine seconds show
+The local historical 60-second demo opens with the recorded run. Its final nine seconds show
 the Hermes Web Dashboard replaying the same edits and the alert clearing.
 All four repaired files in the replay match the live run byte for byte.
 
-[60-second demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) ·
+The historical video was not published as a release asset; the saved evidence is linked here.
+
 [Full event transcript](evidence/live-keyword-session.jsonl) ·
 [Prompt](evidence/live-keyword-prompt.txt) ·
 [Independent verification](evidence/live-keyword-verification.json)
@@ -207,10 +264,9 @@ suggestions on a small fixture, and cleared the alert after a repair and rescan.
 
 [v0.1.3 replay](evidence/keyword-refactor-baseline.json) ·
 [v0.1.4 replay](evidence/keyword-refactor-candidate.json) ·
-[58-second comparison](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-keyword-replay.mp4) ·
 [Integration test](../tests/integration/verify_hermes_refactor.py)
 
-The replay scripts the edits and makes zero model calls. It measures the alert
+A local historical 58-second comparison video was prepared but not published; the replay artifacts above remain available. The replay scripts the edits and makes zero model calls. It measures the alert
 and its clearance on one real refactor, with the same edits in both runs. The
 scratch profiles use a 20,000-file cap and a 120-second hook timeout to index the
 whole selected checkout. The test runs the upstream display file with

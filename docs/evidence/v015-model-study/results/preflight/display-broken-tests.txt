@@ -1,0 +1,19 @@
+..............FFF.........                                               [100%]
+=================================== FAILURES ===================================
+_______ TestPrepareToolPreview.test_recovers_and_describes_truncated_url _______
+tests/agent/test_display.py:142: in test_recovers_and_describes_truncated_url
+    preview = prepare_tool_preview(
+E   TypeError: prepare_tool_preview() got an unexpected keyword argument 'max_len'
+________ TestPrepareToolPreview.test_untruncated_url_has_no_link_target ________
+tests/agent/test_display.py:155: in test_untruncated_url_has_no_link_target
+    preview = prepare_tool_preview(
+E   TypeError: prepare_tool_preview() got an unexpected keyword argument 'max_len'
+_______ TestPrepareToolPreview.test_truncated_non_url_has_no_link_target _______
+tests/agent/test_display.py:164: in test_truncated_non_url_has_no_link_target
+    preview = prepare_tool_preview(
+E   TypeError: prepare_tool_preview() got an unexpected keyword argument 'max_len'
+=========================== short test summary info ============================
+FAILED tests/agent/test_display.py::TestPrepareToolPreview::test_recovers_and_describes_truncated_url
+FAILED tests/agent/test_display.py::TestPrepareToolPreview::test_untruncated_url_has_no_link_target
+FAILED tests/agent/test_display.py::TestPrepareToolPreview::test_truncated_non_url_has_no_link_target
+3 failed, 23 passed in 0.30s

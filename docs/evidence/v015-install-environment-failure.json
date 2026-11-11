@@ -1,0 +1,30 @@
+{
+  "scenario": "Rename the required keyword-only argument of prepare_tool_preview at the same arity",
+  "variant": "candidate",
+  "workspace_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+  "hermes_host_commit": "01672831e48c1224bc003f834dd9b8c1cfc96a57",
+  "plugin_revision": "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
+  "python_version": "3.14.7",
+  "model_calls": 0,
+  "max_files": 20000,
+  "host_hook_timeout_seconds": 120,
+  "steps": [],
+  "status": "FAIL",
+  "install": {
+    "command": [
+      "<hermes-python>",
+      "-m",
+      "hermes_cli.main",
+      "plugins",
+      "install",
+      "file://<plugin-source>",
+      "--ref",
+      "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
+      "--enable"
+    ],
+    "exit_code": 1,
+    "stdout": "Warning: custom (unreviewed) source — not from the Hermes catalog.\nWarning: Using insecure/local URL scheme. Consider using https:// or git@ for \nproduction installs.\nCloning file://<plugin-source>...\nError: Plugin 'locus-codegraph' was not published: venv: uv sync exited 2: ries \nin 7.3s\n  cause: Failed to fetch: \nhttps://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b\n829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl\n  cause: error sending request for url \n(https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80\nb829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl)\n  cause: client error (Connect)\n  cause: dns error\n  cause: failed to lookup address information: nodename nor servname provided, \nor not known\n\nhint: `packaging` (v26.3) was included because `hermes-pm-runtime` (v0.0.0) \ndepends on `packaging` — retry, or run `hermes pm doctor`\n",
+    "stderr": "Preparing the isolated Hermes runtime…\n  → Installing Python dependencies…\n  ✗ Installing Python dependencies failed; last 9 lines of output:\n      Resolved 5 packages in 15ms\n      error: Failed to download `packaging==26.3`\n        cause: Request failed after 3 retries in 7.3s\n        cause: Failed to fetch: https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl\n        cause: error sending request for url (https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl)\n        cause: client error (Connect)\n        cause: dns error\n        cause: failed to lookup address information: nodename nor servname provided, or not known\n      hint: `packaging` (v26.3) was included because `hermes-pm-runtime` (v0.0.0) depends on `packaging`\n"
+  },
+  "error": "Hermes plugin install exited 1. See the replay report."
+}

@@ -1,0 +1,1481 @@
+{
+  "method": "Matched real Hermes patch calls on selected unmodified files at pinned source revisions",
+  "oracle": "CPython inspect.Signature.bind using actual argument kinds and keyword names from the pinned call AST",
+  "limits": [
+    "Targeted source projections, not a representative repository-wide accuracy estimate",
+    "Only call binding is labelled; runtime behavior, aliases and dynamic values are outside this oracle",
+    "The explicitly selected requests.get attribute case is included in the all-case counts"
+  ],
+  "sources": {
+    "hermes": {
+      "repo": "NousResearch/hermes-agent",
+      "commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+      "git_blob_sha1": {
+        "agent/display.py": "9ac45f1e331ec34b0165d196532fcc5d9ef5768f",
+        "gateway/platforms/base.py": "c4a8cecfd7d3698e9a6428f1a4aa8ef9d4fd1918",
+        "gateway/run_turn_progress.py": "d04ec27574c13adcebda7f61661dd787086a35b0",
+        "tests/agent/test_display.py": "afd74c461303e3c5df60e336a5d7fb828fdad76a"
+      }
+    },
+    "httpx": {
+      "repo": "encode/httpx",
+      "commit": "26d48e0634e6ee9cdc0533996db289ce4b430177",
+      "git_blob_sha1": {
+        "httpx/_models.py": "67d74bf86bfc80e22d9a4a3153572845accd9039",
+        "httpx/_utils.py": "7fe827da4d071b32ea6da44328629699d6fc88ce"
+      }
+    },
+    "requests": {
+      "repo": "psf/requests",
+      "commit": "b25c87d7cb8d6a18a37fa12442b5f883f9e41741",
+      "git_blob_sha1": {
+        "src/requests/__init__.py": "051cda1340effaa0706b46dd68ac002ceda3d45c",
+        "src/requests/api.py": "5960744552e7f8eea815429e7bdad38b0cc2741d",
+        "src/requests/sessions.py": "731550de88aceb59747460faf519c2277e300e87",
+        "src/requests/utils.py": "8ab55852cc2188c53f08462ec4319c97fa49f04b",
+        "tests/test_lowlevel.py": "859d07e8a594b2a80acae666949971f6ead90299",
+        "tests/test_utils.py": "f9a287af1b95922741705c538ef4c5a6034bfd05"
+      }
+    }
+  },
+  "host_commit": "01672831e48c1224bc003f834dd9b8c1cfc96a57",
+  "python_version": "3.14.7",
+  "drift_guard": true,
+  "model_calls": 0,
+  "max_files": 2500,
+  "host_hook_timeout_seconds": 120,
+  "variants": {
+    "baseline": {
+      "plugin_commit": "ab90659627b4b0427c847e04d1a9156994346103",
+      "plugin_source": "ab90659627b4b0427c847e04d1a9156994346103",
+      "plugin_engine_sha256": "30ead0bf0054478c0d405ea10ebc50eac4dc91f82158e2f01cf978b8dced25d5",
+      "plugin_version": "0.1.3",
+      "cases": [
+        {
+          "case": "hermes-prepare_tool_preview-keyword-rename",
+          "repository": "hermes",
+          "kind": "keyword-rename",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, *, fallback, limit)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": "missing a required argument: 'limit'",
+            "gateway/run_turn_progress.py:375": "missing a required argument: 'limit'",
+            "tests/agent/test_display.py:142": "missing a required argument: 'limit'",
+            "tests/agent/test_display.py:155": "missing a required argument: 'limit'",
+            "tests/agent/test_display.py:164": "missing a required argument: 'limit'"
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    text = _tail_trunc(full_text, limit)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py\n@@ -509,11 +509,11 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    text = _tail_trunc(full_text, limit)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py"
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-required-keyword",
+          "repository": "hermes",
+          "kind": "required-keyword",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, *, fallback, max_len, trace)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": "missing a required argument: 'trace'",
+            "gateway/run_turn_progress.py:375": "missing a required argument: 'trace'",
+            "tests/agent/test_display.py:142": "missing a required argument: 'trace'",
+            "tests/agent/test_display.py:155": "missing a required argument: 'trace'",
+            "tests/agent/test_display.py:164": "missing a required argument: 'trace'"
+          },
+          "named_sites": [
+            "gateway/platforms/base.py:2014",
+            "gateway/run_turn_progress.py:375",
+            "tests/agent/test_display.py:142",
+            "tests/agent/test_display.py:155",
+            "tests/agent/test_display.py:164"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py\n@@ -509,7 +509,7 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nYour edit changed or removed exported symbol contract(s) with existing external callers:\n- CRITICAL: `prepare_tool_preview` in `agent/display.py` (`def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview` -> `def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool) -> ToolPreview`) — Signature of 'prepare_tool_preview' accepts 5..5 arg(s); 5 external call site(s) still pass incompatible argument counts.\n  -> Update caller `gateway/platforms/base.py:2014` (`BasePlatformAdapter.format_tool_event`, passes 4 arg(s))\n  -> Update caller `gateway/run_turn_progress.py:375` (`GatewayTurnProgressMixin._progress_build_message`, passes 4 arg(s))\n  -> Update caller `tests/agent/test_display.py:142` (`TestPrepareToolPreview.test_recovers_and_describes_truncated_url`, passes 4 arg(s))\n  -> Update caller `tests/agent/test_display.py:155` (`TestPrepareToolPreview.test_untruncated_url_has_no_link_target`, passes 4 arg(s))\n  -> Update caller `tests/agent/test_display.py:164` (`TestPrepareToolPreview.test_truncated_non_url_has_no_link_target`, passes 4 arg(s))\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-positional-only",
+          "repository": "hermes",
+          "kind": "positional-only",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, max_len, /, *, fallback)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": "missing a required positional-only argument: 'max_len'",
+            "gateway/run_turn_progress.py:375": "missing a required positional-only argument: 'max_len'",
+            "tests/agent/test_display.py:142": "missing a required positional-only argument: 'max_len'",
+            "tests/agent/test_display.py:155": "missing a required positional-only argument: 'max_len'",
+            "tests/agent/test_display.py:164": "missing a required positional-only argument: 'max_len'"
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, max_len: int, /, *, fallback: str) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py\n@@ -509,7 +509,7 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, max_len: int, /, *, fallback: str) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py"
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-optional-keyword",
+          "repository": "hermes",
+          "kind": "optional-keyword",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, *, fallback, max_len, trace=None)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": null,
+            "gateway/run_turn_progress.py:375": null,
+            "tests/agent/test_display.py:142": null,
+            "tests/agent/test_display.py:155": null,
+            "tests/agent/test_display.py:164": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool = False) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py\n@@ -509,7 +509,7 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool = False) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py"
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-positional-rename",
+          "repository": "hermes",
+          "kind": "positional-rename",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool, args, *, fallback, max_len)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": null,
+            "gateway/run_turn_progress.py:375": null,
+            "tests/agent/test_display.py:142": null,
+            "tests/agent/test_display.py:155": null,
+            "tests/agent/test_display.py:164": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n-    full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n+    full_text = build_tool_preview(tool, args, max_len=0) or fallback\n     text = _tail_trunc(full_text, max_len)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py\n@@ -509,10 +509,10 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n-    full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n+    full_text = build_tool_preview(tool, args, max_len=0) or fallback\n     text = _tail_trunc(full_text, max_len)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py"
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-body-only",
+          "repository": "hermes",
+          "kind": "body-only",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, *, fallback, max_len)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": null,
+            "gateway/run_turn_progress.py:375": null,
+            "tests/agent/test_display.py:142": null,
+            "tests/agent/test_display.py:155": null,
+            "tests/agent/test_display.py:164": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    cap = max_len\n+    text = _tail_trunc(full_text, cap)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py\n@@ -513,7 +513,8 @@\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    cap = max_len\n+    text = _tail_trunc(full_text, cap)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py"
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-keyword-rename",
+          "repository": "httpx",
+          "kind": "keyword-rename",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match)",
+          "oracle_errors": {
+            "httpx/_models.py:135": "missing a required argument: 'match'"
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+def to_bytes_or_str(value: str, match: typing.AnyStr) -> typing.AnyStr:\n+    return value if isinstance(match, str) else value.encode()\n \n \n def unquote(value: str) -> str:\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py\n@@ -84,8 +84,8 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+def to_bytes_or_str(value: str, match: typing.AnyStr) -> typing.AnyStr:\n+    return value if isinstance(match, str) else value.encode()\n \n \n def unquote(value: str) -> str:\n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py"
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-required-keyword",
+          "repository": "httpx",
+          "kind": "required-keyword",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match_type_of, *, trace)",
+          "oracle_errors": {
+            "httpx/_models.py:135": "missing a required argument: 'trace'"
+          },
+          "named_sites": [
+            "httpx/_models.py:135"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py\n@@ -84,7 +84,7 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nYour edit changed or removed exported symbol contract(s) with existing external callers:\n- CRITICAL: `to_bytes_or_str` in `httpx/_utils.py` (`def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr` -> `def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool) -> typing.AnyStr`) — Signature of 'to_bytes_or_str' accepts 3..3 arg(s); 1 external call site(s) still pass incompatible argument counts.\n  -> Update caller `httpx/_models.py:135` (`_obfuscate_sensitive_headers`, passes 2 arg(s))\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-positional-only",
+          "repository": "httpx",
+          "kind": "positional-only",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match_type_of, /)",
+          "oracle_errors": {
+            "httpx/_models.py:135": "missing a required positional-only argument: 'match_type_of'"
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, /) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py\n@@ -84,7 +84,7 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, /) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py"
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-optional-keyword",
+          "repository": "httpx",
+          "kind": "optional-keyword",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match_type_of, *, trace=None)",
+          "oracle_errors": {
+            "httpx/_models.py:135": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool = False) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py\n@@ -84,7 +84,7 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool = False) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py"
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-positional-rename",
+          "repository": "httpx",
+          "kind": "positional-rename",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(text, match_type_of)",
+          "oracle_errors": {
+            "httpx/_models.py:135": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+def to_bytes_or_str(text: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+    return text if isinstance(match_type_of, str) else text.encode()\n \n \n def unquote(value: str) -> str:\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py\n@@ -84,8 +84,8 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+def to_bytes_or_str(text: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+    return text if isinstance(match_type_of, str) else text.encode()\n \n \n def unquote(value: str) -> str:\n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py"
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-body-only",
+          "repository": "httpx",
+          "kind": "body-only",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match_type_of)",
+          "oracle_errors": {
+            "httpx/_models.py:135": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n \n \n def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+    result = value if isinstance(match_type_of, str) else value.encode()\n+    return result\n \n \n def unquote(value: str) -> str:\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py\n@@ -85,7 +85,8 @@\n \n \n def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+    result = value if isinstance(match_type_of, str) else value.encode()\n+    return result\n \n \n def unquote(value: str) -> str:\n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py"
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-keyword-rename",
+          "repository": "requests",
+          "kind": "keyword-rename",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, exclude=None)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": "got an unexpected keyword argument 'no_proxy'",
+            "tests/test_utils.py:232": "got an unexpected keyword argument 'no_proxy'",
+            "tests/test_utils.py:243": "got an unexpected keyword argument 'no_proxy'",
+            "tests/test_utils.py:255": "got an unexpected keyword argument 'no_proxy'",
+            "tests/test_utils.py:272": "got an unexpected keyword argument 'no_proxy'"
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, exclude=None):\n     \"\"\"\n     Return a dict of environment proxies.\n \n     :rtype: dict\n     \"\"\"\n-    if should_bypass_proxies(url, no_proxy=no_proxy):\n+    if should_bypass_proxies(url, no_proxy=exclude):\n         return {}\n     else:\n         return getproxies()\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py\n@@ -813,13 +813,13 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, exclude=None):\n     \"\"\"\n     Return a dict of environment proxies.\n \n     :rtype: dict\n     \"\"\"\n-    if should_bypass_proxies(url, no_proxy=no_proxy):\n+    if should_bypass_proxies(url, no_proxy=exclude):\n         return {}\n     else:\n         return getproxies()\n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py"
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-required-keyword",
+          "repository": "requests",
+          "kind": "required-keyword",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, no_proxy=None, *, trace)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": "missing a required argument: 'trace'",
+            "tests/test_utils.py:232": "missing a required argument: 'trace'",
+            "tests/test_utils.py:243": "missing a required argument: 'trace'",
+            "tests/test_utils.py:255": "missing a required argument: 'trace'",
+            "tests/test_utils.py:272": "missing a required argument: 'trace'"
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, *, trace):\n     \"\"\"\n     Return a dict of environment proxies.\n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py\n@@ -813,7 +813,7 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, *, trace):\n     \"\"\"\n     Return a dict of environment proxies.\n \n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py"
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-positional-only",
+          "repository": "requests",
+          "kind": "positional-only",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, no_proxy=None, /)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": "got some positional-only arguments passed as keyword arguments: 'no_proxy'",
+            "tests/test_utils.py:232": "got some positional-only arguments passed as keyword arguments: 'no_proxy'",
+            "tests/test_utils.py:243": "got some positional-only arguments passed as keyword arguments: 'no_proxy'",
+            "tests/test_utils.py:255": "got some positional-only arguments passed as keyword arguments: 'no_proxy'",
+            "tests/test_utils.py:272": "got some positional-only arguments passed as keyword arguments: 'no_proxy'"
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, /):\n     \"\"\"\n     Return a dict of environment proxies.\n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py\n@@ -813,7 +813,7 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, /):\n     \"\"\"\n     Return a dict of environment proxies.\n \n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py"
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-optional-keyword",
+          "repository": "requests",
+          "kind": "optional-keyword",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, no_proxy=None, *, trace=None)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": null,
+            "tests/test_utils.py:232": null,
+            "tests/test_utils.py:243": null,
+            "tests/test_utils.py:255": null,
+            "tests/test_utils.py:272": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, *, trace=False):\n     \"\"\"\n     Return a dict of environment proxies.\n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py\n@@ -813,7 +813,7 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, *, trace=False):\n     \"\"\"\n     Return a dict of environment proxies.\n \n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py"
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-positional-rename",
+          "repository": "requests",
+          "kind": "positional-rename",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(target, no_proxy=None)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": null,
+            "tests/test_utils.py:232": null,
+            "tests/test_utils.py:243": null,
+            "tests/test_utils.py:255": null,
+            "tests/test_utils.py:272": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(target, no_proxy=None):\n     \"\"\"\n     Return a dict of environment proxies.\n \n     :rtype: dict\n     \"\"\"\n-    if should_bypass_proxies(url, no_proxy=no_proxy):\n+    if should_bypass_proxies(target, no_proxy=no_proxy):\n         return {}\n     else:\n         return getproxies()\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py\n@@ -813,13 +813,13 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(target, no_proxy=None):\n     \"\"\"\n     Return a dict of environment proxies.\n \n     :rtype: dict\n     \"\"\"\n-    if should_bypass_proxies(url, no_proxy=no_proxy):\n+    if should_bypass_proxies(target, no_proxy=no_proxy):\n         return {}\n     else:\n         return getproxies()\n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py"
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-body-only",
+          "repository": "requests",
+          "kind": "body-only",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, no_proxy=None)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": null,
+            "tests/test_utils.py:232": null,
+            "tests/test_utils.py:243": null,
+            "tests/test_utils.py:255": null,
+            "tests/test_utils.py:272": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     if should_bypass_proxies(url, no_proxy=no_proxy):\n         return {}\n     else:\n-        return getproxies()\n+        proxies = getproxies()\n+        return proxies\n \n \n def select_proxy(url, proxies):\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py\n@@ -822,7 +822,8 @@\n     if should_bypass_proxies(url, no_proxy=no_proxy):\n         return {}\n     else:\n-        return getproxies()\n+        proxies = getproxies()\n+        return proxies\n \n \n def select_proxy(url, proxies):\n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py"
+          }
+        },
+        {
+          "case": "requests-get-unsupported-attribute",
+          "repository": "requests",
+          "kind": "unsupported-attribute",
+          "callee": "src/requests/api.py:62",
+          "binding_scope": "module attribute outside precise binding scope",
+          "old_signature": "(url, params=None, **kwargs)",
+          "new_signature": "(*, url, params=None, **kwargs)",
+          "oracle_errors": {
+            "tests/test_lowlevel.py:59": "too many positional arguments",
+            "tests/test_lowlevel.py:123": "too many positional arguments",
+            "tests/test_lowlevel.py:181": "too many positional arguments",
+            "tests/test_lowlevel.py:231": "too many positional arguments",
+            "tests/test_lowlevel.py:268": "too many positional arguments",
+            "tests/test_lowlevel.py:299": "too many positional arguments",
+            "tests/test_lowlevel.py:332": null,
+            "tests/test_lowlevel.py:349": "too many positional arguments",
+            "tests/test_lowlevel.py:393": "too many positional arguments",
+            "tests/test_lowlevel.py:422": "too many positional arguments"
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/api.py\n@@\n         return session.request(method=method, url=url, **kwargs)\n \n \n-def get(url, params=None, **kwargs):\n+def get(*, url, params=None, **kwargs):\n     r\"\"\"Sends a GET request.\n \n     :param url: URL for the new :class:`Request` object.\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get-unsupported-attribute/src/requests/api.py\n+++ b/<scratch>/requests-get-unsupported-attribute/src/requests/api.py\n@@ -59,7 +59,7 @@\n         return session.request(method=method, url=url, **kwargs)\n \n \n-def get(url, params=None, **kwargs):\n+def get(*, url, params=None, **kwargs):\n     r\"\"\"Sends a GET request.\n \n     :param url: URL for the new :class:`Request` object.\n",
+            "files_modified": [
+              "<scratch>/requests-get-unsupported-attribute/src/requests/api.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get-unsupported-attribute/src/requests/api.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get-unsupported-attribute/src/requests/api.py"
+          }
+        }
+      ],
+      "supported_cases": {
+        "cases": 18,
+        "broken_cases": 9,
+        "fully_named_broken_cases": 2,
+        "compatible_cases": 9,
+        "compatible_warned_cases": 0,
+        "broken": 33,
+        "compatible": 33,
+        "named_broken": 6,
+        "missed_broken": 27,
+        "named_compatible": 0,
+        "unlabelled_named": 0
+      },
+      "all_cases": {
+        "cases": 19,
+        "broken_cases": 10,
+        "fully_named_broken_cases": 2,
+        "compatible_cases": 9,
+        "compatible_warned_cases": 0,
+        "broken": 42,
+        "compatible": 34,
+        "named_broken": 6,
+        "missed_broken": 36,
+        "named_compatible": 0,
+        "unlabelled_named": 0
+      }
+    },
+    "candidate": {
+      "plugin_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
+      "plugin_source": "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
+      "plugin_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "plugin_version": "0.1.5",
+      "cases": [
+        {
+          "case": "hermes-prepare_tool_preview-keyword-rename",
+          "repository": "hermes",
+          "kind": "keyword-rename",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, *, fallback, limit)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": "missing a required argument: 'limit'",
+            "gateway/run_turn_progress.py:375": "missing a required argument: 'limit'",
+            "tests/agent/test_display.py:142": "missing a required argument: 'limit'",
+            "tests/agent/test_display.py:155": "missing a required argument: 'limit'",
+            "tests/agent/test_display.py:164": "missing a required argument: 'limit'"
+          },
+          "named_sites": [
+            "gateway/platforms/base.py:2014",
+            "gateway/run_turn_progress.py:375",
+            "tests/agent/test_display.py:142",
+            "tests/agent/test_display.py:155",
+            "tests/agent/test_display.py:164"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    text = _tail_trunc(full_text, limit)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py\n@@ -509,11 +509,11 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    text = _tail_trunc(full_text, limit)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-keyword-rename/agent/display.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `prepare_tool_preview` in `agent/display.py` (`def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview` -> `def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview`) — Signature of 'prepare_tool_preview' no longer accepts 5 external call site(s). Unexpected keyword argument 'max_len'.\n  -> Update caller `gateway/platforms/base.py:2014` (`BasePlatformAdapter.format_tool_event`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\n  -> Update caller `gateway/run_turn_progress.py:375` (`GatewayTurnProgressMixin._progress_build_message`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\n  -> Update caller `tests/agent/test_display.py:142` (`TestPrepareToolPreview.test_recovers_and_describes_truncated_url`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\n  -> Update caller `tests/agent/test_display.py:155` (`TestPrepareToolPreview.test_untruncated_url_has_no_link_target`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\n  -> Update caller `tests/agent/test_display.py:164` (`TestPrepareToolPreview.test_truncated_non_url_has_no_link_target`): unexpected keyword argument 'max_len'\n     Review replacing max_len= with limit=.\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-required-keyword",
+          "repository": "hermes",
+          "kind": "required-keyword",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, *, fallback, max_len, trace)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": "missing a required argument: 'trace'",
+            "gateway/run_turn_progress.py:375": "missing a required argument: 'trace'",
+            "tests/agent/test_display.py:142": "missing a required argument: 'trace'",
+            "tests/agent/test_display.py:155": "missing a required argument: 'trace'",
+            "tests/agent/test_display.py:164": "missing a required argument: 'trace'"
+          },
+          "named_sites": [
+            "gateway/platforms/base.py:2014",
+            "gateway/run_turn_progress.py:375",
+            "tests/agent/test_display.py:142",
+            "tests/agent/test_display.py:155",
+            "tests/agent/test_display.py:164"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py\n@@ -509,7 +509,7 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-required-keyword/agent/display.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `prepare_tool_preview` in `agent/display.py` (`def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview` -> `def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool) -> ToolPreview`) — Signature of 'prepare_tool_preview' no longer accepts 5 external call site(s). Missing required keyword-only argument 'trace'.\n  -> Update caller `gateway/platforms/base.py:2014` (`BasePlatformAdapter.format_tool_event`): missing required keyword-only argument 'trace'\n  -> Update caller `gateway/run_turn_progress.py:375` (`GatewayTurnProgressMixin._progress_build_message`): missing required keyword-only argument 'trace'\n  -> Update caller `tests/agent/test_display.py:142` (`TestPrepareToolPreview.test_recovers_and_describes_truncated_url`): missing required keyword-only argument 'trace'\n  -> Update caller `tests/agent/test_display.py:155` (`TestPrepareToolPreview.test_untruncated_url_has_no_link_target`): missing required keyword-only argument 'trace'\n  -> Update caller `tests/agent/test_display.py:164` (`TestPrepareToolPreview.test_truncated_non_url_has_no_link_target`): missing required keyword-only argument 'trace'\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-positional-only",
+          "repository": "hermes",
+          "kind": "positional-only",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, max_len, /, *, fallback)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": "missing a required positional-only argument: 'max_len'",
+            "gateway/run_turn_progress.py:375": "missing a required positional-only argument: 'max_len'",
+            "tests/agent/test_display.py:142": "missing a required positional-only argument: 'max_len'",
+            "tests/agent/test_display.py:155": "missing a required positional-only argument: 'max_len'",
+            "tests/agent/test_display.py:164": "missing a required positional-only argument: 'max_len'"
+          },
+          "named_sites": [
+            "gateway/platforms/base.py:2014",
+            "gateway/run_turn_progress.py:375",
+            "tests/agent/test_display.py:142",
+            "tests/agent/test_display.py:155",
+            "tests/agent/test_display.py:164"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, max_len: int, /, *, fallback: str) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py\n@@ -509,7 +509,7 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, max_len: int, /, *, fallback: str) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-positional-only/agent/display.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `prepare_tool_preview` in `agent/display.py` (`def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview` -> `def prepare_tool_preview(tool_name: str, args: dict | None, max_len: int, /, *, fallback: str) -> ToolPreview`) — Signature of 'prepare_tool_preview' no longer accepts 5 external call site(s). Positional-only argument 'max_len' passed by keyword.\n  -> Update caller `gateway/platforms/base.py:2014` (`BasePlatformAdapter.format_tool_event`): positional-only argument 'max_len' passed by keyword\n  -> Update caller `gateway/run_turn_progress.py:375` (`GatewayTurnProgressMixin._progress_build_message`): positional-only argument 'max_len' passed by keyword\n  -> Update caller `tests/agent/test_display.py:142` (`TestPrepareToolPreview.test_recovers_and_describes_truncated_url`): positional-only argument 'max_len' passed by keyword\n  -> Update caller `tests/agent/test_display.py:155` (`TestPrepareToolPreview.test_untruncated_url_has_no_link_target`): positional-only argument 'max_len' passed by keyword\n  -> Update caller `tests/agent/test_display.py:164` (`TestPrepareToolPreview.test_truncated_non_url_has_no_link_target`): positional-only argument 'max_len' passed by keyword\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-optional-keyword",
+          "repository": "hermes",
+          "kind": "optional-keyword",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, *, fallback, max_len, trace=None)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": null,
+            "gateway/run_turn_progress.py:375": null,
+            "tests/agent/test_display.py:142": null,
+            "tests/agent/test_display.py:155": null,
+            "tests/agent/test_display.py:164": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool = False) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py\n@@ -509,7 +509,7 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int, trace: bool = False) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-optional-keyword/agent/display.py"
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-positional-rename",
+          "repository": "hermes",
+          "kind": "positional-rename",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool, args, *, fallback, max_len)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": null,
+            "gateway/run_turn_progress.py:375": null,
+            "tests/agent/test_display.py:142": null,
+            "tests/agent/test_display.py:155": null,
+            "tests/agent/test_display.py:164": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n-    full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n+    full_text = build_tool_preview(tool, args, max_len=0) or fallback\n     text = _tail_trunc(full_text, max_len)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py\n@@ -509,10 +509,10 @@\n     return _tail_trunc(preview, max_len) if preview else None\n \n \n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n-    full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n+    full_text = build_tool_preview(tool, args, max_len=0) or fallback\n     text = _tail_trunc(full_text, max_len)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-positional-rename/agent/display.py"
+          }
+        },
+        {
+          "case": "hermes-prepare_tool_preview-body-only",
+          "repository": "hermes",
+          "kind": "body-only",
+          "callee": "agent/display.py:512",
+          "binding_scope": "direct import",
+          "old_signature": "(tool_name, args, *, fallback, max_len)",
+          "new_signature": "(tool_name, args, *, fallback, max_len)",
+          "oracle_errors": {
+            "gateway/platforms/base.py:2014": null,
+            "gateway/run_turn_progress.py:375": null,
+            "tests/agent/test_display.py:142": null,
+            "tests/agent/test_display.py:155": null,
+            "tests/agent/test_display.py:164": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: agent/display.py\n@@\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    cap = max_len\n+    text = _tail_trunc(full_text, cap)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py\n+++ b/<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py\n@@ -513,7 +513,8 @@\n     \"\"\"Compact preview plus explicit truncation/URL facts (the uncapped preview is\n     rebuilt from the arguments so an upstream display cap cannot drop its link target).\"\"\"\n     full_text = build_tool_preview(tool_name, args, max_len=0) or fallback\n-    text = _tail_trunc(full_text, max_len)\n+    cap = max_len\n+    text = _tail_trunc(full_text, cap)\n     truncated = text != full_text\n     url = _http_url(_display_url(full_text)) if truncated else None\n     return ToolPreview(text=text, truncated=truncated, url=url)\n",
+            "files_modified": [
+              "<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py"
+            ],
+            "lint": {
+              "<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/hermes-prepare_tool_preview-body-only/agent/display.py"
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-keyword-rename",
+          "repository": "httpx",
+          "kind": "keyword-rename",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match)",
+          "oracle_errors": {
+            "httpx/_models.py:135": "missing a required argument: 'match'"
+          },
+          "named_sites": [
+            "httpx/_models.py:135"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+def to_bytes_or_str(value: str, match: typing.AnyStr) -> typing.AnyStr:\n+    return value if isinstance(match, str) else value.encode()\n \n \n def unquote(value: str) -> str:\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py\n@@ -84,8 +84,8 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+def to_bytes_or_str(value: str, match: typing.AnyStr) -> typing.AnyStr:\n+    return value if isinstance(match, str) else value.encode()\n \n \n def unquote(value: str) -> str:\n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-keyword-rename/httpx/_utils.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `to_bytes_or_str` in `httpx/_utils.py` (`def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr` -> `def to_bytes_or_str(value: str, match: typing.AnyStr) -> typing.AnyStr`) — Signature of 'to_bytes_or_str' no longer accepts 1 external call site(s). Unexpected keyword argument 'match_type_of'.\n  -> Update caller `httpx/_models.py:135` (`_obfuscate_sensitive_headers`): unexpected keyword argument 'match_type_of'\n     Review replacing match_type_of= with match=.\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-required-keyword",
+          "repository": "httpx",
+          "kind": "required-keyword",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match_type_of, *, trace)",
+          "oracle_errors": {
+            "httpx/_models.py:135": "missing a required argument: 'trace'"
+          },
+          "named_sites": [
+            "httpx/_models.py:135"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py\n@@ -84,7 +84,7 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-required-keyword/httpx/_utils.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `to_bytes_or_str` in `httpx/_utils.py` (`def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr` -> `def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool) -> typing.AnyStr`) — Signature of 'to_bytes_or_str' no longer accepts 1 external call site(s). Missing required keyword-only argument 'trace'.\n  -> Update caller `httpx/_models.py:135` (`_obfuscate_sensitive_headers`): missing required keyword-only argument 'trace'\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-positional-only",
+          "repository": "httpx",
+          "kind": "positional-only",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match_type_of, /)",
+          "oracle_errors": {
+            "httpx/_models.py:135": "missing a required positional-only argument: 'match_type_of'"
+          },
+          "named_sites": [
+            "httpx/_models.py:135"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, /) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py\n@@ -84,7 +84,7 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, /) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-positional-only/httpx/_utils.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `to_bytes_or_str` in `httpx/_utils.py` (`def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr` -> `def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, /) -> typing.AnyStr`) — Signature of 'to_bytes_or_str' no longer accepts 1 external call site(s). Positional-only argument 'match_type_of' passed by keyword.\n  -> Update caller `httpx/_models.py:135` (`_obfuscate_sensitive_headers`): positional-only argument 'match_type_of' passed by keyword\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-optional-keyword",
+          "repository": "httpx",
+          "kind": "optional-keyword",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match_type_of, *, trace=None)",
+          "oracle_errors": {
+            "httpx/_models.py:135": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool = False) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py\n@@ -84,7 +84,7 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+def to_bytes_or_str(value: str, match_type_of: typing.AnyStr, *, trace: bool = False) -> typing.AnyStr:\n     return value if isinstance(match_type_of, str) else value.encode()\n \n \n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-optional-keyword/httpx/_utils.py"
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-positional-rename",
+          "repository": "httpx",
+          "kind": "positional-rename",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(text, match_type_of)",
+          "oracle_errors": {
+            "httpx/_models.py:135": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+def to_bytes_or_str(text: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+    return text if isinstance(match_type_of, str) else text.encode()\n \n \n def unquote(value: str) -> str:\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py\n@@ -84,8 +84,8 @@\n     return value if isinstance(value, str) else value.decode(encoding)\n \n \n-def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+def to_bytes_or_str(text: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n+    return text if isinstance(match_type_of, str) else text.encode()\n \n \n def unquote(value: str) -> str:\n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-positional-rename/httpx/_utils.py"
+          }
+        },
+        {
+          "case": "httpx-to_bytes_or_str-body-only",
+          "repository": "httpx",
+          "kind": "body-only",
+          "callee": "httpx/_utils.py:87",
+          "binding_scope": "direct import",
+          "old_signature": "(value, match_type_of)",
+          "new_signature": "(value, match_type_of)",
+          "oracle_errors": {
+            "httpx/_models.py:135": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: httpx/_utils.py\n@@\n \n \n def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+    result = value if isinstance(match_type_of, str) else value.encode()\n+    return result\n \n \n def unquote(value: str) -> str:\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py\n+++ b/<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py\n@@ -85,7 +85,8 @@\n \n \n def to_bytes_or_str(value: str, match_type_of: typing.AnyStr) -> typing.AnyStr:\n-    return value if isinstance(match_type_of, str) else value.encode()\n+    result = value if isinstance(match_type_of, str) else value.encode()\n+    return result\n \n \n def unquote(value: str) -> str:\n",
+            "files_modified": [
+              "<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py"
+            ],
+            "lint": {
+              "<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/httpx-to_bytes_or_str-body-only/httpx/_utils.py"
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-keyword-rename",
+          "repository": "requests",
+          "kind": "keyword-rename",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, exclude=None)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": "got an unexpected keyword argument 'no_proxy'",
+            "tests/test_utils.py:232": "got an unexpected keyword argument 'no_proxy'",
+            "tests/test_utils.py:243": "got an unexpected keyword argument 'no_proxy'",
+            "tests/test_utils.py:255": "got an unexpected keyword argument 'no_proxy'",
+            "tests/test_utils.py:272": "got an unexpected keyword argument 'no_proxy'"
+          },
+          "named_sites": [
+            "src/requests/sessions.py:760",
+            "tests/test_utils.py:232",
+            "tests/test_utils.py:243",
+            "tests/test_utils.py:255",
+            "tests/test_utils.py:272"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, exclude=None):\n     \"\"\"\n     Return a dict of environment proxies.\n \n     :rtype: dict\n     \"\"\"\n-    if should_bypass_proxies(url, no_proxy=no_proxy):\n+    if should_bypass_proxies(url, no_proxy=exclude):\n         return {}\n     else:\n         return getproxies()\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py\n@@ -813,13 +813,13 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, exclude=None):\n     \"\"\"\n     Return a dict of environment proxies.\n \n     :rtype: dict\n     \"\"\"\n-    if should_bypass_proxies(url, no_proxy=no_proxy):\n+    if should_bypass_proxies(url, no_proxy=exclude):\n         return {}\n     else:\n         return getproxies()\n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-keyword-rename/src/requests/utils.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `get_environ_proxies` in `src/requests/utils.py` (`def get_environ_proxies(url, no_proxy = None)` -> `def get_environ_proxies(url, exclude = None)`) — Signature of 'get_environ_proxies' no longer accepts 5 external call site(s). Unexpected keyword argument 'no_proxy'.\n  -> Update caller `src/requests/sessions.py:760` (`Session.merge_environment_settings`): unexpected keyword argument 'no_proxy'\n     Review replacing no_proxy= with exclude=.\n  -> Update caller `tests/test_utils.py:232` (`TestGetEnvironProxies.test_bypass`): unexpected keyword argument 'no_proxy'\n     Review replacing no_proxy= with exclude=.\n  -> Update caller `tests/test_utils.py:243` (`TestGetEnvironProxies.test_not_bypass`): unexpected keyword argument 'no_proxy'\n     Review replacing no_proxy= with exclude=.\n  -> Update caller `tests/test_utils.py:255` (`TestGetEnvironProxies.test_bypass_no_proxy_keyword`): unexpected keyword argument 'no_proxy'\n     Review replacing no_proxy= with exclude=.\n  -> Update caller `tests/test_utils.py:272` (`TestGetEnvironProxies.test_not_bypass_no_proxy_keyword`): unexpected keyword argument 'no_proxy'\n     Review replacing no_proxy= with exclude=.\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-required-keyword",
+          "repository": "requests",
+          "kind": "required-keyword",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, no_proxy=None, *, trace)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": "missing a required argument: 'trace'",
+            "tests/test_utils.py:232": "missing a required argument: 'trace'",
+            "tests/test_utils.py:243": "missing a required argument: 'trace'",
+            "tests/test_utils.py:255": "missing a required argument: 'trace'",
+            "tests/test_utils.py:272": "missing a required argument: 'trace'"
+          },
+          "named_sites": [
+            "src/requests/sessions.py:760",
+            "tests/test_utils.py:232",
+            "tests/test_utils.py:243",
+            "tests/test_utils.py:255",
+            "tests/test_utils.py:272"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, *, trace):\n     \"\"\"\n     Return a dict of environment proxies.\n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py\n@@ -813,7 +813,7 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, *, trace):\n     \"\"\"\n     Return a dict of environment proxies.\n \n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-required-keyword/src/requests/utils.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `get_environ_proxies` in `src/requests/utils.py` (`def get_environ_proxies(url, no_proxy = None)` -> `def get_environ_proxies(url, no_proxy = None, *, trace)`) — Signature of 'get_environ_proxies' no longer accepts 5 external call site(s). Missing required keyword-only argument 'trace'.\n  -> Update caller `src/requests/sessions.py:760` (`Session.merge_environment_settings`): missing required keyword-only argument 'trace'\n  -> Update caller `tests/test_utils.py:232` (`TestGetEnvironProxies.test_bypass`): missing required keyword-only argument 'trace'\n  -> Update caller `tests/test_utils.py:243` (`TestGetEnvironProxies.test_not_bypass`): missing required keyword-only argument 'trace'\n  -> Update caller `tests/test_utils.py:255` (`TestGetEnvironProxies.test_bypass_no_proxy_keyword`): missing required keyword-only argument 'trace'\n  -> Update caller `tests/test_utils.py:272` (`TestGetEnvironProxies.test_not_bypass_no_proxy_keyword`): missing required keyword-only argument 'trace'\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-positional-only",
+          "repository": "requests",
+          "kind": "positional-only",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, no_proxy=None, /)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": "got some positional-only arguments passed as keyword arguments: 'no_proxy'",
+            "tests/test_utils.py:232": "got some positional-only arguments passed as keyword arguments: 'no_proxy'",
+            "tests/test_utils.py:243": "got some positional-only arguments passed as keyword arguments: 'no_proxy'",
+            "tests/test_utils.py:255": "got some positional-only arguments passed as keyword arguments: 'no_proxy'",
+            "tests/test_utils.py:272": "got some positional-only arguments passed as keyword arguments: 'no_proxy'"
+          },
+          "named_sites": [
+            "src/requests/sessions.py:760",
+            "tests/test_utils.py:232",
+            "tests/test_utils.py:243",
+            "tests/test_utils.py:255",
+            "tests/test_utils.py:272"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, /):\n     \"\"\"\n     Return a dict of environment proxies.\n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py\n@@ -813,7 +813,7 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, /):\n     \"\"\"\n     Return a dict of environment proxies.\n \n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-positional-only/src/requests/utils.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `get_environ_proxies` in `src/requests/utils.py` (`def get_environ_proxies(url, no_proxy = None)` -> `def get_environ_proxies(url, no_proxy = None, /)`) — Signature of 'get_environ_proxies' no longer accepts 5 external call site(s). Positional-only argument 'no_proxy' passed by keyword.\n  -> Update caller `src/requests/sessions.py:760` (`Session.merge_environment_settings`): positional-only argument 'no_proxy' passed by keyword\n  -> Update caller `tests/test_utils.py:232` (`TestGetEnvironProxies.test_bypass`): positional-only argument 'no_proxy' passed by keyword\n  -> Update caller `tests/test_utils.py:243` (`TestGetEnvironProxies.test_not_bypass`): positional-only argument 'no_proxy' passed by keyword\n  -> Update caller `tests/test_utils.py:255` (`TestGetEnvironProxies.test_bypass_no_proxy_keyword`): positional-only argument 'no_proxy' passed by keyword\n  -> Update caller `tests/test_utils.py:272` (`TestGetEnvironProxies.test_not_bypass_no_proxy_keyword`): positional-only argument 'no_proxy' passed by keyword\nInspect and update the affected call sites above before concluding your task."
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-optional-keyword",
+          "repository": "requests",
+          "kind": "optional-keyword",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, no_proxy=None, *, trace=None)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": null,
+            "tests/test_utils.py:232": null,
+            "tests/test_utils.py:243": null,
+            "tests/test_utils.py:255": null,
+            "tests/test_utils.py:272": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, *, trace=False):\n     \"\"\"\n     Return a dict of environment proxies.\n \n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py\n@@ -813,7 +813,7 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(url, no_proxy=None, *, trace=False):\n     \"\"\"\n     Return a dict of environment proxies.\n \n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-optional-keyword/src/requests/utils.py"
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-positional-rename",
+          "repository": "requests",
+          "kind": "positional-rename",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(target, no_proxy=None)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": null,
+            "tests/test_utils.py:232": null,
+            "tests/test_utils.py:243": null,
+            "tests/test_utils.py:255": null,
+            "tests/test_utils.py:272": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(target, no_proxy=None):\n     \"\"\"\n     Return a dict of environment proxies.\n \n     :rtype: dict\n     \"\"\"\n-    if should_bypass_proxies(url, no_proxy=no_proxy):\n+    if should_bypass_proxies(target, no_proxy=no_proxy):\n         return {}\n     else:\n         return getproxies()\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py\n@@ -813,13 +813,13 @@\n     return False\n \n \n-def get_environ_proxies(url, no_proxy=None):\n+def get_environ_proxies(target, no_proxy=None):\n     \"\"\"\n     Return a dict of environment proxies.\n \n     :rtype: dict\n     \"\"\"\n-    if should_bypass_proxies(url, no_proxy=no_proxy):\n+    if should_bypass_proxies(target, no_proxy=no_proxy):\n         return {}\n     else:\n         return getproxies()\n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-positional-rename/src/requests/utils.py"
+          }
+        },
+        {
+          "case": "requests-get_environ_proxies-body-only",
+          "repository": "requests",
+          "kind": "body-only",
+          "callee": "src/requests/utils.py:816",
+          "binding_scope": "direct import",
+          "old_signature": "(url, no_proxy=None)",
+          "new_signature": "(url, no_proxy=None)",
+          "oracle_errors": {
+            "src/requests/sessions.py:760": null,
+            "tests/test_utils.py:232": null,
+            "tests/test_utils.py:243": null,
+            "tests/test_utils.py:255": null,
+            "tests/test_utils.py:272": null
+          },
+          "named_sites": [],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/utils.py\n@@\n     if should_bypass_proxies(url, no_proxy=no_proxy):\n         return {}\n     else:\n-        return getproxies()\n+        proxies = getproxies()\n+        return proxies\n \n \n def select_proxy(url, proxies):\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py\n+++ b/<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py\n@@ -822,7 +822,8 @@\n     if should_bypass_proxies(url, no_proxy=no_proxy):\n         return {}\n     else:\n-        return getproxies()\n+        proxies = getproxies()\n+        return proxies\n \n \n def select_proxy(url, proxies):\n",
+            "files_modified": [
+              "<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get_environ_proxies-body-only/src/requests/utils.py"
+          }
+        },
+        {
+          "case": "requests-get-unsupported-attribute",
+          "repository": "requests",
+          "kind": "unsupported-attribute",
+          "callee": "src/requests/api.py:62",
+          "binding_scope": "module attribute outside precise binding scope",
+          "old_signature": "(url, params=None, **kwargs)",
+          "new_signature": "(*, url, params=None, **kwargs)",
+          "oracle_errors": {
+            "tests/test_lowlevel.py:59": "too many positional arguments",
+            "tests/test_lowlevel.py:123": "too many positional arguments",
+            "tests/test_lowlevel.py:181": "too many positional arguments",
+            "tests/test_lowlevel.py:231": "too many positional arguments",
+            "tests/test_lowlevel.py:268": "too many positional arguments",
+            "tests/test_lowlevel.py:299": "too many positional arguments",
+            "tests/test_lowlevel.py:332": null,
+            "tests/test_lowlevel.py:349": "too many positional arguments",
+            "tests/test_lowlevel.py:393": "too many positional arguments",
+            "tests/test_lowlevel.py:422": "too many positional arguments"
+          },
+          "named_sites": [
+            "tests/test_lowlevel.py:123",
+            "tests/test_lowlevel.py:181",
+            "tests/test_lowlevel.py:231",
+            "tests/test_lowlevel.py:268",
+            "tests/test_lowlevel.py:299",
+            "tests/test_lowlevel.py:349",
+            "tests/test_lowlevel.py:393",
+            "tests/test_lowlevel.py:422",
+            "tests/test_lowlevel.py:59"
+          ],
+          "patch_args": {
+            "mode": "patch",
+            "patch": "*** Begin Patch\n*** Update File: src/requests/api.py\n@@\n         return session.request(method=method, url=url, **kwargs)\n \n \n-def get(url, params=None, **kwargs):\n+def get(*, url, params=None, **kwargs):\n     r\"\"\"Sends a GET request.\n \n     :param url: URL for the new :class:`Request` object.\n*** End Patch"
+          },
+          "patch_result": {
+            "success": true,
+            "diff": "--- a/<scratch>/requests-get-unsupported-attribute/src/requests/api.py\n+++ b/<scratch>/requests-get-unsupported-attribute/src/requests/api.py\n@@ -59,7 +59,7 @@\n         return session.request(method=method, url=url, **kwargs)\n \n \n-def get(url, params=None, **kwargs):\n+def get(*, url, params=None, **kwargs):\n     r\"\"\"Sends a GET request.\n \n     :param url: URL for the new :class:`Request` object.\n",
+            "files_modified": [
+              "<scratch>/requests-get-unsupported-attribute/src/requests/api.py"
+            ],
+            "lint": {
+              "<scratch>/requests-get-unsupported-attribute/src/requests/api.py": {
+                "status": "ok",
+                "output": ""
+              }
+            },
+            "resolved_path": "<scratch>/requests-get-unsupported-attribute/src/requests/api.py",
+            "locus_drift_alert": "[Locus Signature Drift Alert]\nChanged or removed signatures still affect these workspace callers:\n- CRITICAL: `get` in `src/requests/api.py` (`def get(url, params = None, **kwargs)` -> `def get(*, url, params = None, **kwargs)`) — Signature of 'get' no longer accepts 9 external call site(s). Passes 1 positional arguments but accepts at most 0.\n  -> Update caller `tests/test_lowlevel.py:59` (`test_chunked_encoding_error`): passes 1 positional arguments but accepts at most 0\n  -> Update caller `tests/test_lowlevel.py:123` (`test_conflicting_content_lengths`): passes 1 positional arguments but accepts at most 0\n  -> Update caller `tests/test_lowlevel.py:181` (`test_digestauth_401_count_reset_on_redirect`): passes 1 positional arguments but accepts at most 0\n  -> Update caller `tests/test_lowlevel.py:231` (`test_digestauth_401_only_sent_once`): passes 1 positional arguments but accepts at most 0\n  -> Update caller `tests/test_lowlevel.py:268` (`test_digestauth_only_on_4xx`): passes 1 positional arguments but accepts at most 0\n  -> Update caller `tests/test_lowlevel.py:299` (`test_use_proxy_from_environment`): passes 1 positional arguments but accepts at most 0\n  -> Additional affected caller locations: `tests/test_lowlevel.py:349`, `tests/test_lowlevel.py:393`, `tests/test_lowlevel.py:422`\nInspect and update the affected call sites above before concluding your task."
+          }
+        }
+      ],
+      "supported_cases": {
+        "cases": 18,
+        "broken_cases": 9,
+        "fully_named_broken_cases": 9,
+        "compatible_cases": 9,
+        "compatible_warned_cases": 0,
+        "broken": 33,
+        "compatible": 33,
+        "named_broken": 33,
+        "missed_broken": 0,
+        "named_compatible": 0,
+        "unlabelled_named": 0
+      },
+      "all_cases": {
+        "cases": 19,
+        "broken_cases": 10,
+        "fully_named_broken_cases": 10,
+        "compatible_cases": 9,
+        "compatible_warned_cases": 0,
+        "broken": 42,
+        "compatible": 34,
+        "named_broken": 42,
+        "missed_broken": 0,
+        "named_compatible": 0,
+        "unlabelled_named": 0
+      }
+    }
+  }
+}

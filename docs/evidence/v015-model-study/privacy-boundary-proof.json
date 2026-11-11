@@ -1,0 +1,60 @@
+{
+  "actual_hermes_dispatch": true,
+  "network_or_credentials_used": false,
+  "cases": [
+    {
+      "case": "public-read",
+      "expected_blocked": false,
+      "blocked": false,
+      "private_marker_absent": true
+    },
+    {
+      "case": "parent-read",
+      "expected_blocked": true,
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "absolute-read",
+      "expected_blocked": true,
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "symlink-read",
+      "expected_blocked": true,
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "symlink-search",
+      "expected_blocked": true,
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "broad-search",
+      "expected_blocked": false,
+      "blocked": false,
+      "private_marker_absent": true
+    },
+    {
+      "case": "outside-write",
+      "expected_blocked": true,
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "mixed-patch",
+      "expected_blocked": true,
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "terminal",
+      "expected_blocked": true,
+      "blocked": true,
+      "private_marker_absent": true
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
-  "description": "Private v0.1.5 deterministic evidence. Historical evidence files are unchanged.",
+  "description": "Private v0.1.5 evidence. Historical evidence files are unchanged.",
   "model_study_frozen_snapshot_sha256": "0de949210326e6810aca269a7ca4f9c7cfd949cf0561213c6c52588fc03417e8",
-  "model_outcomes": "pending; no model outcome artifacts included here",
+  "model_outcomes": "Complete: 24 attempts retained, 23 completed and one privacy interruption. Eleven complete matched pairs: ten both pass, one warning-on-only pass, zero warning-off-only; selected four tasks, not a general success-rate estimate.",
   "artifacts": [
     {
       "file": "v015-signature-corpus.json",
@@ -248,9 +248,156 @@
       "packaged_sha256": "0a4951e3b346aa2e0318eaddda611b52a9d82fd8bc846ce9356c2f428a236e12",
       "redactions": [],
       "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v015-signature-corpus-release.json",
+      "source_file": "model-study-v015-20261111/signature-corpus-c622.json",
+      "original_sha256": "c4f9309c2c8e2e41f6ed7cd652e376e3de8b195984d01781ce6da72e00af45bb",
+      "packaged_sha256": "c4f9309c2c8e2e41f6ed7cd652e376e3de8b195984d01781ce6da72e00af45bb",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263"
+    },
+    {
+      "file": "v015-resolution-corpus-release.json",
+      "source_file": "model-study-v015-20261111/resolution-corpus-c622-rerun.json",
+      "original_sha256": "9ce418a104c0d007b02b674c9d217981689cca79f571147039b167d56bb19c97",
+      "packaged_sha256": "9ce418a104c0d007b02b674c9d217981689cca79f571147039b167d56bb19c97",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263"
+    },
+    {
+      "file": "v015-resolution-corpus-release-setup.json",
+      "source_file": "model-study-v015-20261111/resolution-corpus-c622.json",
+      "original_sha256": "6523af5e1958b1ea07b3cb3240d85d3b6e613b6c87ff855f28957362e771fa6d",
+      "packaged_sha256": "6523af5e1958b1ea07b3cb3240d85d3b6e613b6c87ff855f28957362e771fa6d",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
+      "scope": "Setup-only failed attempt; zero candidate cases executed"
+    },
+    {
+      "file": "v015-resolution-corpus-release-setup-error.txt",
+      "source_file": "model-study-v015-20261111/resolution-corpus-c622-setup-error.txt",
+      "original_sha256": "b19467145dff7dc35d552565c8ff4cf6ca00f2c2c2fc276dea2d5c6bc8896da4",
+      "packaged_sha256": "b19467145dff7dc35d552565c8ff4cf6ca00f2c2c2fc276dea2d5c6bc8896da4",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
+      "scope": "Setup-only failed attempt; zero candidate cases executed"
+    },
+    {
+      "file": "v015-performance-release.json",
+      "source_file": "evidence/performance-v015-release.json",
+      "original_sha256": "74647f87f63db560e6a0336b55a81d9de7cdd6d86d5ba5ef8338ab08c310a7ee",
+      "packaged_sha256": "74647f87f63db560e6a0336b55a81d9de7cdd6d86d5ba5ef8338ab08c310a7ee",
+      "redactions": []
+    },
+    {
+      "file": "v015-tests-evaluator-complete.txt",
+      "source_file": "evidence/tests-v015-evaluator-final2.log",
+      "original_sha256": "76538cc23d44750435e0cae2e479975d94bf5ddc5a26855771aa546ebec24d0c",
+      "packaged_sha256": "76538cc23d44750435e0cae2e479975d94bf5ddc5a26855771aa546ebec24d0c",
+      "redactions": []
+    },
+    {
+      "file": "v015-demo-selected-evidence.json",
+      "source_file": "media-v015/selected-evidence.json",
+      "original_sha256": "64212f1e748eb8cc89adfb8ff608ea3a135d7e4baba7ad548e1d50feb30b73fc",
+      "packaged_sha256": "64212f1e748eb8cc89adfb8ff608ea3a135d7e4baba7ad548e1d50feb30b73fc",
+      "redactions": []
+    },
+    {
+      "file": "v015-demo-qa.json",
+      "source_file": "media-v015/qa.json",
+      "original_sha256": "cca3d32795bd8243e2bb56684d4f9b237975257f741e536dbcc087aa93b5c5ad",
+      "packaged_sha256": "cca3d32795bd8243e2bb56684d4f9b237975257f741e536dbcc087aa93b5c5ad",
+      "redactions": []
+    },
+    {
+      "file": "v015-demo-storyboard.json",
+      "source_file": "media-v015/storyboard.json",
+      "original_sha256": "1377a862aaef2f169fd123af3fb2c0585f8e1f8d6590d8f13ffbfbda6459d508",
+      "packaged_sha256": "1377a862aaef2f169fd123af3fb2c0585f8e1f8d6590d8f13ffbfbda6459d508",
+      "redactions": []
+    },
+    {
+      "file": "v015-model-study/README.md",
+      "source": "Packaged model-study evidence",
+      "packaged_sha256": "02099af467b89ad73be9b181b139c9d2f70ac6b2c775a0a1f3677b628404c2b4",
+      "bytes": 5411,
+      "redactions": []
+    },
+    {
+      "file": "v015-model-study/analysis-final.json",
+      "source": "Packaged model-study evidence",
+      "packaged_sha256": "f1e77a04cabae04996d903efa01185a45468bb237e864d575d2bfbf428cef4cc",
+      "bytes": 21866,
+      "redactions": []
+    },
+    {
+      "file": "v015-model-study/checksum-manifest.json",
+      "source": "Packaged model-study evidence",
+      "packaged_sha256": "181e3ed7cdc13e36225de1a126e1ed28fa8ea6ead7b16e6479d33ddc2debcc5d",
+      "bytes": 109035,
+      "redactions": []
+    },
+    {
+      "file": "../../assets/locus-v015-proof.mp4",
+      "source": "Locally rendered replay of selected recorded controlled study session watchdog-2-warning-on",
+      "packaged_sha256": "bf8e4f3bd3d73d220e822c46994fd8cd4569c322af9f228bae6ddc4047eabde9",
+      "bytes": 1691079,
+      "redactions": []
+    },
+    {
+      "file": "../../assets/locus-v015-proof.srt",
+      "source": "Locally rendered replay of selected recorded controlled study session watchdog-2-warning-on",
+      "packaged_sha256": "fdd206abad3a6780812d3631da3d653aa4d5989536fe784ddea50c8a74489bf2",
+      "bytes": 717,
+      "redactions": []
+    },
+    {
+      "file": "../../assets/locus-v015-proof-poster.jpg",
+      "source": "Locally rendered replay of selected recorded controlled study session watchdog-2-warning-on",
+      "packaged_sha256": "0710c9abb88dc9dd3b9f83da969517c0579515218bbce5a4cac4f3a0b71cc117",
+      "bytes": 232005,
+      "redactions": []
+    },
+    {
+      "file": "v015-install-replay.json",
+      "source_file": "evidence/contest-v015-implementation-install-network-retry.json",
+      "original_sha256": "c35e7c75259c39feda41c76ac44a3712fcf0867d58fe3490657f8ee9e4c6042f",
+      "packaged_sha256": "c35e7c75259c39feda41c76ac44a3712fcf0867d58fe3490657f8ee9e4c6042f",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263"
+    },
+    {
+      "file": "v015-install-replay.txt",
+      "source_file": "evidence/contest-v015-implementation-install-network-retry.log",
+      "original_sha256": "0090511b8cc9370768cb88a9d9f9ebde446b44c8710c296a36301db1f1425350",
+      "packaged_sha256": "0090511b8cc9370768cb88a9d9f9ebde446b44c8710c296a36301db1f1425350",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263"
+    },
+    {
+      "file": "v015-install-environment-failure.json",
+      "source_file": "evidence/contest-v015-implementation-install.json",
+      "original_sha256": "9ba17330782fd087bbb0de5542f419828817c4d984780dac53a246aab650ad2e",
+      "packaged_sha256": "9ba17330782fd087bbb0de5542f419828817c4d984780dac53a246aab650ad2e",
+      "redactions": [],
+      "candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+      "candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
+      "scope": "Environment-only installation failure: sandbox DNS blocked a Hermes runtime dependency download; no replay steps executed"
     }
   ],
   "frozen_corpus_engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
   "current_candidate_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
-  "postfreeze_note": "The current candidate preserves established warnings through caller confidence loss and skipped or unparseable source, exposes persistent stale coverage, and bounds source excerpts. The model study retains its original engine and snapshot. Full deterministic corpus reruns for the final candidate remain pending."
+  "postfreeze_note": "The current candidate preserves established warnings through caller confidence loss and skipped or unparseable source, exposes persistent stale coverage, and bounds source excerpts. Final deterministic corpus reruns are complete on c622/e71824. The model study retains its original efbf401 engine and snapshot; earlier corpus outputs and the setup-only failed final rerun are preserved separately.",
+  "current_corpus_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
+  "current_candidate_commit": "e71824bc12d6cde8951d95c8545ad6eda4ca1263",
+  "model_study_package": "v015-model-study/checksum-manifest.json",
+  "current_performance_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
 }

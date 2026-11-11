@@ -29,6 +29,8 @@ class EvaluationProtocolTests(unittest.TestCase):
         self.assertEqual(result["all_recorded_usage"]["sessions_with_token_accounting"], 3)
         self.assertEqual(result["all_recorded_usage"]["reported_tokens"]["total"], 300)
         self.assertIsNone(result["all_recorded_usage"]["trace_reported_cost_fields"])
+        self.assertEqual(result["paired_resource_comparisons"]["tokens_total"],
+                         {"paired_observations": 1, "lower_on": 0, "same": 1, "higher_on": 0})
 
     def test_file_boundary_blocks_private_paths_and_symlink_escapes(self):
         with tempfile.TemporaryDirectory() as temporary:

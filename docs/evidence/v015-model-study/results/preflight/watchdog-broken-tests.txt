@@ -1,0 +1,30 @@
+............F.....FFFF....                                               [100%]
+=================================== FAILURES ===================================
+________ test_lifecycle_event_does_not_restart_first_progress_deadline _________
+tests/agent/test_codex_ttfb_watchdog.py:335: in test_lifecycle_event_does_not_restart_first_progress_deadline
+    deadline = wn.codex_watchdog_deadline(
+E   TypeError: codex_watchdog_deadline() got an unexpected keyword argument 'stale_timeout'. Did you mean 'idle_timeout'?
+___ test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite[inf] ____
+tests/agent/test_codex_ttfb_watchdog.py:458: in test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite
+    recovery = wn.codex_watchdog_deadline(
+E   TypeError: codex_watchdog_deadline() got an unexpected keyword argument 'stale_timeout'. Did you mean 'idle_timeout'?
+___ test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite[-inf] ___
+tests/agent/test_codex_ttfb_watchdog.py:458: in test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite
+    recovery = wn.codex_watchdog_deadline(
+E   TypeError: codex_watchdog_deadline() got an unexpected keyword argument 'stale_timeout'. Did you mean 'idle_timeout'?
+___ test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite[nan] ____
+tests/agent/test_codex_ttfb_watchdog.py:458: in test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite
+    recovery = wn.codex_watchdog_deadline(
+E   TypeError: codex_watchdog_deadline() got an unexpected keyword argument 'stale_timeout'. Did you mean 'idle_timeout'?
+______________ test_moa_heartbeat_survives_infinite_stale_timeout ______________
+tests/agent/test_codex_ttfb_watchdog.py:529: in test_moa_heartbeat_survives_infinite_stale_timeout
+    assert len(notices) == 1
+E   assert 0 == 1
+E    +  where 0 = len([])
+=========================== short test summary info ============================
+FAILED tests/agent/test_codex_ttfb_watchdog.py::test_lifecycle_event_does_not_restart_first_progress_deadline
+FAILED tests/agent/test_codex_ttfb_watchdog.py::test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite[inf]
+FAILED tests/agent/test_codex_ttfb_watchdog.py::test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite[-inf]
+FAILED tests/agent/test_codex_ttfb_watchdog.py::test_wait_notice_omits_reconnect_when_all_deadlines_are_non_finite[nan]
+FAILED tests/agent/test_codex_ttfb_watchdog.py::test_moa_heartbeat_survives_infinite_stale_timeout
+5 failed, 21 passed in 26.56s

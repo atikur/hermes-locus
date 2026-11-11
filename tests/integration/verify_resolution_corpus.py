@@ -256,6 +256,7 @@ def main():
         root = Path(scratch)
         home = root / "home"
         install = home / "plugins/locus-codegraph"
+        install.parent.mkdir(parents=True, exist_ok=True)
         if args.plugin_snapshot:
             shutil.copytree(args.plugin_snapshot, install)
         elif args.plugin_ref == "WORKTREE":

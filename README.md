@@ -4,9 +4,11 @@
 
 **Locus Codegraph puts precise caller feedback inside Hermes's edit results.** When a supported Python signature change breaks an indexed caller, the agent receives the caller's file and line, the binding error, and a repair suggestion where one can be checked. A local repository graph also powers agent tools, `@` context references, the Web Dashboard, and Hermes Desktop.
 
-[Watch the v0.1.4 Hermes demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) · [Read the live trace](docs/verification.md#live-keyword-refactor-on-hermes-agent) · [Current v0.1.5 verification status](docs/verification.md#version-015-candidate)
+[Watch the 60-second study replay](assets/locus-v015-proof.mp4) · [Captions](assets/locus-v015-proof.srt) · [Current native UI proof](docs/evidence/v015-native-stale-verification.md) · [Verification](docs/verification.md#version-015-candidate)
 
-Version **0.1.5 is a private release candidate**. It extends Python resolution to supported module imports, import aliases, and static re-exports; makes the caller inbox actionable; and exposes incomplete scans throughout reports. Current deterministic results are below; linked videos document previous versions. The candidate model study and native Desktop flow have separate verification status.
+The video replays one recorded controlled `efbf401` study session: a pre-applied helper edit, model-requested caller repairs, then independent evaluator tests. It is an evidence replay, not a live UI recording or a typical-success claim. [Trace and media provenance](docs/evidence/v015-demo-selected-evidence.json).
+
+Version **0.1.5 is a private release candidate**. It extends Python resolution to supported module imports, import aliases, and static re-exports; makes the caller inbox actionable; and exposes incomplete scans throughout reports. Current deterministic results are below; video and model-study evidence use the earlier frozen engine. The completed paired model study, final-engine corpus reruns, and native Desktop checks have separate provenance.
 
 The analysis engine uses Python's standard library (`ast`, `sqlite3`, and structural parsers). It needs no API key, hosted index, or extra model call. Hermes supplies the web and desktop integration libraries.
 
@@ -29,9 +31,11 @@ Suppose checkout code calls `verify_token(token, audience="checkout")`, and an A
 
 Locus supplies the evidence and the agent performs the repair. The warning above is abbreviated for illustration.
 
-In a recorded v0.1.4 refactor on Hermes Agent's own code, Locus named all five affected call sites in the result of the first edit, before Hermes searched for callers. Hermes confirmed the locations, repaired the calls, and passed all 26 upstream display tests. [Live evidence and replay](docs/verification.md#live-keyword-refactor-on-hermes-agent)
+In a recorded v0.1.4 refactor on Hermes Agent's own code, Locus named all five affected call sites in the result of the first edit, before Hermes searched for callers. Hermes confirmed the locations, repaired the calls, and passed all 26 upstream display tests. [Historical live evidence and replay](docs/verification.md#live-keyword-refactor-on-hermes-agent)
 
-Across 19 selected edits from Hermes Agent, HTTPX, and Requests, the frozen v0.1.5 engine named **42 of 42 incompatible call instances**, including the module-qualified Requests case, and none of 34 compatible instances. A separate 12-case real-source corpus named **22 of 24** incompatible instances: all 22 cross-file calls, with two same-file misses. It named none of 28 compatible instances. These targeted checks measure call binding, not repository-wide accuracy or improved agent success. [Current results and raw evidence](docs/verification.md#version-015-candidate); [preserved v0.1.4 comparison](docs/verification.md#signature-changes-across-three-repositories).
+Across 19 selected edits from Hermes Agent, HTTPX, and Requests, the final v0.1.5 engine named **42 of 42 incompatible call instances**, including the module-qualified Requests case, and none of 34 compatible instances. A separate 12-case real-source corpus named **22 of 24** incompatible instances: all 22 cross-file calls, with two same-file misses. It named none of 28 compatible instances. These targeted checks measure call binding, not repository-wide accuracy or improved agent success. [Current results and raw evidence](docs/verification.md#version-015-candidate); [preserved v0.1.4 comparison](docs/verification.md#signature-changes-across-three-repositories).
+
+Across **11 complete pairs on four selected refactor tasks**, warning feedback used **32 searches versus 67**; independent checks passed **11/11 with warnings and 10/11 without**. This study used frozen engine `efbf401`; one privacy interruption was excluded from the paired comparison. [All 24 attempts, protocol, and limits](docs/verification.md#paired-model-study-on-the-frozen-engine).
 
 ## Install
 
@@ -194,13 +198,13 @@ hermes plugins doctor . --ci
 
 See [the submission runbook](docs/submission.md) for the real-session demonstration and evidence checklist.
 
-In one v0.1.5 trial, a full 17,025-file index took 73.65 seconds from a fresh database and 2.72 seconds cached. A real Hermes one-file patch with caller feedback took 9.42 seconds; a three-file repair took 5.88 seconds. These include host work and are not isolated plugin overhead. The scan used a raised 20,000-file cap. [Exact snapshot, method, limits, and historical measurements](docs/performance.md).
+In one final-engine v0.1.5 trial, a full 17,025-file index took 65.50 seconds from a fresh database and 1.98 seconds cached. A real Hermes one-file patch with caller feedback took 6.76 seconds; a three-file repair took 6.51 seconds. These include host work and are not isolated plugin overhead. The scan used a raised 20,000-file cap. [Exact snapshot, method, limits, and historical measurements](docs/performance.md).
 
 ## Verified behavior
 
 Current local evidence records **123 passing Python checks in Hermes, 10 UI contract checks, and 7 evaluator-validity checks**. Minimum-version Python 3.10.22 passes 120 checks with 3 Hermes-runtime-only skips. Actual Web and native Desktop workflows passed on a synthetic fixture, including a [final-engine stale-source follow-up](docs/evidence/v015-native-stale-verification.md).
 
-The [verification record](docs/verification.md#version-015-candidate) separates current confidence-preservation and stale-source fixes from the frozen corpus/model snapshot. Previously indexed files that can no longer be scanned retain explicit stale coverage and affected caller evidence marked **Needs verification**. Full corpus reruns for the final engine are pending. The planned 24-session model study continues on its original snapshot; no aggregate outcome or success-rate improvement is claimed before it completes.
+The [verification record](docs/verification.md#version-015-candidate) separates current confidence-preservation and stale-source fixes from the frozen corpus/model snapshot. Previously indexed files that can no longer be scanned retain explicit stale coverage and affected caller evidence marked **Needs verification**. Final-engine corpus reruns are complete. In the earlier frozen-engine model study, 11 complete pairs produced 10 both-pass outcomes and one warning-on-only pass. Across those pairs, warning-on used 112 file-tool calls versus 169 without the warning. All 24 attempts are preserved, including one privacy interruption excluded from comparison. This four-task study does not establish a general success-rate improvement. [Paired results and limits](docs/verification.md#paired-model-study-on-the-frozen-engine).
 
 [Watch the earlier 77-second model session](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4) · [Download its captions](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.srt)
 

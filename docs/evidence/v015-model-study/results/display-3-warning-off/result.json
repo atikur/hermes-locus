@@ -1,0 +1,106 @@
+{
+  "task": "display",
+  "repeat": 3,
+  "warning_enabled": false,
+  "pass": true,
+  "cli_exit": 0,
+  "model_exit": 0,
+  "tokens": {
+    "input": 72845,
+    "output": 1683,
+    "total": 74528,
+    "cache_read": 58112,
+    "cache_write": 0
+  },
+  "reported_cost_fields": {},
+  "model_duration_ms": 97776,
+  "first_patch_ok": true,
+  "first_patch_files": [
+    "<workspace>/agent/display.py"
+  ],
+  "first_patch_helper_only": true,
+  "first_patch_alert_sites": [],
+  "outside_helper_lookups_before_first_patch": 0,
+  "tool_calls": 14,
+  "search_calls": 5,
+  "read_calls": 4,
+  "edit_calls": 5,
+  "helper_edit_replayed_before_model": true,
+  "changed_files": [
+    "agent/display.py",
+    "gateway/platforms/base.py",
+    "gateway/run_turn_progress.py",
+    "tests/agent/test_display.py"
+  ],
+  "expected_files_only": true,
+  "unexpected_files": [],
+  "changed_file_fingerprints": {
+    "agent/display.py": {
+      "before": [
+        false,
+        "7fc2ae84b600cc7da7359a7a578ae5f4ca278fcc519c51911995f99e81969424"
+      ],
+      "after": [
+        false,
+        "232d78e63f7159a103c09bd0cea085a772a95557e45cdcc1c648e3b0612a4c26"
+      ]
+    },
+    "gateway/platforms/base.py": {
+      "before": [
+        false,
+        "a6f7a2e86c17d3a99d899742f64b7c04d8103cf1dc1c8120985365b47f96825b"
+      ],
+      "after": [
+        false,
+        "ba4464d5b2a630b947b9097621bb9676f6680a46d5ba34c041ed583aecf8115d"
+      ]
+    },
+    "gateway/run_turn_progress.py": {
+      "before": [
+        false,
+        "39867955503b7e1fd7259969d877c42ba821bdb4c2c3d2f7141155008df48be5"
+      ],
+      "after": [
+        false,
+        "f6c0098db657157420d8b920ff2ce280f0cd8cc206f4253f8222eb28b039dcaf"
+      ]
+    },
+    "tests/agent/test_display.py": {
+      "before": [
+        false,
+        "9514e45ada4b5e6708fe1feaa74121c67c780ba74cf03b5181cd89466fa24ed9"
+      ],
+      "after": [
+        false,
+        "71bc64b79800466b238c06973f2eb5b45cce57c9690cf51fe94a2d7e3ffa4d4f"
+      ]
+    }
+  },
+  "helper_signature_ok": true,
+  "helper_rename_ok": true,
+  "verified_caller_sites": [
+    "gateway/platforms/base.py:2014",
+    "gateway/run_turn_progress.py:375",
+    "tests/agent/test_display.py:142",
+    "tests/agent/test_display.py:155",
+    "tests/agent/test_display.py:164"
+  ],
+  "expected_caller_sites": [
+    "gateway/platforms/base.py:2014",
+    "gateway/run_turn_progress.py:375",
+    "tests/agent/test_display.py:142",
+    "tests/agent/test_display.py:155",
+    "tests/agent/test_display.py:164"
+  ],
+  "repaired_call_binding_errors": {
+    "gateway/platforms/base.py:2014": null,
+    "gateway/run_turn_progress.py:375": null,
+    "tests/agent/test_display.py:142": null,
+    "tests/agent/test_display.py:155": null,
+    "tests/agent/test_display.py:164": null
+  },
+  "source_file_count_compared": 24306,
+  "test_exit": 0,
+  "test_summary": "26 passed in 0.27s",
+  "trace_sha256": "d7943ce811c14a91aa3bc7ebaaaf6a05360868df4128d69e5fcee5f20d00e635"
+}

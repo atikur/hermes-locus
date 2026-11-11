@@ -1,0 +1,9 @@
+Installed and enabled Locus at e71824bc12d6cde8951d95c8545ad6eda4ca1263
+upstream tests before the edit 26 passed in 0.25s
+alerts before the edit
+rename the required keyword
+alerts after the rename
+upstream tests with broken callers 3 failed, 23 passed in 0.25s
+repair all five callers
+alerts after repair
+upstream tests after repair 26 passed in 0.23s

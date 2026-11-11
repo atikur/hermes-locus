@@ -1,0 +1,93 @@
+{
+  "task": "watchdog",
+  "repeat": 1,
+  "warning_enabled": true,
+  "pass": true,
+  "cli_exit": 0,
+  "model_exit": 0,
+  "tokens": {
+    "input": 64799,
+    "output": 1406,
+    "total": 66205,
+    "cache_read": 50816,
+    "cache_write": 0
+  },
+  "reported_cost_fields": {},
+  "model_duration_ms": 45649,
+  "first_patch_ok": true,
+  "first_patch_files": [
+    "<workspace>/agent/chat_completion_wait_notice.py"
+  ],
+  "first_patch_helper_only": true,
+  "first_patch_alert_sites": [
+    "agent/chat_completion_nonstream.py:168",
+    "tests/agent/test_codex_ttfb_watchdog.py:335",
+    "tests/agent/test_codex_ttfb_watchdog.py:458"
+  ],
+  "outside_helper_lookups_before_first_patch": 0,
+  "tool_calls": 7,
+  "search_calls": 2,
+  "read_calls": 2,
+  "edit_calls": 3,
+  "helper_edit_replayed_before_model": true,
+  "changed_files": [
+    "agent/chat_completion_nonstream.py",
+    "agent/chat_completion_wait_notice.py",
+    "tests/agent/test_codex_ttfb_watchdog.py"
+  ],
+  "expected_files_only": true,
+  "unexpected_files": [],
+  "changed_file_fingerprints": {
+    "agent/chat_completion_nonstream.py": {
+      "before": [
+        false,
+        "34d4afad0a0c7228a0518eed4a2521ba1a340f509c83784c74abceb56f1becb7"
+      ],
+      "after": [
+        false,
+        "7b04f17fb08184d30234f3861a8d21a67627789e958a1cca70a4fa7c260d81c6"
+      ]
+    },
+    "agent/chat_completion_wait_notice.py": {
+      "before": [
+        false,
+        "26aa4d603687f365729e4d8108efda7be627ea5482fa10c56f225c2a6cbc8c84"
+      ],
+      "after": [
+        false,
+        "09063ed06d6f95fc25878859b00f39d4690f1ce1b7737a5266478afb8d9f5937"
+      ]
+    },
+    "tests/agent/test_codex_ttfb_watchdog.py": {
+      "before": [
+        false,
+        "eb91abc5498264e88543d443680a76f1e871fea50654fb53efec3e43243b4942"
+      ],
+      "after": [
+        false,
+        "c93f19468161d215dc2a6910f3cfc46c2ec4e7783439503911aa64f527b2d7e0"
+      ]
+    }
+  },
+  "helper_signature_ok": true,
+  "helper_rename_ok": true,
+  "verified_caller_sites": [
+    "agent/chat_completion_nonstream.py:168",
+    "tests/agent/test_codex_ttfb_watchdog.py:335",
+    "tests/agent/test_codex_ttfb_watchdog.py:458"
+  ],
+  "expected_caller_sites": [
+    "agent/chat_completion_nonstream.py:168",
+    "tests/agent/test_codex_ttfb_watchdog.py:335",
+    "tests/agent/test_codex_ttfb_watchdog.py:458"
+  ],
+  "repaired_call_binding_errors": {
+    "agent/chat_completion_nonstream.py:168": null,
+    "tests/agent/test_codex_ttfb_watchdog.py:335": null,
+    "tests/agent/test_codex_ttfb_watchdog.py:458": null
+  },
+  "source_file_count_compared": 24306,
+  "test_exit": 0,
+  "test_summary": "26 passed in 26.30s",
+  "trace_sha256": "f462c839e625d1b3cbb476945a1d1d673404d41eefd6ac55e7317ff222c2cdf8"
+}

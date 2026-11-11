@@ -2,9 +2,11 @@
 
 **Locus Codegraph puts precise caller feedback inside Hermes's edit results.**
 
-[Current evidence](verification.md#version-015-candidate) · [Actual Desktop/Web checks](evidence/v015-native-verification.md) · [Historical v0.1.4 demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-live-keyword-refactor.mp4) · [Installation](../README.md#install)
+[60-second recorded-study replay](../assets/locus-v015-proof.mp4) · [Current evidence](verification.md#version-015-candidate) · [Actual final-engine Desktop/Web checks](evidence/v015-native-stale-verification.md) · [Installation](../README.md#install)
 
-**Private v0.1.5 draft; not submitted.** The 24-session model study is in progress.
+The replay shows one selected controlled `efbf401` study session with a pre-applied helper edit and independently run tests; it is not a live UI capture, final-engine run, or typical-success estimate. [Media provenance](evidence/v015-demo-selected-evidence.json).
+
+**Private v0.1.5 draft; not submitted.** Final-engine corpus reruns and the paired model study are complete; their snapshots and limits are distinguished below.
 
 A Python keyword rename can break a caller without changing the number of
 arguments. Locus checks supported cross-file bindings after an edit and puts
@@ -16,7 +18,7 @@ One local index also powers four agent tools, `@sym:` / `@impact:` references,
 and a caller inbox in Web and Desktop. Its Python standard-library engine needs
 no hosted index, API key, or extra model call.
 
-The frozen v0.1.5 corpus named **42/42 incompatible call instances and 0/34
+The final v0.1.5 corpus named **42/42 incompatible call instances and 0/34
 compatible instances** across 19 selected Hermes, HTTPX, and Requests edits.
 An additional real-source corpus found **22/24**, with both misses explicitly
 retained as same-file calls. Actual Desktop and Web checks exercised eight
@@ -61,7 +63,7 @@ context are visible to the model configured by the user.
 
 ## Current deterministic evidence
 
-The frozen v0.1.5 engine named 42 of 42 incompatible call instances in the
+The final v0.1.5 engine named 42 of 42 incompatible call instances in the
 19-edit Hermes/HTTPX/Requests corpus and none of 34 compatible instances.
 An additional 12-case real-source corpus named 22 of 24 incompatible instances
 and none of 28 compatible instances. All 22 external calls were found; the two
@@ -74,18 +76,22 @@ not a representative accuracy or agent-success benchmark.
 The final candidate's local suite records 123 passing Python checks in Hermes, 10 UI contract
 checks, and 7 evaluator-validity checks. On the minimum supported Python 3.10.22,
 120 checks passed and 3 Hermes-runtime-only checks were skipped. A full 17,025-file performance trial
-took 73.65 seconds for a fresh index and 2.72 seconds cached; real edit/repair
-dispatches took 9.42 and 5.88 seconds, including host work. The performance
-snapshot precedes the report-count, caller-confidence, and stale-source corrections and was
-measured once.
+took 65.50 seconds for a fresh index and 1.98 seconds cached; real edit/repair
+dispatches took 6.76 and 6.51 seconds, including host work. This single observation
+used exact checkpoint `e71824bc` and the final `c622b20c` engine; it does not
+isolate plugin overhead or establish a general speedup.
 [Method and raw measurements](performance.md).
+A [fresh exact-commit local Git installation](evidence/v015-install-replay.json)
+also reproduced five caller warnings, three failing upstream tests after the
+edit, and all 26 tests passing with zero alerts after repair. The initial
+dependency-download failure is preserved separately as an environment failure.
 
 The final candidate also preserves an established caller warning if subsequent
 edits make its binding uncertain or a previously indexed source becomes
 unavailable to the scanner. Stale sources remain explicit **Needs verification**
 evidence rather than proving a repair. These fixes have separate regression
-evidence and postdate the frozen corpus/model engine; full corpus reruns
-for the final candidate remain pending. Actual Web and Desktop checks exercised all eight fixture
+evidence and postdate the frozen model-study engine; final-candidate corpus
+reruns reproduced the counts above. Actual Web and Desktop checks exercised all eight fixture
 callers, a complete unsent repair draft, keyboard navigation, persisted parse
 warnings, automatic clearance after repair and passing tests, and dismissal
 while the underlying code remained broken. [Observed interaction record](evidence/v015-native-verification.md).
@@ -93,9 +99,15 @@ A [separate final-engine follow-up](evidence/v015-native-stale-verification.md)
 verified persistent oversized-source warnings, retained caller evidence, a
 successful recheck that kept still-broken callers open, and cleanup with passing tests.
 
-The 24-session paired model study is in progress. Its results will describe
-the executed frozen snapshot and all observed outcomes; no aggregate improvement
-is claimed before completion.
+The completed `gpt-5.4-mini` study preserved 24 attempts on four selected tasks
+with three repeats: 23 completed and one privacy interruption. The 11 complete
+pairs produced ten both-pass outcomes, one warning-on-only pass, and no
+warning-off-only pass. Across those same pairs, warning-on used 112 file-tool calls
+versus 169, including 32 versus 67 searches; trace-reported tokens were 824,364
+versus 1,529,667, including cached input. Interrupted pairs are excluded, and
+missing usage is unknown. These descriptive results use the earlier frozen
+`efbf401` engine and do not establish general success-rate or cost improvements.
+[Full outcomes, protocol amendment, traces, and limits](verification.md#paired-model-study-on-the-frozen-engine).
 
 ## Historical v0.1.4 live keyword refactor
 

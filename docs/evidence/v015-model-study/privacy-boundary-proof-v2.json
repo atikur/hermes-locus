@@ -1,0 +1,47 @@
+{
+  "actual_hermes_dispatch": true,
+  "network_or_credentials_used": false,
+  "guard_sha256": "df1be58a0e5d44ef8ee2c5c0e41687a36b7903d2a3000eab9a33488b89a47ee4",
+  "cases": [
+    {
+      "case": "space-outside",
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "comma-outside",
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "space-parent",
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "comma-parent",
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "public-space",
+      "blocked": false,
+      "private_marker_absent": true
+    },
+    {
+      "case": "public-comma",
+      "blocked": false,
+      "private_marker_absent": true
+    },
+    {
+      "case": "lenient-mixed-patch",
+      "blocked": true,
+      "private_marker_absent": true
+    },
+    {
+      "case": "move-escape",
+      "blocked": true,
+      "private_marker_absent": true
+    }
+  ]
+}

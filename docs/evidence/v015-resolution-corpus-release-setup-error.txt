@@ -1,0 +1,13 @@
+The first final-commit expanded-corpus attempt stopped before any candidate case ran.
+Candidate commit: e71824bc12d6cde8951d95c8545ad6eda4ca1263
+Expected engine: c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c
+
+Traceback summary:
+  verify_resolution_corpus.py main(), extract_commit(plugin_repo, args.plugin_ref, install)
+  verify_hermes_refactor.py extract_commit(), target.mkdir()
+FileNotFoundError: parent home/plugins did not exist for the archived Git-ref branch.
+
+The original resolution-corpus-c622.json declaration is preserved unchanged.
+Harness-only fix: create install.parent with parents=True before branch selection.
+The identical declared37 cases rerun in resolution-corpus-c622-rerun.json.
+No candidate engine, labels, checks or model protocol changed.

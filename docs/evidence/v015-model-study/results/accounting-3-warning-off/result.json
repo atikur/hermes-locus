@@ -1,0 +1,54 @@
+{
+  "task": "accounting",
+  "repeat": 3,
+  "warning_enabled": false,
+  "pass": false,
+  "cli_exit": -15,
+  "model_exit": null,
+  "tokens": null,
+  "reported_cost_fields": {},
+  "model_duration_ms": null,
+  "first_patch_ok": true,
+  "first_patch_files": [
+    "<workspace>/agent/aux_accounting.py"
+  ],
+  "first_patch_helper_only": true,
+  "first_patch_alert_sites": [],
+  "outside_helper_lookups_before_first_patch": 0,
+  "tool_calls": 0,
+  "search_calls": 0,
+  "read_calls": 0,
+  "edit_calls": 0,
+  "helper_edit_replayed_before_model": true,
+  "changed_files": [
+    "agent/aux_accounting.py"
+  ],
+  "expected_files_only": false,
+  "unexpected_files": [],
+  "changed_file_fingerprints": {
+    "agent/aux_accounting.py": {
+      "before": [
+        false,
+        "162711ae15f31d1562a5a76a3f7f82840d8b92ccfcde834ee759404e407c2e83"
+      ],
+      "after": [
+        false,
+        "76ccf6cca106c9025ca2c4366199be76a006c7cd2b016fa339e64e2c0a15831d"
+      ]
+    }
+  },
+  "helper_signature_ok": true,
+  "helper_rename_ok": true,
+  "verified_caller_sites": [],
+  "expected_caller_sites": [
+    "agent/auxiliary_client.py:6647",
+    "plugins/image_gen/_common.py:270",
+    "tests/hermes_state/test_aux_usage_accounting.py:199"
+  ],
+  "repaired_call_binding_errors": {},
+  "source_file_count_compared": 24306,
+  "test_exit": 1,
+  "test_summary": "2 failed, 9 passed in 2.16s",
+  "trace_sha256": "e39df0ee6ae9a797574a5e67cce6b7359c81c2aacdb59d8c5720caa5915c8b89",
+  "provider_infrastructure_error": "session_timeout_or_incomplete_exit"
+}

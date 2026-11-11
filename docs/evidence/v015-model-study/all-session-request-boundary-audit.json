@@ -1,0 +1,302 @@
+{
+  "workspace_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+  "reconstructed_baseline_sha256": "aa72818823e75a574dfbc9db447baa42f996303b7420ab90cf7f11967e109d63",
+  "matches_preregistered_baseline": true,
+  "guard_sha256": "df1be58a0e5d44ef8ee2c5c0e41687a36b7903d2a3000eab9a33488b89a47ee4",
+  "attempts": 24,
+  "model_tool_requests_audited": 287,
+  "all_requests_allowed_by_stricter_guard": true,
+  "outside_root_tool_requests": [],
+  "boundary_denials": [],
+  "all_source_audits_have_no_unexpected_files": true,
+  "credential_or_model_calls_used_for_audit": false,
+  "rows": [
+    {
+      "run": "accounting-1-warning-off",
+      "tool_calls_audited": 16,
+      "tools": {
+        "search_files": 5,
+        "read_file": 7,
+        "patch": 4
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "cc0330c6ecd4a70824d4666416cc2993ceec6b5a60e6dff48be848de1a317e9d"
+    },
+    {
+      "run": "accounting-1-warning-on",
+      "tool_calls_audited": 11,
+      "tools": {
+        "read_file": 4,
+        "patch": 3,
+        "search_files": 4
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "cba5c1888c2a8f9df66f6069d7ea0d2d747dffddda7cfb63aa0b0fc772a55651"
+    },
+    {
+      "run": "accounting-2-warning-off",
+      "tool_calls_audited": 12,
+      "tools": {
+        "read_file": 5,
+        "search_files": 4,
+        "patch": 3
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "5e108669735420bd5379ec4aea55c57f4a11327ba282b4a1768adf722e8cb746"
+    },
+    {
+      "run": "accounting-2-warning-on",
+      "tool_calls_audited": 11,
+      "tools": {
+        "read_file": 4,
+        "patch": 3,
+        "search_files": 4
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "0af9d518fb890712256a7b3c9d059fc0ffcec7a6bd6fe40093a255a753c5e776"
+    },
+    {
+      "run": "accounting-3-warning-off",
+      "tool_calls_audited": 0,
+      "tools": {},
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "e39df0ee6ae9a797574a5e67cce6b7359c81c2aacdb59d8c5720caa5915c8b89"
+    },
+    {
+      "run": "accounting-3-warning-on",
+      "tool_calls_audited": 6,
+      "tools": {
+        "read_file": 3,
+        "patch": 3
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "23078a551bbb865a6a616eb2b34f09f8ea4f31118f0c6bb07562086f99bb9e3f"
+    },
+    {
+      "run": "display-1-warning-off",
+      "tool_calls_audited": 16,
+      "tools": {
+        "search_files": 7,
+        "read_file": 4,
+        "patch": 5
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "734dafca8bcb2e91de6fd90d5aa3049975cad853b8f6bb2855008f0dcbb77193"
+    },
+    {
+      "run": "display-1-warning-on",
+      "tool_calls_audited": 10,
+      "tools": {
+        "read_file": 3,
+        "patch": 5,
+        "search_files": 2
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "b75571c20b99e8d509392b478dd2f2d6656fa1d04d023c9b5953e058b2bba7a5"
+    },
+    {
+      "run": "display-2-warning-off",
+      "tool_calls_audited": 24,
+      "tools": {
+        "search_files": 11,
+        "read_file": 8,
+        "patch": 5
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "18f748f653424f82b6b3e3e376cc647d50f089bfad70dca7621a06bc2208601a"
+    },
+    {
+      "run": "display-2-warning-on",
+      "tool_calls_audited": 13,
+      "tools": {
+        "read_file": 4,
+        "patch": 5,
+        "search_files": 4
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "bf858ac5a57900f9ffed98ff6a93221b1573dcd7da07229d6fca31f410fe01f4"
+    },
+    {
+      "run": "display-3-warning-off",
+      "tool_calls_audited": 14,
+      "tools": {
+        "read_file": 4,
+        "search_files": 5,
+        "patch": 5
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "d7943ce811c14a91aa3bc7ebaaaf6a05360868df4128d69e5fcee5f20d00e635"
+    },
+    {
+      "run": "display-3-warning-on",
+      "tool_calls_audited": 11,
+      "tools": {
+        "read_file": 4,
+        "patch": 5,
+        "search_files": 2
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "c3f959ea6de9fff998e5f55bcb95f9fdda5a7a2a32d76eed2861a5017b06a078"
+    },
+    {
+      "run": "replay-1-warning-off",
+      "tool_calls_audited": 19,
+      "tools": {
+        "search_files": 8,
+        "read_file": 6,
+        "patch": 5
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "dd7c01104c6695816609ecbb89122c6edf1091fa376b33433eb749adf09e63f3"
+    },
+    {
+      "run": "replay-1-warning-on",
+      "tool_calls_audited": 14,
+      "tools": {
+        "read_file": 5,
+        "search_files": 4,
+        "patch": 5
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "eecfcc026e169656db4755bf9bba390b0c523f8709f16adb6dd93674beeb830d"
+    },
+    {
+      "run": "replay-2-warning-off",
+      "tool_calls_audited": 17,
+      "tools": {
+        "search_files": 6,
+        "read_file": 6,
+        "patch": 5
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "207e4595f69616dc9c0e9bc787de8aea274d4189364c1a3a8962d4f813051f89"
+    },
+    {
+      "run": "replay-2-warning-on",
+      "tool_calls_audited": 9,
+      "tools": {
+        "read_file": 2,
+        "search_files": 2,
+        "patch": 5
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "a5d380459aa2490d84b33063595a60e0e6d9fe35164ff23962c5a30b7b55c89c"
+    },
+    {
+      "run": "replay-3-warning-off",
+      "tool_calls_audited": 15,
+      "tools": {
+        "search_files": 5,
+        "read_file": 5,
+        "patch": 5
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "d7b53ec2eb662a40c978cbaeb9668bb33e70e7366afd5b59bf548f3521fc6357"
+    },
+    {
+      "run": "replay-3-warning-on",
+      "tool_calls_audited": 11,
+      "tools": {
+        "read_file": 2,
+        "search_files": 4,
+        "patch": 5
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "9879f1f23e4566b733db60e4da3e59e30a902a68f83830b0d24b461a945af257"
+    },
+    {
+      "run": "watchdog-1-warning-off",
+      "tool_calls_audited": 11,
+      "tools": {
+        "read_file": 3,
+        "search_files": 5,
+        "patch": 3
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "0d05eed64d27d6591c03046c64a942c1fa3d00e7109906a6eb1afb16a7168b75"
+    },
+    {
+      "run": "watchdog-1-warning-on",
+      "tool_calls_audited": 7,
+      "tools": {
+        "read_file": 2,
+        "search_files": 2,
+        "patch": 3
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "f462c839e625d1b3cbb476945a1d1d673404d41eefd6ac55e7317ff222c2cdf8"
+    },
+    {
+      "run": "watchdog-2-warning-off",
+      "tool_calls_audited": 12,
+      "tools": {
+        "read_file": 4,
+        "search_files": 5,
+        "patch": 3
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "31232fcc1938795fe659318fa407fd216e9f913fa4e3a0d31872375165298a3c"
+    },
+    {
+      "run": "watchdog-2-warning-on",
+      "tool_calls_audited": 8,
+      "tools": {
+        "read_file": 3,
+        "search_files": 2,
+        "patch": 3
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "2a19f7fb8cfca738270dd3de0dc55df40f57d758bd28d65de5f6be9deba6209a"
+    },
+    {
+      "run": "watchdog-3-warning-off",
+      "tool_calls_audited": 13,
+      "tools": {
+        "read_file": 4,
+        "search_files": 6,
+        "patch": 3
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "0cb1db66328edf7b71bd9df04e5c3f9ab8bd0d9cf53e77cd10be376376dc15d9"
+    },
+    {
+      "run": "watchdog-3-warning-on",
+      "tool_calls_audited": 7,
+      "tools": {
+        "read_file": 2,
+        "search_files": 2,
+        "patch": 3
+      },
+      "host_patch_paths_audited": 0,
+      "unexpected_source_files": [],
+      "trace_sha256": "32f782a40db5bc70a06157221f2ed8c2e8093548ce416313d447f0753803173d"
+    }
+  ],
+  "limits": [
+    "A file-path and saved-request audit, not an operating-system sandbox security proof.",
+    "Saved traces were already sanitized during capture; no pre-redaction raw trace was retained."
+  ]
+}

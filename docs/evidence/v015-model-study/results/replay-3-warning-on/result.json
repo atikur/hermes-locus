@@ -1,0 +1,101 @@
+{
+  "task": "replay",
+  "repeat": 3,
+  "warning_enabled": true,
+  "pass": true,
+  "cli_exit": 0,
+  "model_exit": 0,
+  "tokens": {
+    "input": 97138,
+    "output": 1058,
+    "total": 98196,
+    "cache_read": 82432,
+    "cache_write": 0
+  },
+  "reported_cost_fields": {},
+  "model_duration_ms": 73778,
+  "first_patch_ok": true,
+  "first_patch_files": [
+    "<workspace>/agent/replay_cleanup.py"
+  ],
+  "first_patch_helper_only": true,
+  "first_patch_alert_sites": [
+    "agent/turn_context.py:1454",
+    "tests/agent/test_replay_cleanup.py:159",
+    "tests/agent/test_replay_cleanup.py:200",
+    "tests/agent/test_replay_cleanup.py:215",
+    "tests/agent/test_replay_cleanup.py:217"
+  ],
+  "outside_helper_lookups_before_first_patch": 0,
+  "tool_calls": 11,
+  "search_calls": 4,
+  "read_calls": 2,
+  "edit_calls": 5,
+  "helper_edit_replayed_before_model": true,
+  "changed_files": [
+    "agent/replay_cleanup.py",
+    "agent/turn_context.py",
+    "tests/agent/test_replay_cleanup.py"
+  ],
+  "expected_files_only": true,
+  "unexpected_files": [],
+  "changed_file_fingerprints": {
+    "agent/replay_cleanup.py": {
+      "before": [
+        false,
+        "59a1a52691283536848c1f77b6aa14f1a76d22011707edf3298a17413b8bcb85"
+      ],
+      "after": [
+        false,
+        "cb409b3d52cc9625209d76bfd837f391461a55399a4e0618c0c422c10c797ef9"
+      ]
+    },
+    "agent/turn_context.py": {
+      "before": [
+        false,
+        "196c75c36cb775ef2da9b01de92f3846c3db678517a0a61a3ff96870511e45b2"
+      ],
+      "after": [
+        false,
+        "0c1ed3d7dfe3cd65d482114a31c97f82684d27cd9f2ca24492a01f3974359096"
+      ]
+    },
+    "tests/agent/test_replay_cleanup.py": {
+      "before": [
+        false,
+        "2fde6b3b274393e60883a5ce126adecbc00e01119d2944f9e57c69c814dabe3c"
+      ],
+      "after": [
+        false,
+        "31445d6859b8f4c1b7e3386844c5824efec2e414e77c7a5aac1681318c0d2bf5"
+      ]
+    }
+  },
+  "helper_signature_ok": true,
+  "helper_rename_ok": true,
+  "verified_caller_sites": [
+    "agent/turn_context.py:1454",
+    "tests/agent/test_replay_cleanup.py:159",
+    "tests/agent/test_replay_cleanup.py:200",
+    "tests/agent/test_replay_cleanup.py:215",
+    "tests/agent/test_replay_cleanup.py:217"
+  ],
+  "expected_caller_sites": [
+    "agent/turn_context.py:1454",
+    "tests/agent/test_replay_cleanup.py:159",
+    "tests/agent/test_replay_cleanup.py:200",
+    "tests/agent/test_replay_cleanup.py:215",
+    "tests/agent/test_replay_cleanup.py:217"
+  ],
+  "repaired_call_binding_errors": {
+    "agent/turn_context.py:1454": null,
+    "tests/agent/test_replay_cleanup.py:159": null,
+    "tests/agent/test_replay_cleanup.py:200": null,
+    "tests/agent/test_replay_cleanup.py:215": null,
+    "tests/agent/test_replay_cleanup.py:217": null
+  },
+  "source_file_count_compared": 24306,
+  "test_exit": 0,
+  "test_summary": "6 passed in 1.23s",
+  "trace_sha256": "9879f1f23e4566b733db60e4da3e59e30a902a68f83830b0d24b461a945af257"
+}

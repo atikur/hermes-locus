@@ -77,6 +77,18 @@ def summarize(summary, amendment=None):
                       "on_searches": on[0].get("search_calls"), "off_searches": off[0].get("search_calls"),
                       "on_tokens": (on[0].get("tokens") or {}).get("total"),
                       "off_tokens": (off[0].get("tokens") or {}).get("total")})
+    comparisons = {}
+    for field in ("tool_calls", "search_calls", "read_calls", "edit_calls", "model_duration_ms", "tokens_total"):
+        values = []
+        for on, off in zip(on_rows, off_rows):
+            a = (on.get("tokens") or {}).get("total") if field == "tokens_total" else on.get(field)
+            b = (off.get("tokens") or {}).get("total") if field == "tokens_total" else off.get(field)
+            if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+                values.append((a, b))
+        comparisons[field] = {"paired_observations": len(values),
+                              "lower_on": sum(a < b for a, b in values),
+                              "same": sum(a == b for a, b in values),
+                              "higher_on": sum(a > b for a, b in values)}
     return {
         "study_engine_sha256": summary["plugin_engine_sha256"], "model": summary["model"],
         "planned_attempts": len(schedule), "recorded_attempts": len(reports),
@@ -94,6 +106,7 @@ def summarize(summary, amendment=None):
             "off_only_pass": sum(pair["off_pass"] and not pair["on_pass"] for pair in pairs),
             "neither_pass": sum(not pair["on_pass"] and not pair["off_pass"] for pair in pairs)},
         "matched_metrics": {"on": metrics(on_rows), "off": metrics(off_rows)},
+        "paired_resource_comparisons": comparisons,
         "sessions": rows,
         "limits": ["Descriptive results for four purposively selected tasks; not a representative benchmark.",
                    "Interrupted attempts remain in raw evidence, but do not contribute a comparative task failure.",

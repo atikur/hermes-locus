@@ -1,6 +1,34 @@
 # Larger-workspace trial
 
-## Version 0.1.5 full-workspace observation
+## Final v0.1.5 exact-commit observation
+
+On 11 November 2026, Python 3.14.7 on macOS 26.4 arm64 measured a fresh
+Hermes archive at `78abaafcccec20a546c94e8734a70e38c08a6a69`, using the exact
+plugin Git archive `e71824bc12d6cde8951d95c8545ad6eda4ca1263` and engine
+`c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c`.
+With a raised 20,000-file cap, the scan indexed **17,025 files, 192,406 symbols,
+and 66,779 edges**, without parse errors or file-cap truncation.
+
+| Operation | Observed wall time |
+| --- | ---: |
+| Scan with a fresh database | 65.50 s |
+| Cached scan, no source changes | 1.98 s |
+| Real Hermes one-file keyword-rename patch | 6.76 s |
+| Real Hermes three-file caller-repair patch | 6.51 s |
+
+Each operation ran once with operating-system caches unchanged. Scan timings
+call `index_workspace` directly; edit timings include Hermes editing, lint,
+hook indexing, and result transformation. They do not isolate plugin overhead.
+The rename returned five affected sites and one open alert; the repair left
+zero open alerts. No model calls were made. The edit-hook callback kept its
+30-second default; the 65.50-second cold scan ran directly, not inside a startup
+hook. The cap exceeded the default 2,500 files.
+[Exact measurements, settings, and revisions](evidence/v015-performance-release.json).
+
+This is one workspace observation, not a latency distribution, performance
+guarantee, or measured general speedup over the earlier observations below.
+
+## Earlier v0.1.5 development observation
 
 On 11 November 2026, Python 3.14.7 on macOS 26.4 arm64 indexed a fresh archive
 of Hermes commit `78abaafcccec20a546c94e8734a70e38c08a6a69` with a raised
@@ -26,12 +54,10 @@ The measured engine SHA-256 was
 `f37ddb1fbc088b7f55df42acba3df6032fa0c105d10078ecfe7d00906b926226`.
 This precedes the report-count correction in the frozen corpus/model engine
 `efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac`.
-The benchmark was not rerun after that correction; these timings belong to the
-recorded snapshot. The final candidate engine
-`c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c`
-adds caller-confidence preservation, stale-source handling, and bounded source
-excerpts after that freeze and was not benchmarked
-again either. [Raw measurements and settings](evidence/v015-performance.json).
+These earlier timings belong only to that recorded snapshot. The final candidate adds caller-confidence preservation, stale-source handling,
+and bounded source excerpts; its separate exact-commit observation appears
+above. These runs are not a controlled speedup comparison.
+[Earlier raw measurements and settings](evidence/v015-performance.json).
 
 This is one observation on one workspace, not a latency distribution or a
 performance guarantee. The full scan and larger file cap differ from the older

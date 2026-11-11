@@ -1,0 +1,66 @@
+--- before/agent/replay_cleanup.py
++++ after/agent/replay_cleanup.py
+@@ -153,7 +153,7 @@
+ 
+ 
+ def canonicalize_replay_history(
+-    agent_history: list[dict[str, Any]], *, now: Optional[float] = None
++    agent_history: list[dict[str, Any]], *, clock_now: Optional[float] = None
+ ) -> list[dict[str, Any]]:
+     """Apply every destructive replay transform in the shared, fixed order.
+ 
+@@ -165,11 +165,11 @@
+     """
+     if not agent_history:
+         return agent_history
+-    if now is None:
+-        now = time.time()
++    if clock_now is None:
++        clock_now = time.time()
+     cleaned = strip_interrupted_tool_tails(agent_history)
+     cleaned = strip_dangling_tool_call_tail(cleaned)
+-    return strip_stale_dangerous_confirmations(cleaned, now=now)
++    return strip_stale_dangerous_confirmations(cleaned, now=clock_now)
+ 
+ 
+ # --- Stale dangerous-confirmation text expiry ---
+--- before/agent/turn_context.py
++++ after/agent/turn_context.py
+@@ -1451,7 +1451,7 @@
+     # rather than silently un-freezing it.
+     turn_now = agent._current_turn_timestamp
+     split = current_turn_user_idx if has_current else 0
+-    canonical_messages = canonicalize_replay_history(messages[:split], now=turn_now) + messages[split:]
++    canonical_messages = canonicalize_replay_history(messages[:split], clock_now=turn_now) + messages[split:]
+ 
+     api_messages = []
+     for idx, msg in enumerate(canonical_messages):
+--- before/tests/agent/test_replay_cleanup.py
++++ after/tests/agent/test_replay_cleanup.py
+@@ -156,7 +156,7 @@
+ 
+     # What every resume surface feeds the model, with the sidecar bytes the send path replays.
+     replay = [{**m, "content": m.get("api_content") or m.get("content")}
+-              for m in canonicalize_replay_history(persisted, now=now)]
++              for m in canonicalize_replay_history(persisted, clock_now=now)]
+     live = copy.deepcopy(persisted) + [{"role": "user", "content": "now", "timestamp": now}]
+     frozen = copy.deepcopy(live)
+     request = _send(_SendAgent(), live)
+@@ -197,7 +197,7 @@
+     _reset_per_turn_agent_state(agent)
+     request = _send(agent, history)
+     assert "EXPIRED" in request[0]["content"]
+-    assert _wire(request[:2]) == _wire(canonicalize_replay_history(history[:2], now=10_070.0))
++    assert _wire(request[:2]) == _wire(canonicalize_replay_history(history[:2], clock_now=10_070.0))
+ 
+     agent._current_turn_timestamp = 9_990.0  # admitted at 49s: fresh, and stays fresh...
+     history += [{"role": "assistant", "content": "", "tool_calls": [
+@@ -212,6 +212,6 @@
+     text and its sidecar expire. A missing stamp (legacy row) is still left alone."""
+     for untrusted in ("nan", 96_400.0, 4_000_000_000.0):
+         row = [{"role": "user", "content": "confirm reboot", "timestamp": untrusted, "api_content": "confirm reboot"}]
+-        out = canonicalize_replay_history(row, now=10_000.0)
++        out = canonicalize_replay_history(row, clock_now=10_000.0)
+         assert "EXPIRED" in out[0]["content"] and "api_content" not in out[0], untrusted
+-    assert canonicalize_replay_history([{"role": "user", "content": "confirm reboot"}], now=1e9)[0]["content"] == "confirm reboot"
++    assert canonicalize_replay_history([{"role": "user", "content": "confirm reboot"}], clock_now=1e9)[0]["content"] == "confirm reboot"

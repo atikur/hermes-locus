@@ -1,0 +1,29 @@
+{
+  "changed_files": [
+    "agent/aux_accounting.py"
+  ],
+  "expected_files_only": false,
+  "unexpected_files": [],
+  "changed_file_fingerprints": {
+    "agent/aux_accounting.py": {
+      "before": [
+        false,
+        "162711ae15f31d1562a5a76a3f7f82840d8b92ccfcde834ee759404e407c2e83"
+      ],
+      "after": [
+        false,
+        "76ccf6cca106c9025ca2c4366199be76a006c7cd2b016fa339e64e2c0a15831d"
+      ]
+    }
+  },
+  "helper_signature_ok": true,
+  "helper_rename_ok": true,
+  "verified_caller_sites": [],
+  "expected_caller_sites": [
+    "agent/auxiliary_client.py:6647",
+    "plugins/image_gen/_common.py:270",
+    "tests/hermes_state/test_aux_usage_accounting.py:199"
+  ],
+  "repaired_call_binding_errors": {},
+  "source_file_count_compared": 24306
+}
