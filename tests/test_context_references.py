@@ -78,7 +78,7 @@ class TestContextReferencesAndCommands(unittest.IsolatedAsyncioTestCase):
                 ctx = _StubCtx(str(ws))
                 mod.register(ctx)
 
-                self.assertEqual(set(ctx.refs.keys()), {"sym", "impact", "hotspots"})
+                self.assertEqual(set(ctx.refs.keys()), {"sym", "impact", "hotspots", "whatif"})
 
                 # @sym: autocomplete + expand
                 sym_items = await ctx.refs["sym"].autocomplete("capture")

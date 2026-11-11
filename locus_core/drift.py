@@ -47,7 +47,10 @@ def _external_callers_for_symbol(
     include_imports: bool = True,
     qualname: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Find external call sites and explicit importers referencing *symbol_name*.
+    """Find call sites and explicit importers referencing *symbol_name*.
+
+    Calls in other files, plus calls inside the edited file that are proven to
+    name its own module-level definition.
 
     *qualname* is the symbol's exact identity within the edited file. A proven
     Python call must name that symbol, so ``Class.method`` never inherits the
@@ -68,17 +71,18 @@ def _external_callers_for_symbol(
         FROM calls c
         WHERE c.workspace_id = ?
           AND c.callee_name = ?
-          AND c.caller_path != ?
           AND (c.resolved_path = ? OR c.resolved_path = '')
         ORDER BY caller_path, line_no
         """,
-        (workspace_id, symbol_name, edited_path, edited_path),
+        (workspace_id, symbol_name, edited_path),
     ).fetchall()
 
     callers: list[dict[str, Any]] = []
     for row in rows:
         shape = _load_shape(row["python_call_json"])
         precise = shape is not None and shape.get("binding_version") == 2
+        if row["caller_path"] == edited_path and not (precise and shape.get("import_kind") == "local"):
+            continue
         if precise and (row["resolved_path"] != edited_path or not shape.get("direct_import")):
             continue
         bound = row["callee_qualname"]
@@ -327,6 +331,7 @@ def _classify_callers(
                         updated_call = {**call_shape, "keywords": [new if name == old else name for name in keywords]}
                         compatible, _ = python_call_compatibility(new_shape, updated_call)
                         if compatible is True:
+                            entry["rename"] = [old, new]
                             entry["suggestion"] = f"Review replacing {old}= with {new}=."
                 broken.append(entry)
             elif accepted_before is not False and accepted_now is None and shape_narrowed:
@@ -354,13 +359,13 @@ def _describe_break(
     if explanations:
         detail = ". ".join(text[0].upper() + text[1:] for text in explanations[:3])
         return (
-            f"Signature of '{symbol_name}' no longer accepts {len(affected)} external call site(s). "
+            f"Signature of '{symbol_name}' no longer accepts {len(affected)} call site(s). "
             f"{detail}."
         )
     minimum, maximum = arity
     return (
         f"Signature of '{symbol_name}' accepts {minimum}..{'*' if maximum < 0 else maximum} arg(s); "
-        f"{len(affected)} external call site(s) pass incompatible argument counts."
+        f"{len(affected)} call site(s) pass incompatible argument counts."
     )
 
 
@@ -508,7 +513,7 @@ def reconcile_drift_alerts(
                 severity = "warning"
                 reason = (
                     f"The signature of '{row['symbol_name']}' may reject "
-                    f"{len(affected)} external call site(s) with unpacked or unknown arguments."
+                    f"{len(affected)} call site(s) with unpacked or unknown arguments."
                 )
 
         unresolved = stale_callers + _unresolved_tracked_callers(
@@ -518,7 +523,7 @@ def reconcile_drift_alerts(
             if not affected:
                 severity = "warning"
                 reason = (
-                    f"{len(unresolved)} previously affected external call site(s) need verification: "
+                    f"{len(unresolved)} previously affected call site(s) need verification: "
                     "their source or imported target could not be verified against current files."
                 )
             else:
@@ -626,7 +631,7 @@ def detect_and_record_drift(
                     new_signature=_contract_signature(new_symbols, new_sym),
                     reason=(
                         f"The signature of '{new_sym.qualified_name}' may reject "
-                        f"{len(uncertain)} external call site(s) with unpacked or unknown arguments."
+                        f"{len(uncertain)} call site(s) with unpacked or unknown arguments."
                     ),
                     affected_callers=uncertain,
                     baseline_signature=old_shape,

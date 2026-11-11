@@ -3,7 +3,7 @@
   "label": "Locus Codegraph",
   "description": "Caller alerts, repair context and local code navigation for Hermes edits",
   "icon": "Code",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "tab": {
     "path": "/locus-codegraph",
     "position": "after:skills"

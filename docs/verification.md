@@ -2,7 +2,8 @@
 
 Verified on 11 November 2026 on macOS (Darwin 25.4.0, arm64).
 
-The current private candidate is **0.1.5**. Its status is separated below from
+The current version is **0.2.0**, measured as local changes on top of the private
+**0.1.5** candidate. Each is reported in its own section below, separately from
 the preserved **0.1.4** evidence. The
 [GitHub workflow](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
 defines standalone jobs on Linux and macOS, a portable Windows smoke test,
@@ -180,6 +181,93 @@ where the check applies, not how often it applies, and are not a blind or
 representative benchmark. Labels were prepared before Locus ran, and the run's
 case manifest equals that plan; the plan embeds full pinned sources, so only
 its checksum is in the [evidence manifest](evidence/v015-evidence-manifest.json).
+
+### Version 0.2.0: rehearsal, same-file and instance calls
+
+Version 0.2.0 adds four things on top of the class-bound extension above.
+
+- **Signature rehearsal.** `locus_rehearse`, `@whatif:<symbol>(<new parameters>)`,
+  `/locus whatif` and `hermes locus whatif` bind every proven caller against a
+  proposed parameter list before any file is edited, and report which call sites
+  would break and why, which need review, and what was not checked.
+- **Caller patches.** For a single renamed keyword, the rehearsal and the
+  post-edit alert include a patch that renames it at the proven call sites.
+  A file that changed since it was indexed is left out. Locus never applies the patch.
+- **Same-file calls.** A call inside the edited file is checked when it provably
+  names that module's own undecorated function or bare class.
+- **Local instances.** A method call is checked when its receiver is a name
+  assigned exactly once, earlier, from a proven constructor. Parameters, `self`,
+  attributes, reassigned names and values returned by other calls are not typed,
+  and neither are classes whose instances may shadow or intercept a method.
+
+The engine is
+`2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2`, measured
+as working-tree changes on top of commit `014a73f` before they were committed.
+The install replay, catalog admission, runtime doctor, performance trial,
+Web/Desktop checks and model study were not repeated on it, and hosted CI has not run.
+
+| Check on version 0.2.0 | Result |
+| --- | --- |
+| Complete Python suite in Hermes, Python 3.14.7 | [146 checks passed, no skips](evidence/v020-tests-host.txt), including [rehearsal](../tests/test_rehearsal.py), [same-file](../tests/test_same_file_calls.py) and [instance-call](../tests/test_instance_calls.py) checks |
+| Minimum supported Python 3.10.22, standalone | [143 passed and 3 Hermes-runtime-only checks skipped](evidence/v020-tests-python310.txt), out of 146 discovered tests |
+| Rehearsal through a real Hermes host | [Passed](evidence/v020-rehearsal-host.txt) with zero model calls: the plugin loads with five tools; the tool reports the two breaking callers; Hermes's reference parser accepts `@whatif:` unspaced and quoted and expands it; Hermes's patch tool applies the returned caller patch and the rehearsed definition change then raises no alert; a definition-first edit raises an alert carrying the patch, and applying it leaves zero open alerts. [Script](../tests/integration/verify_rehearsal_host.py) |
+| Prediction against the edit guard | For four proposals, the call sites a rehearsal predicts would break equal the sites the edit guard reports after the change is made ([test](../tests/test_rehearsal.py)) |
+
+Both corpora ran through real Hermes editing hooks with zero model calls and
+passed their strict checks. The signature harness now labels calls inside the
+edited module with the same `inspect.Signature.bind` oracle; earlier records
+labelled cross-file calls only, so their totals are not directly comparable.
+The one such call in that corpus, `src/requests/utils.py:872`, accounts for
+the three added incompatible and three added compatible instances.
+
+| Corpus on version 0.2.0 | Cases | Incompatible call instances named | Compatible call instances named |
+| --- | ---: | ---: | ---: |
+| [Pinned Hermes / HTTPX / Requests signature edits](evidence/v020-signature-corpus.json) | 19 | 45 / 45 | 0 / 37 |
+| [Pinned real-source resolution edits](evidence/v020-resolution-corpus.json) | 12 | 24 / 24 | 0 / 28 |
+| [Authored executable resolution controls](evidence/v020-resolution-corpus.json) | 25 | 16 / 16 | 0 / 13 |
+| [Pinned Hermes classes](evidence/v020-resolution-corpus.json) | 16 | 25 / 26 | 0 / 38 |
+| [Authored executable class fixtures](evidence/v020-resolution-corpus.json) | 34 | 18 / 21 | 0 / 13 |
+
+The two same-file misses of the earlier resolution runs,
+`agent/retry_utils.py:167` under two mutations, are now named. The four
+remaining misses are outside the supported set and stay in the denominator: a
+call through `self` (`hermes_cli/local_runtime/supervisor.py:301`), a method
+call on a parameter, a dataclass constructor, and a class with an imported base.
+The class fixture group gained one case; the two instance-receiver cases that
+0.2.0 now supports were relabelled as required, and a parameter-receiver case
+was added as the retained gap.
+
+As a false-positive check, [every statically proven call](evidence/v020-unmodified-bindings.json)
+in an unmodified checkout of Hermes Agent (17,025 indexed files) was bound
+against the current signature of its target
+([script](../tests/integration/verify_unmodified_bindings.py)).
+Of 230,467 proven calls, 228,354 are compatible, 2,112 are
+uncertain because of argument unpacking, and one is incompatible: a test that
+calls a function inside `pytest.raises(TypeError)`. A further 10,985 calls are
+linked to a class or missing name without a provable signature and are not bound.
+
+| Proven and compatible in unmodified Hermes | Calls |
+| --- | ---: |
+| Functions, other files | 105,710 |
+| Functions, same file | 106,802 |
+| Constructors, other files | 6,120 |
+| Constructors, same file | 4,979 |
+| Static/class methods through the class | 593 |
+| Methods on locally constructed instances | 4,150 |
+
+An earlier run of this check, during development, found ten false positives:
+a value returned by a same-file factory such as `attempt = Attempt.resolve(...)`
+was treated as an instance. The binding rule was corrected, a
+[regression test](../tests/test_instance_calls.py) added, and the rerun above is clean.
+
+Evidence files quote upstream source inside recorded alerts and patches. One
+token in those quotations is masked so that the plugin security scan does not
+read evidence as code; each masked file is listed in the
+[evidence manifest](evidence/v015-evidence-manifest.json).
+
+These results measure call binding on selected and self-authored cases and on
+one repository. They do not estimate accuracy across repositories, and no
+predicted break in a rehearsal is not proof that a change is safe.
 
 ### Paired model study on the frozen engine
 

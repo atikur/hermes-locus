@@ -17,6 +17,7 @@ from .locus_core import (
     format_drift_banner,
     format_hotspots_markdown,
     format_impact_markdown,
+    format_rehearsal_markdown,
     format_repo_map_markdown,
     format_symbol_markdown,
     get_hotspots_report,
@@ -26,9 +27,13 @@ from .locus_core import (
     list_open_drift_alerts,
     merge_drift_into_tool_result,
     open_locus_db,
+    rehearsal_summary,
+    rehearse_signature_change,
+    repair_patch_for_alerts,
     reindex_edited_file,
     reindex_edited_files,
     search_symbols,
+    split_rehearsal_request,
     validate_safe_workspace_root,
     workspace_id_for,
 )
@@ -167,6 +172,50 @@ LOCUS_HOTSPOTS_SCHEMA: dict[str, Any] = {
         "required": [],
     },
 }
+
+LOCUS_REHEARSE_SCHEMA: dict[str, Any] = {
+    "name": "locus_rehearse",
+    "description": (
+        "Rehearse a Python signature change BEFORE editing: bind every statically proven cross-file caller "
+        "of a function, class constructor, or static/class method against the proposed parameters and "
+        "report which call sites would break, why, and which stay compatible. For a single renamed keyword "
+        "it also returns a caller patch to review and apply. Reads only; never edits files."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "target": {
+                "type": "string",
+                "description": "Symbol name or exact target, e.g. 'verify_token' or 'auth/tokens.py::Client.build'.",
+            },
+            "new_signature": {
+                "type": "string",
+                "description": "Proposed parameter list in parentheses, e.g. '(token, *, scope=None)'.",
+            },
+            "workspace": {
+                "type": "string",
+                "description": "Optional workspace root path override.",
+            },
+        },
+        "required": ["target", "new_signature"],
+    },
+}
+
+_REHEARSAL_USAGE = (
+    "Give a symbol and its proposed parameters, for example "
+    "`verify_token(token, *, scope=None)` or `auth/tokens.py::Client.build(cls, raw, *, issuer)`."
+)
+
+
+def _rehearse(root: Path, request: str, parameters: str = "") -> dict[str, Any]:
+    """Run a rehearsal from ``target(params)`` or from a separate target and parameter list."""
+    target, inline = split_rehearsal_request(request)
+    proposed = (parameters or "").strip() or inline
+    if not target or not proposed:
+        return {"ok": False, "error": _REHEARSAL_USAGE}
+    if not proposed.startswith("("):
+        proposed = split_rehearsal_request(proposed)[1] or f"({proposed})"
+    return rehearse_signature_change(root, target, proposed)
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -403,6 +452,41 @@ class LocusImpactReferenceProvider(ContextReferenceProvider):
         return format_impact_markdown(impact)
 
 
+class LocusWhatIfReferenceProvider(ContextReferenceProvider):
+    """Inline a signature rehearsal via ``@whatif:<symbol>(<proposed parameters>)``.
+
+    Written without spaces (``@whatif:verify_token(token,*,scope=None)``) or quoted.
+    """
+
+    prefix = "whatif"
+    description = "Rehearse a signature change: which callers would break, before editing (Locus Codegraph)"
+
+    def __init__(self, ctx: Any) -> None:
+        self._ctx = ctx
+
+    async def autocomplete(self, query: str, *, limit: int = 10) -> list[ContextCompletionItem]:
+        root = _resolve_workspace_root(self._ctx)
+        name = split_rehearsal_request(query or "")[0]
+        hits = await asyncio.to_thread(search_symbols, root, name, limit=max(1, min(limit, 20)))
+        return [
+            ContextCompletionItem(
+                text=h["symbol_id"],
+                display=f"{h['qualified_name']}(…) — add the proposed parameters",
+                meta=f"{h['rel_path']}:{h['line_start']}",
+            )
+            for h in hits
+            if h["kind"] in {"function", "async_function", "class", "method"}
+        ]
+
+    async def expand(self, target: str) -> str | None:
+        clean = (target or "").strip()
+        if not clean:
+            return None
+        root = _resolve_workspace_root(self._ctx)
+        data = await asyncio.to_thread(_rehearse, root, clean)
+        return format_rehearsal_markdown(data)
+
+
 class LocusHotspotsReferenceProvider(ContextReferenceProvider):
     """Inline architectural cycles, god-modules & drift report via ``@hotspots:all``."""
 
@@ -486,6 +570,11 @@ def _handle_slash_command(ctx: Any, raw_args: str = "", **kwargs: Any) -> str:
             return "Usage: `/locus symbol <name>` (e.g. `/locus symbol analyze_impact`)"
         return format_symbol_markdown(lookup_symbol_details(root, rest))
 
+    if sub in ("whatif", "rehearse"):
+        if not rest:
+            return f"Usage: `/locus whatif <symbol>(<proposed parameters>)`. {_REHEARSAL_USAGE}"
+        return format_rehearsal_markdown(_rehearse(root, rest))
+
     if sub in ("hotspots", "cycles", "drift"):
         rep = get_hotspots_report(root)
         if sub == "cycles":
@@ -504,7 +593,8 @@ def _handle_slash_command(ctx: Any, raw_args: str = "", **kwargs: Any) -> str:
         f"- **Import Cycles**: `{len(repo.get('cycles', []))}` · "
         f"**Open Drift Alerts**: `{repo.get('open_drift_count', 0)}`\n"
         f"- **Try**: `/locus map`, `/locus impact <target>`, `/locus symbol <name>`, `/locus hotspots`, "
-        f"or type `@sym:`, `@impact:`, `@hotspots:` inline in chat!"
+        f"`/locus whatif <symbol>(<new parameters>)`, or type `@sym:`, `@impact:`, `@whatif:`, "
+        f"`@hotspots:` inline in chat!"
     )
 
 
@@ -513,10 +603,13 @@ def _setup_cli_parser(parser: Any) -> None:
         "action",
         nargs="?",
         default="map",
-        choices=["scan", "map", "impact", "symbol", "hotspots"],
+        choices=["scan", "map", "impact", "symbol", "hotspots", "whatif"],
         help="Graph command to run (default: map)",
     )
-    parser.add_argument("target", nargs="?", default="", help="Target file/symbol/scope for impact, symbol, or map")
+    parser.add_argument(
+        "target", nargs="?", default="",
+        help="Target file/symbol/scope for impact, symbol, or map; for whatif, 'symbol(proposed parameters)'",
+    )
     parser.add_argument("--workspace", "-w", default="", help="Workspace directory (defaults to current directory)")
     parser.add_argument("--json", action="store_true", dest="as_json", help="Emit machine-readable JSON output")
 
@@ -551,6 +644,14 @@ def _handle_cli_command(args: Any) -> int:
     if action == "hotspots":
         data = get_hotspots_report(root)
         print(json.dumps(data, indent=2) if as_json else format_hotspots_markdown(data))
+        return 0 if data.get("ok") else 1
+
+    if action == "whatif":
+        if not target:
+            print(f"Error: 'hermes locus whatif' needs a quoted request. {_REHEARSAL_USAGE}")
+            return 2
+        data = _rehearse(root, target)
+        print(json.dumps(data, indent=2) if as_json else format_rehearsal_markdown(data))
         return 0 if data.get("ok") else 1
 
     data = get_repo_map(root, scope_prefix=target, max_files=15)
@@ -661,6 +762,34 @@ def register(ctx: PluginContext) -> None:
         except Exception as exc:
             return json.dumps({"ok": False, "error": f"locus_hotspots failed: {exc}"})
 
+    def handle_locus_rehearse(args: dict[str, Any], **kwargs: Any) -> str:
+        try:
+            target = str(args.get("target") or "").strip()
+            proposed = str(args.get("new_signature") or "").strip()
+            if not target or not proposed:
+                return json.dumps({"ok": False, "error": "Parameters 'target' and 'new_signature' are required."})
+            root = _resolve_workspace_root(ctx, args.get("workspace"))
+            _record_active_workspace(ctx, root)
+            data = _rehearse(root, target, proposed)
+            if not data.get("ok"):
+                return json.dumps({"ok": False, "error": data.get("error"), "candidates": data.get("candidates", []),
+                                   "report": format_rehearsal_markdown(data)}, ensure_ascii=False)
+            return json.dumps(
+                {"ok": True, "report": format_rehearsal_markdown(data), "symbol": data["symbol"],
+                 **rehearsal_summary(data)},
+                ensure_ascii=False,
+            )
+        except Exception as exc:
+            return json.dumps({"ok": False, "error": f"locus_rehearse failed: {exc}"})
+
+    ctx.register_tool(
+        name="locus_rehearse",
+        toolset=PLUGIN_NAME,
+        schema=LOCUS_REHEARSE_SCHEMA,
+        handler=handle_locus_rehearse,
+        description="Rehearse a signature change: which proven callers would break, before any edit",
+        emoji="🎭",
+    )
     ctx.register_tool(
         name="locus_map",
         toolset=PLUGIN_NAME,
@@ -738,7 +867,14 @@ def register(ctx: PluginContext) -> None:
                         for item in batch.get("stale_files", [])
                     )]
                     alerts = batch.get("drift_alerts", [])
-                    banner = format_drift_banner(alerts) if bool(ctx.get_config("drift_guard", True)) else ""
+                    banner = ""
+                    if alerts and bool(ctx.get_config("drift_guard", True)):
+                        try:
+                            repair = repair_patch_for_alerts(root, alerts)
+                        except Exception as exc:  # the alert itself must still be delivered
+                            logger.debug("Locus repair patch skipped: %s", exc)
+                            repair = None
+                        banner = format_drift_banner(alerts, repair)
                     if len(inspected_calls) >= _MAX_PENDING_DRIFT:
                         inspected_calls.pop(next(iter(inspected_calls)))
                     inspected_calls[key] = (banner, index_warnings, False)
@@ -783,6 +919,7 @@ def register(ctx: PluginContext) -> None:
     ctx.register_context_reference(LocusSymbolReferenceProvider(ctx))
     ctx.register_context_reference(LocusImpactReferenceProvider(ctx))
     ctx.register_context_reference(LocusHotspotsReferenceProvider(ctx))
+    ctx.register_context_reference(LocusWhatIfReferenceProvider(ctx))
 
     # 4. Slash Command (/locus) & CLI Subcommand (hermes locus)
     def slash_locus(raw_args: str = "", **kwargs: Any) -> str:
@@ -792,7 +929,7 @@ def register(ctx: PluginContext) -> None:
         "locus",
         slash_locus,
         description="Explore codebase graph, blast radius, symbols & signature drift alerts",
-        args_hint="[map|impact <target>|symbol <name>|hotspots|drift|reindex]",
+        args_hint="[map|impact <target>|symbol <name>|whatif <symbol>(<params>)|hotspots|drift|reindex]",
     )
     ctx.register_cli_command(
         "locus",
@@ -810,6 +947,6 @@ def register(ctx: PluginContext) -> None:
             skill_path,
             description=(
                 "Architectural navigation, pre-refactor blast-radius checks, and "
-                "@sym:/@impact:/@hotspots: context workflows."
+                "@sym:/@impact:/@whatif:/@hotspots: context workflows."
             ),
         )

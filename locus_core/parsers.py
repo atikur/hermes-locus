@@ -287,6 +287,7 @@ class _PythonBinding:
     name: str = ""
     line: int = 0
     unconditional: bool = False
+    constructor: tuple[str, ...] = ()  # for kind "instance": the called expression, e.g. ("lib", "Client")
 
 
 @dataclass
@@ -470,6 +471,28 @@ class _PythonCallCollector(ast.NodeVisitor):
         if isinstance(node.ctx, (ast.Store, ast.Del)):
             self.scope.bind(node.id)
 
+    def _bind_instance(self, target: ast.AST, value: ast.AST | None, node: ast.AST) -> bool:
+        """Record ``name = Callee(...)``; whether Callee is a class is decided when linking."""
+        if isinstance(target, ast.Name) and isinstance(value, ast.Call):
+            parts = _attribute_parts(value.func)
+            if parts:
+                self.visit(value)
+                self.scope.bind(target.id, _PythonBinding(
+                    "instance", line=node.lineno, unconditional=self._unconditional(node), constructor=tuple(parts),
+                ))
+                return True
+        return False
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        if len(node.targets) != 1 or not self._bind_instance(node.targets[0], node.value, node):
+            self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        if self._bind_instance(node.target, node.value, node):
+            self.visit(node.annotation)
+        else:
+            self.generic_visit(node)
+
     def visit_NamedExpr(self, node: ast.NamedExpr) -> None:
         self.visit(node.value)
         scope = self.scope
@@ -566,37 +589,105 @@ class _PythonCallCollector(ast.NodeVisitor):
             current = parent
         return None
 
+    def _defined_in_this_module(self, name: str, scope: _PythonScope, line: int) -> bool:
+        """Whether *name* at this call is this module's own bare function or class.
+
+        The first scope that binds the name must be the module, with exactly one
+        unconditional, undecorated definition. Code that runs while the module is
+        being imported must follow that definition; a function body may precede it.
+        """
+        if name in self.nonlocal_mutations or name in self.attribute_mutations:
+            return False
+        deferred = False
+        current: _PythonScope | None = scope
+        while current is not None:
+            if current.star_import or current.dynamic:
+                return False
+            entries = current.bindings.get(name)
+            if entries:
+                binding = entries[0]
+                return (current is self.root and len(entries) == 1 and binding.unconditional
+                        and binding.kind in {"function", "class"} and (deferred or binding.line < line))
+            if isinstance(current.node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+                deferred = True
+            parent = current.parent
+            if current.kind == "function":
+                while parent is not None and parent.kind == "class":
+                    parent = parent.parent
+            current = parent
+        return False
+
+    def _binding_fields(self, parts: list[str], scope: _PythonScope, line: int) -> dict[str, Any] | None:
+        """Describe how the expression *parts* is bound at this point, or ``None`` when unknown."""
+        binding = self._lookup(parts[0], scope, line)
+        if binding is None:
+            # f(), Class() or Class.method() defined in this same module.
+            if len(parts) <= 2 and self._defined_in_this_module(parts[0], scope, line):
+                return {"direct_import": True, "import_module": "", "import_name": parts[0],
+                        "import_kind": "local", "attribute_path": parts[1:]}
+            return None
+        attrs = parts[1:]
+        if binding.kind == "module":
+            if binding.name:  # import package.module as alias
+                suffix = attrs
+            else:  # import package.module binds the package root
+                prefix = binding.module.split(".")[1:]
+                if attrs[:len(prefix)] != prefix:
+                    return None
+                suffix = attrs[len(prefix):]
+            # module.function(), module.Class() or module.Class.method().
+            if len(suffix) not in (1, 2):
+                return None
+            module, imported_name = binding.module, ""
+        else:
+            # A direct function or class, a member of an explicitly imported
+            # module or class, or a class member reached through a module.
+            if len(attrs) > 2:
+                return None
+            module, imported_name, suffix = binding.module, binding.name, attrs
+        return {"direct_import": True, "import_module": module, "import_name": imported_name,
+                "import_kind": binding.kind, "attribute_path": suffix}
+
+    def _instance_fields(self, parts: list[str], scope: _PythonScope, line: int) -> dict[str, Any] | None:
+        """Bind ``name.method()`` when *name* is assigned exactly once, earlier, from ``Callee(...)``.
+
+        The receiver is then an instance of exactly that callee if it is a class,
+        which the linker checks. Parameters, attributes, reassigned names and
+        values returned by other calls are not typed.
+        """
+        if len(parts) != 2 or parts[0] in self.nonlocal_mutations or parts[0] in self.attribute_mutations:
+            return None
+        current: _PythonScope | None = scope
+        while current is not None:
+            if current.star_import or current.dynamic:
+                return None
+            entries = current.bindings.get(parts[0])
+            if entries:
+                binding = entries[0]
+                if len(entries) != 1 or binding.kind != "instance" or binding.line >= line:
+                    return None
+                fields = self._binding_fields(list(binding.constructor), current, binding.line)
+                # The callee must name a class: Class(...) or module.Class(...). A member of this
+                # module's own class (Class.factory()) returns a value of unknown type.
+                if fields is None or len(fields["attribute_path"]) > (0 if fields["import_kind"] == "local" else 1):
+                    return None
+                return {**fields, "attribute_path": [*fields["attribute_path"], parts[1]], "receiver": "instance"}
+            parent = current.parent
+            if current.kind == "function":
+                while parent is not None and parent.kind == "class":
+                    parent = parent.parent
+            current = parent
+        return None
+
     def mark_direct_imports(self) -> None:
         for call, parts, scope in self.pending:
-            binding = self._lookup(parts[0], scope, call.line_no)
-            if binding is None:
+            fields = (self._binding_fields(parts, scope, call.line_no)
+                      or self._instance_fields(parts, scope, call.line_no))
+            if fields is None:
                 continue
-            attrs = parts[1:]
-            if binding.kind == "module":
-                if binding.name:  # import package.module as alias
-                    suffix = attrs
-                else:  # import package.module binds the package root
-                    prefix = binding.module.split(".")[1:]
-                    if attrs[:len(prefix)] != prefix:
-                        continue
-                    suffix = attrs[len(prefix):]
-                # module.function(), module.Class() or module.Class.method().
-                if len(suffix) not in (1, 2):
-                    continue
-                module, imported_name = binding.module, ""
-            else:
-                # A direct function or class, a member of an explicitly imported
-                # module or class, or a class member reached through a module.
-                if len(attrs) > 2:
-                    continue
-                module, imported_name, suffix = binding.module, binding.name, attrs
             assert call.python_call is not None
-            call.python_call.update({
-                "direct_import": True, "import_module": module,
-                "import_name": imported_name, "import_kind": binding.kind,
-                "attribute_path": suffix,
-            })
-            call.callee_name = suffix[-1] if suffix else imported_name
+            call.python_call.update(fields)
+            call.callee_name = (fields["attribute_path"] or [fields["import_name"]])[-1]
 
     def module_metadata(self) -> dict[str, Any]:
         bindings = {}
@@ -607,7 +698,8 @@ class _PythonCallCollector(ast.NodeVisitor):
                 and name not in self.nonlocal_mutations and name not in self.attribute_mutations) else "unknown"
             if bindings[name] in {"from", "module"}:
                 imports[name] = {"kind": entry.kind, "module": entry.module, "name": entry.name}
-        classes = {name: {"closed": info["closed"], "base": info["base"], "members": info["members"]}
+        classes = {name: {"closed": info["closed"], "base": info["base"], "members": info["members"],
+                          "instance_safe": info["instance_safe"], "instance_attributes": info["instance_attributes"]}
                    for name, info in self.class_contracts().items()}
         return {"bindings": bindings, "imports": imports, "classes": classes,
                 "dynamic": self.root.dynamic or self.root.star_import}
@@ -672,6 +764,21 @@ class _PythonCallCollector(ast.NodeVisitor):
                     members[member] = kind
                 else:
                     members[member] = "function" if kind == "function" else "unknown"
+                    if kind == "function" and member in methods and member != "__init__":
+                        # What an instance call binds; calls through the class are not resolved to it.
+                        signatures[member] = _without_receiver(_python_signature(methods[member].args))
+
+            # Names an instance may shadow or resolve dynamically cannot be tied to the class body.
+            instance_attributes = sorted({
+                item.attr for item in ast.walk(node)
+                if isinstance(item, ast.Attribute) and isinstance(item.ctx, (ast.Store, ast.Del))
+                and isinstance(item.value, ast.Name)
+            })
+            dynamic_instance = any(
+                (isinstance(item, ast.Call) and _attribute_parts(item.func)[:1] in (["setattr"], ["delattr"]))
+                or (isinstance(item, ast.Attribute) and item.attr == "__dict__")
+                for item in ast.walk(node)
+            ) or bool({"__getattr__", "__getattribute__"} & set(scope.bindings))
 
             constructor: PythonSignature | None = None
             if plain:
@@ -684,6 +791,8 @@ class _PythonCallCollector(ast.NodeVisitor):
                 elif len(node.bases) == 1 and local_bases:
                     constructor = contracts[local_bases[0]]["constructor"]
             contracts[name] = {"plain": plain, "closed": closed, "constructor": constructor,
+                               "instance_safe": plain and not dynamic_instance,
+                               "instance_attributes": instance_attributes,
                                "base": local_bases[0] if len(node.bases) == 1 and local_bases else None,
                                "members": members, "member_signatures": signatures}
         self._contracts = contracts

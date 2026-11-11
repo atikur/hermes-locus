@@ -176,6 +176,17 @@ def checked_calls(files: dict[str, bytes], callee: str, name: str, receiver: str
     return found
 
 
+def same_file_calls(text: str, path: str, name: str) -> dict[str, ast.Call]:
+    """Bare-name calls to *name* inside its own module, keyed by their location in *text*."""
+    found = {}
+    for node in ast.walk(ast.parse(text)):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == name:
+            location = f"{path}:{node.lineno}"
+            assert location not in found, location
+            found[location] = node
+    return found
+
+
 def binding_error(signature: inspect.Signature, call: ast.Call) -> str | None:
     assert all(not isinstance(arg, ast.Starred) for arg in call.args)
     assert all(keyword.arg is not None for keyword in call.keywords)
@@ -262,6 +273,13 @@ def run_variant(args: argparse.Namespace) -> dict:
                     after = revised_source(before, name, edits)
                     new_signature = callable_signature(after, name)
                     labels = {site: binding_error(new_signature, calls[site]) for site in sites}
+                    # Calls inside the edited module are labelled by the same oracle, at their
+                    # post-edit locations. Attribute-receiver targets have no bare same-file form.
+                    own = same_file_calls(after, callee, name) if receiver is None else {}
+                    assert all(binding_error(old_signature, call) is None
+                               for call in (same_file_calls(before, callee, name) if receiver is None else {}).values())
+                    assert not set(own) & set(labels), identifier
+                    labels.update({site: binding_error(new_signature, call) for site, call in own.items()})
                     os.environ.update({"TERMINAL_CWD": str(workspace), "LOCUS_WORKSPACE": str(workspace)})
                     os.chdir(workspace)
                     set_session_cwd(str(workspace))
@@ -282,6 +300,7 @@ def run_variant(args: argparse.Namespace) -> dict:
                         "case": identifier, "repository": repo, "kind": kind, "callee": f"{callee}:{definition(before, name).lineno}",
                         "binding_scope": "module attribute outside precise binding scope" if receiver else "direct import",
                         "old_signature": str(old_signature), "new_signature": str(new_signature), "oracle_errors": labels,
+                        "same_file_sites": sorted(own),
                         "named_sites": named, "patch_args": payload, "patch_result": result,
                     })
                     print(args.variant, identifier, "labelled breaks", sum(error is not None for error in labels.values()),
@@ -347,7 +366,9 @@ def main() -> None:
             "oracle": "CPython inspect.Signature.bind using actual argument kinds and keyword names from the pinned call AST",
             "limits": ["Targeted source projections, not a representative repository-wide accuracy estimate",
                        "Only call binding is labelled; runtime behavior, aliases and dynamic values are outside this oracle",
-                       "The explicitly selected requests.get attribute case is included in the all-case counts"],
+                       "The explicitly selected requests.get attribute case is included in the all-case counts",
+                       "Calls inside the edited module are labelled too (same_file_sites); earlier records labelled "
+                       "cross-file calls only, so their totals are not directly comparable"],
             "sources": {key: {"repo": repo, "commit": commit, "git_blob_sha1": files}
                         for key, (repo, commit, files) in SOURCES.items()},
             "host_commit": git(args.source, "rev-parse", "HEAD").decode().strip(),

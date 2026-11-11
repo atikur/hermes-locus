@@ -1,0 +1,10 @@
+3. caller patch applied by Hermes: True | files: ['api.py', 'checkout.py'] | alert after caller patch: False
+4. definition edit ok: True | drift alert after rehearsed refactor: False
+5. rehearsing the now-current signature: would_break [] compatible 3
+6. alert names callers: True | carries patch: True
+7. carried patch applied: True | new alert: False | open alerts now: 0
+HOST CHECK PASSED
+plugin loaded: 0.2.0 | tools: 5 | hooks: 3
+1. tool ok: True | would_break: ['api.py:2', 'checkout.py:4'] | patch files: ['api.py', 'checkout.py']
+2. parsed refs: [('whatif', 'verify_token(token,*,scope=None)')]
+   expansion mentions breaks: True | quoted form parsed: [('whatif', 'verify_token(token, *, scope=None)')]

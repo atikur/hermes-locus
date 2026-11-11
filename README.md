@@ -8,7 +8,9 @@
 
 The video replays one recorded controlled `efbf401` study session: a pre-applied helper edit, model-requested caller repairs, then independent evaluator tests. It is an evidence replay, not a live UI recording or a typical-success claim. [Trace and media provenance](docs/evidence/v015-demo-selected-evidence.json).
 
-Version **0.1.5 is a private release candidate**. It extends Python resolution to supported module imports, import aliases, and static re-exports; makes the caller inbox actionable; and exposes incomplete scans throughout reports. Current deterministic results are below; video and model-study evidence use the earlier frozen engine. A later local extension also checks class constructors and static/class methods called through an imported class; it has its own corpus evidence and has not been through the install replay, admission, or Web/Desktop checks. The completed paired model study, final-engine corpus reruns, and native Desktop checks have separate provenance.
+**New in 0.2.0: rehearse a refactor before making it.** `@whatif:verify_token(token,*,scope=None)`, or the `locus_rehearse` tool, binds every proven caller against a proposed signature before any file changes and lists what would break and why. For a renamed keyword it returns a caller patch to review, and the same patch now arrives inside the post-edit alert. Checks also reach calls inside the edited file and methods on locally constructed instances. Version 0.2.0 has [its own corpus and host evidence](docs/verification.md#version-020-rehearsal-same-file-and-instance-calls); the install replay, admission, Web/Desktop and model-study records below belong to the 0.1.5 pin.
+
+Version **0.1.5 was the previous private release candidate**. It extends Python resolution to supported module imports, import aliases, and static re-exports; makes the caller inbox actionable; and exposes incomplete scans throughout reports. Current deterministic results are below; video and model-study evidence use the earlier frozen engine. A later local extension also checks class constructors and static/class methods called through an imported class; it has its own corpus evidence and has not been through the install replay, admission, or Web/Desktop checks. The completed paired model study, final-engine corpus reruns, and native Desktop checks have separate provenance.
 
 The analysis engine uses Python's standard library (`ast`, `sqlite3`, and structural parsers). It needs no API key, hosted index, or extra model call. Hermes supplies the web and desktop integration libraries.
 
@@ -17,8 +19,9 @@ The analysis engine uses Python's standard library (`ast`, `sqlite3`, and struct
 Suppose checkout code calls `verify_token(token, audience="checkout")`, and an API route depends on checkout.
 
 1. **See the impact.** `@impact:auth/tokens.py` identifies direct and indirect dependents and suggests related tests.
-2. **Make the change.** Hermes renames the `audience` parameter to `scope`. The total number of parameters stays the same.
-3. **Catch a missed caller.** Locus appends a warning to the editing tool's result.
+2. **Rehearse it.** `@whatif:verify_token(token,*,scope=None)` reports, before anything is edited, that the checkout call would break with `unexpected keyword argument 'audience'`, and offers a caller patch for the rename.
+3. **Make the change.** Hermes renames the `audience` parameter to `scope`. The total number of parameters stays the same.
+4. **Catch a missed caller.** Locus appends a warning to the editing tool's result.
 
    ```text
    [Locus Signature Drift Alert]
@@ -27,13 +30,13 @@ Suppose checkout code calls `verify_token(token, audience="checkout")`, and an A
       Review replacing audience= with scope=.
    ```
 
-4. **Repair and verify.** Hermes updates the caller and runs the relevant tests. Locus re-evaluates the tracked mismatch as files are indexed and clears it when the incompatible references are gone.
+5. **Repair and verify.** Hermes applies the caller patch carried in the alert, or updates the caller itself, and runs the relevant tests. Locus re-evaluates the tracked mismatch as files are indexed and clears it when the incompatible references are gone.
 
 Locus supplies the evidence and the agent performs the repair. The warning above is abbreviated for illustration.
 
 In a recorded v0.1.4 refactor on Hermes Agent's own code, Locus named all five affected call sites in the result of the first edit, before Hermes searched for callers. Hermes confirmed the locations, repaired the calls, and passed all 26 upstream display tests. [Historical live evidence and replay](docs/verification.md#live-keyword-refactor-on-hermes-agent)
 
-Across 19 selected edits from Hermes Agent, HTTPX, and Requests, the final v0.1.5 engine named **42 of 42 incompatible call instances**, including the module-qualified Requests case, and none of 34 compatible instances. A separate 12-case real-source corpus named **22 of 24** incompatible instances: all 22 cross-file calls, with two same-file misses. It named none of 28 compatible instances. With class-bound calls added, the extended engine named **25 of 26** incompatible instances on four pinned Hermes classes, missing one same-file call, and **16 of 20** in authored class fixtures. The four misses there are documented gaps: two calls through an instance, a dataclass constructor, and a class with an imported base. It named none of 51 compatible instances; the previous engine named none of the 46 breaks. [Class-bound results and limits](docs/verification.md#class-bound-calls-on-the-extended-engine). These targeted checks measure call binding, not repository-wide accuracy or improved agent success. [Current results and raw evidence](docs/verification.md#version-015-candidate); [preserved v0.1.4 comparison](docs/verification.md#signature-changes-across-three-repositories).
+Across 19 selected edits from Hermes Agent, HTTPX, and Requests, the final v0.1.5 engine named **42 of 42 incompatible call instances**, including the module-qualified Requests case, and none of 34 compatible instances. A separate 12-case real-source corpus named **22 of 24** incompatible instances: all 22 cross-file calls, with two same-file misses. It named none of 28 compatible instances. With class-bound calls added, the extended engine named **25 of 26** incompatible instances on four pinned Hermes classes, missing one same-file call, and **16 of 20** in authored class fixtures. The four misses there are documented gaps: two calls through an instance, a dataclass constructor, and a class with an imported base. It named none of 51 compatible instances; the previous engine named none of the 46 breaks. [Class-bound results and limits](docs/verification.md#class-bound-calls-on-the-extended-engine). On version 0.2.0, with calls inside the edited file now labelled, the same corpora read **45 of 45**, **24 of 24** and **16 of 16** incompatible instances named and none of 78 compatible ones. The class groups read **25 of 26** and **18 of 21**; the four misses are a call through `self`, a parameter-typed receiver, a dataclass constructor and a class with an imported base. In an unmodified 17,025-file Hermes checkout, 228,354 of 230,467 statically proven calls bind to their current signatures, 2,112 are uncertain because of argument unpacking, and one is incompatible: a test that expects `TypeError`. [Version 0.2.0 results](docs/verification.md#version-020-rehearsal-same-file-and-instance-calls). These targeted checks measure call binding, not repository-wide accuracy or improved agent success. [Current results and raw evidence](docs/verification.md#version-015-candidate); [preserved v0.1.4 comparison](docs/verification.md#signature-changes-across-three-repositories).
 
 Across **11 complete pairs on four selected refactor tasks**, warning feedback used **32 searches versus 67**; independent checks passed **11/11 with warnings and 10/11 without**. This study used frozen engine `efbf401`; one privacy interruption was excluded from the paired comparison. [All 24 attempts, protocol, and limits](docs/verification.md#paired-model-study-on-the-frozen-engine).
 
@@ -77,6 +80,7 @@ Review @hotspots:cycles and explain the smallest change that would break a depen
 | --- | --- |
 | `@sym:<name>` | Definition and signature, indexed callers/callees, and a bounded source excerpt |
 | `@impact:<file-or-symbol>` | Direct and transitive dependents, suggested tests, risk score, and open drift alerts |
+| `@whatif:<symbol>(<new parameters>)` | A rehearsal of that signature change: which proven callers would break and why, and a caller patch for a renamed keyword. Write it without spaces, or quote it |
 | `@hotspots:all` | Dependency cycles, highly connected modules, modules without inferred test links, and open drift |
 | `@hotspots:cycles`, `@hotspots:drift`, `@hotspots:untested` | A focused subset of the health report |
 
@@ -89,6 +93,7 @@ The same analysis is available through commands:
 /locus map src/auth
 /locus impact auth/tokens.py
 /locus symbol verify_token
+/locus whatif verify_token(token, *, scope=None)
 /locus hotspots
 /locus reindex
 ```
@@ -98,6 +103,7 @@ hermes locus scan
 hermes locus map
 hermes locus impact auth/tokens.py
 hermes locus symbol verify_token
+hermes locus whatif "verify_token(token, *, scope=None)"
 hermes locus hotspots --json
 # Analyze a specific project:
 hermes locus map --workspace /path/to/project
@@ -105,13 +111,14 @@ hermes locus map --workspace /path/to/project
 
 ## Agent tools
 
-The `locus-codegraph` toolset exposes four tools, plus a bundled `locus-navigation` skill. Tools read source and maintain the local index; they do not modify source files.
+The `locus-codegraph` toolset exposes five tools, plus a bundled `locus-navigation` skill. Tools read source and maintain the local index; they do not modify source files.
 
 | Tool | Parameters | Result |
 | --- | --- | --- |
 | `locus_map` | `scope_prefix?`, `max_files?`, `workspace?` | PageRank-ranked modules, exported signatures, languages, cycles, and drift counts |
 | `locus_symbol` | `name`, `workspace?` | Definition, signature, indexed call sites, outgoing calls, and source excerpt |
 | `locus_impact` | `target`, `max_depth?`, `workspace?` | Reverse dependency traversal, related test files, and a heuristic 0–100 impact score |
+| `locus_rehearse` | `target`, `new_signature`, `workspace?` | Before any edit: proven callers a proposed signature would break, with reasons, and a caller patch for a renamed keyword |
 | `locus_hotspots` | `workspace?` | Dependency cycles, high-coupling modules, inferred test gaps, and unresolved drift |
 
 ## Web and desktop
@@ -129,7 +136,7 @@ The inbox shows the newest 20 open alerts with an exact total and the newest 10 
 
 | Language | Analysis |
 | --- | --- |
-| Python (`.py`, `.pyi`) | AST definitions, signatures, imports, and call sites. Checks positional and keyword binding for supported cross-file imports of undecorated functions, class constructors, and static/class methods called through the class. |
+| Python (`.py`, `.pyi`) | AST definitions, signatures, imports, and call sites. Checks positional and keyword binding for undecorated functions, class constructors, static/class methods called through the class, and methods on locally constructed instances, across files and inside the edited file. |
 | TypeScript / JavaScript | Structural definitions and imports, plus approximate call extraction; call argument counts are not available |
 | Go / Rust | Structural definitions and imports; no call-site extraction |
 
@@ -137,7 +144,9 @@ Locus is a navigation and refactoring aid. Its results have these boundaries:
 
 - **Supported Python bindings:** direct imports, module-qualified calls, `import`/`from` aliases, relative imports, common `src`/`lib` layouts, and static re-exports can resolve to indexed undecorated functions. Function-local imports are scoped separately. Binding checks cover renamed keywords, required arguments, and positional-only and keyword-only parameters.
 - **Classes:** calling an imported class is checked against its own `__init__`, or a sole same-module base's when it defines none. `Class.method()` is checked for static and class methods, including one inherited from a sole same-module base. This applies to bare top-level classes whose bases are absent, `object`, `ABC`, built-in exceptions, or such classes in the same module.
-- **Uncertain calls:** conditional or ambiguous imports, shadowed names, dynamic dispatch, assignment-created function aliases, decorated functions, and unpacked arguments may remain unresolved or require manual review. Instance-method calls such as `obj.method()` need the receiver's type and are not checked. Decorated classes (including dataclasses), classes with a metaclass, `__new__`, or an imported base, and rebound or conditionally defined members have no proven calling convention. Locus does not guess a target from a matching name. The signature-drift guard checks external callers; same-file calls are an explicit gap. No alert does not establish compatibility. Runtime tests still check values and behavior.
+- **Instances and same-file calls:** a method call is checked when its receiver is a name assigned exactly once from a proven constructor, such as `client = Client(...)` followed by `client.send(...)`. Calls inside the edited file are checked when they provably name that module's own function or class.
+- **Repair patches:** for a single renamed keyword, the rehearsal and the post-edit alert include a patch that renames it at the proven call sites. Locus offers the patch; it never applies it.
+- **Uncertain calls:** conditional or ambiguous imports, shadowed names, dynamic dispatch, assignment-created function aliases, decorated functions, and unpacked arguments may remain unresolved or require manual review. Receivers whose exact type is not in view are not checked: parameters, `self`, attributes such as `self.client`, reassigned names, and values returned by other calls. Decorated classes (including dataclasses), classes with a metaclass, `__new__`, or an imported base, and rebound or conditionally defined members have no proven calling convention. Locus does not guess a target from a matching name. No alert, and no predicted break in a rehearsal, does not establish compatibility. Runtime tests still check values and behavior.
 - **Suggested tests:** the reports' “covering tests” are inferred from dependencies and filename conventions. Locus does not measure execution coverage or run those tests.
 - **Risk scores:** the 0–100 score combines dependency counts, inferred test gaps, and drift alerts. It is a prioritization heuristic, not a failure probability.
 - **Edit feedback:** hooks respond to supported Hermes editing tools and recognized paths. Locus is not a filesystem watcher; after external editor or shell changes, use `/locus reindex` to refresh the graph.
@@ -203,7 +212,7 @@ In one final-engine v0.1.5 trial, a full 17,025-file index took 65.50 seconds fr
 
 ## Verified behavior
 
-The pinned 0.1.5 candidate recorded **123 passing Python checks in Hermes, 10 UI contract checks, and 7 evaluator-validity checks**. Minimum-version Python 3.10.22 passed 120 checks with 3 Hermes-runtime-only skips. The class-bound extension adds seven checks: 130 pass in Hermes, and Python 3.10.22 passes 127 with the same 3 skips. Actual Web and native Desktop workflows passed on a synthetic fixture, including a [final-engine stale-source follow-up](docs/evidence/v015-native-stale-verification.md).
+The pinned 0.1.5 candidate recorded **123 passing Python checks in Hermes, 10 UI contract checks, and 7 evaluator-validity checks**. Minimum-version Python 3.10.22 passed 120 checks with 3 Hermes-runtime-only skips. The class-bound extension adds seven checks: 130 pass in Hermes, and Python 3.10.22 passes 127 with the same 3 skips. Version 0.2.0 has 146 checks: all pass in Hermes, and Python 3.10.22 passes 143 with the same 3 skips. Actual Web and native Desktop workflows passed on a synthetic fixture, including a [final-engine stale-source follow-up](docs/evidence/v015-native-stale-verification.md).
 
 The [verification record](docs/verification.md#version-015-candidate) separates current confidence-preservation and stale-source fixes from the frozen corpus/model snapshot. Previously indexed files that can no longer be scanned retain explicit stale coverage and affected caller evidence marked **Needs verification**. Final-engine corpus reruns are complete. In the earlier frozen-engine model study, 11 complete pairs produced 10 both-pass outcomes and one warning-on-only pass. Across those pairs, warning-on used 112 file-tool calls versus 169 without the warning. All 24 attempts are preserved, including one privacy interruption excluded from comparison. This four-task study does not establish a general success-rate improvement. [Paired results and limits](docs/verification.md#paired-model-study-on-the-frozen-engine).
 
@@ -231,6 +240,7 @@ Hermes editing tool
 | `locus_core/storage.py` | Profile-scoped SQLite storage |
 | `locus_core/graph.py` | Repository maps, symbols, impact, cycles, and visualization data |
 | `locus_core/drift.py`, `formatter.py` | Contract comparison and bounded reports |
+| `locus_core/rehearsal.py` | Signature rehearsal and caller patches |
 | `dashboard/`, `desktop/` | Web and native Hermes interfaces |
 | `tests/`, `scripts/run_demo.py` | Automated checks and deterministic engine showcase |
 

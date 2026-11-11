@@ -5,6 +5,7 @@ from .formatter import (
     format_drift_banner,
     format_hotspots_markdown,
     format_impact_markdown,
+    format_rehearsal_markdown,
     format_repo_map_markdown,
     format_symbol_markdown,
     merge_drift_into_tool_result,
@@ -20,6 +21,12 @@ from .graph import (
 )
 from .indexer import index_workspace, reindex_edited_file, reindex_edited_files, validate_safe_workspace_root
 from .parsers import detect_language, parse_source_file
+from .rehearsal import (
+    rehearsal_summary,
+    rehearse_signature_change,
+    repair_patch_for_alerts,
+    split_rehearsal_request,
+)
 from .storage import open_locus_db, workspace_id_for
 
 __all__ = [
@@ -32,6 +39,7 @@ __all__ = [
     "format_drift_banner",
     "format_hotspots_markdown",
     "format_impact_markdown",
+    "format_rehearsal_markdown",
     "format_repo_map_markdown",
     "format_symbol_markdown",
     "get_hotspots_report",
@@ -43,8 +51,12 @@ __all__ = [
     "open_locus_db",
     "parse_source_file",
     "reindex_edited_file",
+    "rehearsal_summary",
+    "rehearse_signature_change",
+    "repair_patch_for_alerts",
     "reindex_edited_files",
     "search_symbols",
+    "split_rehearsal_request",
     "validate_safe_workspace_root",
     "workspace_id_for",
 ]

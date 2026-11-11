@@ -43,7 +43,7 @@ SKIP_DIR_NAMES = frozenset(
 DEFAULT_MAX_FILES = 2500
 DEFAULT_MAX_FILE_BYTES = 512 * 1024  # 512 KiB
 MAX_ACTIVITY_LOG_ROWS = 200
-_PYTHON_PARSER_REVISION = 4
+_PYTHON_PARSER_REVISION = 6
 
 _BLOCKED_SYSTEM_ROOTS: tuple[str, ...] = (
     "/etc",
@@ -332,17 +332,27 @@ class _PythonModuleIndex:
         return (path, name, kind) if kind in ("function", "class") else ("", name, "")
 
     def _class_member(self, module_path: str, class_name: str, member: str,
-                      metadata: dict) -> tuple[str, str, str]:
-        """Resolve ``Class.member()`` only where the receiver's type is not needed."""
+                      metadata: dict, instance: bool = False) -> tuple[str, str, str]:
+        """Resolve ``Class.member()``, or ``obj.member()`` on an instance built from ``Class(...)``.
+
+        Through the class, only static and class methods have a receiver-free
+        contract. On a directly constructed instance the exact type is known, so a
+        plain method binds too, unless the instance could shadow or intercept it.
+        """
         path, canonical, kind = self._export(module_path, class_name, metadata)
         classes = metadata.get(path, {}).get("classes", {}) if kind == "class" else {}
+        accepted = {"staticmethod", "classmethod", "function"} if instance else {"staticmethod", "classmethod"}
+        shadowed: set[str] = set()
         owner = canonical
         for _ in range(8):
             info = classes.get(owner)
-            if not info:
+            if not info or (instance and not info.get("instance_safe")):
+                break
+            shadowed.update(info.get("instance_attributes", ()))
+            if instance and member in shadowed:
                 break
             member_kind = info["members"].get(member)
-            if member_kind in ("staticmethod", "classmethod"):
+            if member_kind in accepted:
                 return path, member, f"{owner}.{member}"
             if member_kind is not None:
                 break
@@ -366,17 +376,28 @@ class _PythonModuleIndex:
         if not shape.get("direct_import") or len(attrs) > 2:
             return "", symbol, ""
         module = shape.get("import_module", "")
+        instance = shape.get("receiver") == "instance"
+        if shape.get("import_kind") == "local":
+            # The calling module's own definition; the same export rules decide provability.
+            if len(attrs) > 1:
+                return "", symbol, ""
+            if attrs:
+                return self._class_member(src, name, attrs[0], metadata, instance)
+            path, canonical, _ = self._export(src, name, metadata)
+            return path, canonical, canonical if path else ""
         if shape.get("import_kind") == "from" and attrs:
             target = self._module_from(src, module, name, metadata)
             if not target:
                 # Not a module: the imported name may be a class whose member is called.
                 if len(attrs) != 1:
                     return "", symbol, ""
-                return self._class_member(self.resolve(src, module), name, attrs[0], metadata)
+                return self._class_member(self.resolve(src, module), name, attrs[0], metadata, instance)
         else:
             target = self.resolve(src, module)
         if len(attrs) == 2:
-            return self._class_member(target, attrs[0], attrs[1], metadata)
+            return self._class_member(target, attrs[0], attrs[1], metadata, instance)
+        if instance:
+            return "", symbol, ""  # a receiver that is not a class instance
         path, canonical, _ = self._export(target, symbol, metadata)
         return path, canonical, canonical if path else ""
 
@@ -1071,6 +1092,7 @@ def reindex_edited_files(
 
     with open_locus_db(db_path=db_path) as conn:
         conn.execute("BEGIN IMMEDIATE")
+        newest_alert = conn.execute("SELECT COALESCE(MAX(id), 0) FROM drift_alerts").fetchone()[0]
         previous_alerts = {
             (row["edited_path"], row["symbol_name"]): (
                 row["severity"], row["new_signature"], row["reason"], json.loads(row["affected_callers_json"]),
@@ -1130,6 +1152,15 @@ def reindex_edited_files(
                   or previous_alerts.get((alert.edited_path, alert.symbol_name)) != (
                       alert.severity, alert.new_signature, alert.reason, alert.affected_callers,
                   )]
+        # An edit that changes a definition and its own module's callers together was
+        # never a break; do not leave a closed record for an alert nobody saw.
+        for row in conn.execute(
+            "SELECT id, edited_path, affected_callers_json FROM drift_alerts "
+            "WHERE workspace_id = ? AND id > ? AND resolved = 1", (ws_id, newest_alert),
+        ).fetchall():
+            recorded = json.loads(row["affected_callers_json"])
+            if recorded and all(caller.get("path") == row["edited_path"] for caller in recorded):
+                conn.execute("DELETE FROM drift_alerts WHERE id = ?", (int(row["id"]),))
         conn.execute(
             "UPDATE workspaces SET last_indexed_at = ?, file_count = ?, symbol_count = ?, "
             "edge_count = COALESCE(?, edge_count), scan_status_json = ? WHERE workspace_id = ?",

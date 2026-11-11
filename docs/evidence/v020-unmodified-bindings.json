@@ -1,0 +1,41 @@
+{
+ "tally": {
+  "same-file / function / proven / compatible": 106802,
+  "cross-file / function / proven / compatible": 105710,
+  "cross-file / class / linked-only / uncertain": 6882,
+  "same-file / class / proven / compatible": 4979,
+  "cross-file / function / proven / uncertain": 1052,
+  "cross-file / class / proven / compatible": 6120,
+  "same-file / class / linked-only / uncertain": 2785,
+  "same-file instance / method / proven / compatible": 546,
+  "same-file / method / proven / compatible": 82,
+  "cross-file / method / proven / compatible": 511,
+  "same-file / function / proven / uncertain": 912,
+  "same-file / class / proven / uncertain": 41,
+  "cross-file / class / proven / uncertain": 28,
+  "cross-file instance / method / proven / compatible": 3604,
+  "same-file instance / method / proven / uncertain": 7,
+  "cross-file / method / proven / uncertain": 2,
+  "cross-file / no-symbol / linked-only / uncertain": 1315,
+  "same-file / no-symbol / linked-only / uncertain": 1,
+  "cross-file instance / method / proven / uncertain": 65,
+  "same-file / method / proven / uncertain": 5,
+  "cross-file instance / no-symbol / linked-only / uncertain": 2,
+  "cross-file / function / proven / INCOMPATIBLE": 1
+ },
+ "incompatible": [
+  [
+   "cross-file",
+   "function",
+   "tests/gateway/test_hosted_room_execution_policy.py",
+   274,
+   "catalog_mapping",
+   "missing required keyword-only argument 'target_profile'"
+  ]
+ ],
+ "stats": {
+  "file_count": 17025,
+  "symbol_count": 192406,
+  "edge_count": 66843
+ }
+}

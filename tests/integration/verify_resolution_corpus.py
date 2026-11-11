@@ -7,7 +7,8 @@ non-target/shadowing behavior. This is a targeted regression set, not a blind or
 representative held-out benchmark. Every case is declared before running Locus.
 
 Protocol 2 adds class-bound calls in two further groups, leaving the original
-two groups and their cases unchanged: constructors and static/class methods on
+two groups and their cases unchanged: constructors, static/class methods and
+methods on locally constructed instances, on
 pinned Hermes classes, and authored executable class fixtures. Breaks that the
 documented limits exclude (instance receivers, decorated classes, imported
 bases) stay in the denominator under their own scope instead of being omitted.
@@ -487,11 +488,14 @@ CLASS_CONTROLS = {
     "static-other-class": ("from pkg.api import Other\ndef run():\n    return Other.parse('x')  # site\n", "client-parse-required", "cross-file", False),
     "static-module-function": ("from pkg.api import parse\ndef run():\n    return parse('x')  # site\n", "client-parse-required", "cross-file", False),
     "static-override": ("from pkg.api import Override\ndef run():\n    return Override.parse('x')  # site\n", "client-parse-required", "cross-file", False),
-    # Real breaks outside the documented supported set: retained, not required.
+    # Methods on a name assigned once from a proven constructor: the exact type is in view.
     "instance-method": ("from pkg.api import Client\ndef run():\n    client = Client('h')\n    return client.send('b')  # site\n",
-                        "client-send-required", "instance-receiver", True),
+                        "client-send-required", "cross-file", True),
     "instance-static": ("from pkg.api import Client\ndef run():\n    client = Client('h')\n    return client.parse('x')  # site\n",
-                        "client-parse-required", "instance-receiver", True),
+                        "client-parse-required", "cross-file", True),
+    # Real breaks outside the documented supported set: retained, not required.
+    "instance-parameter": ("from pkg.api import Client\ndef use(client):\n    return client.send('b')  # site\ndef run():\n    return use(Client('h'))\n",
+                           "client-send-required", "instance-receiver", True),
     "dataclass-ctor": ("from pkg.api import Record\ndef run():\n" + _CTOR.format("Record"), "record-field-rename", "decorated-class", True),
     "imported-base-ctor": ("from pkg.api import Derived\ndef run():\n" + _CTOR.format("Derived"), "root-init-keyword-rename", "imported-base", True),
 }

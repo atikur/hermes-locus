@@ -7,7 +7,8 @@ description: Navigate repositories, inspect dependencies before refactoring, sel
 
 Locus maintains a local structural dependency graph of the selected workspace.
 Python has AST definitions, signatures, and positional and keyword binding for
-supported direct imports. TypeScript and
+supported direct imports, calls inside the edited file, class constructors, static and
+class methods, and methods on locally constructed instances. TypeScript and
 JavaScript have lighter structural and call extraction; Go and Rust have
 definitions and imports. The graph is useful evidence, not a complete type checker
 or execution-coverage report.
@@ -23,16 +24,25 @@ or execution-coverage report.
    changing a shared signature, removing an exported symbol, or moving a module,
    review direct and transitive dependents, known call sites, and suggested tests.
    The impact score is a prioritization heuristic, not a probability of failure.
-4. **Inspect health with `locus_hotspots` or `@hotspots:all`.** Use `cycles`, `drift`,
+4. **Rehearse a signature change with `locus_rehearse` or `@whatif:<symbol>(<new parameters>)`.**
+   Before editing a function, constructor, or method signature, pass the proposed
+   parameter list, for example `(token, *, scope=None)`. The report lists the proven
+   call sites that would break and why, those needing review, and what was not
+   checked. For a single renamed keyword it includes a caller patch: review it, then
+   apply it with the patch tool together with the definition change. A rehearsal
+   with no predicted break is not proof of safety.
+5. **Inspect health with `locus_hotspots` or `@hotspots:all`.** Use `cycles`, `drift`,
    or `untested` to focus the report. An inferred test gap does not prove there is
    no runtime test coverage.
 
 ## Respond to a drift alert
 
 After supported editing-tool calls, Locus can append a
-`[Locus Signature Drift Alert]` naming external references affected by a
+`[Locus Signature Drift Alert]` naming call sites, including ones in the edited file, affected by a
 signature change or symbol removal. An exact binding diagnostic can explain
-which argument failed and suggest a keyword replacement to review.
+which argument failed and suggest a keyword replacement to review. For a single
+renamed keyword the alert can carry a ready caller patch; review it before applying it
+with the patch tool.
 
 When an alert appears:
 

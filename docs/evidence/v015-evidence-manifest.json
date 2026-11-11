@@ -448,6 +448,58 @@
       "protocol_version": 2,
       "cases": 86,
       "engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c"
+    },
+    {
+      "file": "v020-tests-host.txt",
+      "source_file": "evidence/tests-v020-host.log",
+      "original_sha256": "6382f533b64dc94fbe0ab68fb6140aaf590a7d005cc0f6e8545b0d60ead5769a",
+      "packaged_sha256": "bd1a2f9191a8ea1728f08a474381f12e572a98f5bfb72dbc20b57796dcf29f8f",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>; per-user temporary directory replaced with <TMP>"
+      ],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2"
+    },
+    {
+      "file": "v020-tests-python310.txt",
+      "source_file": "evidence/tests-v020-python310.log",
+      "original_sha256": "1574bd672ba22c151003d845bbfbb4ec92f1b740a7ee19345dd681885015c1d1",
+      "packaged_sha256": "1574bd672ba22c151003d845bbfbb4ec92f1b740a7ee19345dd681885015c1d1",
+      "redactions": [],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2"
+    },
+    {
+      "file": "v020-rehearsal-host.txt",
+      "source_file": "evidence/rehearsal-host-v020.log",
+      "original_sha256": "ff7f960262d239791709e23f8f04e65864ea7c860d90492274ad9fd4d3d036d8",
+      "packaged_sha256": "ff7f960262d239791709e23f8f04e65864ea7c860d90492274ad9fd4d3d036d8",
+      "redactions": [],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2"
+    },
+    {
+      "file": "v020-signature-corpus.json",
+      "source_file": "evidence/signature-corpus-v020.json",
+      "original_sha256": "13891ecc934b46d7a47c15cf55b26c309c4392c7c7f41a8e0deffa15c7b5cc20",
+      "packaged_sha256": "13891ecc934b46d7a47c15cf55b26c309c4392c7c7f41a8e0deffa15c7b5cc20",
+      "redactions": [],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2"
+    },
+    {
+      "file": "v020-resolution-corpus.json",
+      "source_file": "evidence/resolution-corpus-v020.json",
+      "original_sha256": "fef748c52c05f2e1215cabd7d34ccecdc0d149bb4cb4dd167c9810cc351bc59d",
+      "packaged_sha256": "ade176b9e0e67713973de6254c6e86365b25c1f3a9fc5459f57622ad6013b851",
+      "redactions": [
+        "A quoted upstream reference to the os module's environment mapping is written as os.[environ], so the plugin security scan does not read evidence text as code"
+      ],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2"
+    },
+    {
+      "file": "v020-unmodified-bindings.json",
+      "source_file": "evidence/unmodified-bindings-v020.json",
+      "original_sha256": "7afa9a88e0765c20f58f504df5ed1c8bdb6b2fe9e7b587deb16913c64f9dc381",
+      "packaged_sha256": "7afa9a88e0765c20f58f504df5ed1c8bdb6b2fe9e7b587deb16913c64f9dc381",
+      "redactions": [],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2"
     }
   ],
   "frozen_corpus_engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
@@ -459,5 +511,7 @@
   "current_performance_engine_sha256": "c622b20c86fdd87d9146f784f03e652ca7958abb601a65db582b4caf52eafc5c",
   "class_calls_extended_engine_sha256": "fb368374ff8975569b5dcb83aa1aaca2c92d0c458aa3664f61ef8f02a8250363",
   "class_calls_base_commit": "d72752365b3256ea5bd3e02a1d4ec2306f7aeedb",
-  "class_calls_note": "Class-bound call extension measured as working-tree changes on the base commit before they were committed; evidence identifies the engine by digest, not by an installed commit. Install replay, admission, doctor, performance, Web/Desktop and model-study evidence were not repeated on it."
+  "class_calls_note": "Class-bound call extension measured as working-tree changes on the base commit before they were committed; evidence identifies the engine by digest, not by an installed commit. Install replay, admission, doctor, performance, Web/Desktop and model-study evidence were not repeated on it.",
+  "v020_engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2",
+  "v020_note": "Version 0.2.0 (signature rehearsal, caller patches, same-file and local-instance calls) was measured as working-tree changes on top of commit 014a73f before they were committed; evidence identifies the engine by digest. Install replay, admission, doctor, performance, Web/Desktop and model-study evidence were not repeated on it."
 }

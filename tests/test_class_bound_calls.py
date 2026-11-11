@@ -148,7 +148,7 @@ class ClassBoundCallTests(unittest.TestCase):
             edits[f"{name}.py"] = source.replace("(self, a)", "(self, a, b)") + "\n"
             files[f"use_{name}.py"] = f"from {name} import S\nS(1)\n"
         methods = {
-            "instance": "class S:\n    def run(self, a):\n        pass\n",
+            "instance_parameter": "class S:\n    def run(self, a):\n        pass\n",
             "property_like": "class S:\n    @cached\n    def run(a):\n        pass\n",
             "shadowed_static": "staticmethod = wrap\nclass S:\n    @staticmethod\n    def run(a):\n        pass\n",
             "rebound_member": "class S:\n    @staticmethod\n    def run(a):\n        pass\n    run = other\n",
@@ -157,7 +157,10 @@ class ClassBoundCallTests(unittest.TestCase):
         for name, source in methods.items():
             files[f"{name}.py"] = source
             edits[f"{name}.py"] = source.replace("(self, a)", "(self, a, b)").replace("run(a)", "run(a, b)") + "\n"
-            files[f"use_{name}.py"] = f"from {name} import S\nS.run(1)\ns = S()\ns.run(1)\nS().run(1)\n"
+            # Through the class, a parameter, and a chained call: none gives a proven receiver.
+            # (A name assigned once from S(...) does; see test_instance_calls.)
+            files[f"use_{name}.py"] = (f"from {name} import S\nS.run(1)\ndef use(s):\n    return s.run(1)\n"
+                                       "S().run(1)\n")
         for path, text in files.items():
             self.write(path, text)
         index_workspace(self.root, db_path=self.db)

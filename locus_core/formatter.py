@@ -236,8 +236,75 @@ def format_hotspots_markdown(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def format_drift_banner(alerts: list[dict[str, Any]]) -> str:
-    """Render concise `[Locus Signature Drift Alert]` block appended to file-edit tool results."""
+def format_rehearsal_markdown(data: dict[str, Any]) -> str:
+    """Render a signature rehearsal: a prediction made before any file is edited."""
+    if not data.get("ok"):
+        lines = [f"### Locus Rehearsal\n{_error_detail(data, 'Rehearsal unavailable.')}"]
+        if data.get("symbol"):
+            lines.extend(_coverage_lines(data))
+        return "\n".join(lines)
+    sym = data["symbol"]
+    breaks, review = data.get("breaks", []), data.get("needs_review", [])
+    checked = data.get("checked_call_sites", 0)
+    lines = [
+        f"## Rehearsal: `{sym['qualified_name']}` in `{sym['rel_path']}` (nothing was edited)",
+        f"- **Current:** `{data['current_signature']}`",
+        f"- **Proposed parameters:** `{data['proposed_parameters']}`",
+    ]
+    if not data.get("changes_contract"):
+        lines.append("- The proposal binds calls exactly as the current signature does.")
+    if breaks:
+        lines.append(f"- **{len(breaks)} of {checked} checked call site(s) would break**; "
+                     f"{data.get('compatible_count', 0)} stay compatible"
+                     + (f" and {len(review)} need review." if review else "."))
+    else:
+        lines.append(f"- **None of {checked} checked call site(s) would break.**")
+    if breaks:
+        lines.append("\n### Would break")
+        for c in breaks[:30]:
+            note = " (already incompatible today)" if c.get("already_incompatible") else ""
+            lines.append(f"- `{c['path']}:{c['line']}` (`{c['caller']}`): {c['incompatibility']}{note}")
+            if c.get("suggestion"):
+                lines.append(f"  {c['suggestion']}")
+        if len(breaks) > 30:
+            lines.append(f"- {len(breaks) - 30} more breaking call site(s) omitted here.")
+    if review:
+        lines.append("\n### Needs review")
+        for c in review[:15]:
+            lines.append(f"- `{c['path']}:{c['line']}` (`{c['caller']}`): {c['reason']}")
+        if len(review) > 15:
+            lines.append(f"- {len(review) - 15} more call site(s) need review.")
+    patch = data.get("caller_patch") or {}
+    if patch.get("patch"):
+        lines.append(f"\n### Caller patch for the rename ({patch['calls']} call(s) in {len(patch['files'])} file(s), not applied)")
+        lines.append("Review it, then apply it with the patch tool alongside the definition change:")
+        lines.append("```\n" + patch["patch"] + "\n```")
+    for item in patch.get("skipped", [])[:5]:
+        lines.append(f"- No patch for `{item['path']}`: {item['reason']}.")
+    unchecked = data.get("unchecked") or {}
+    notes = []
+    if unchecked.get("same_file"):
+        notes.append(f"{unchecked['same_file']} call(s) named `{sym['name']}` inside `{sym['rel_path']}`")
+    if unchecked.get("unresolved_same_name"):
+        notes.append(f"{unchecked['unresolved_same_name']} same-named call(s) elsewhere with no proven target")
+    lines.append("\n### Not checked")
+    if notes:
+        lines.append("- " + " and ".join(notes) + " were not checked.")
+    lines.append("- Only statically proven cross-file calls are bound. No predicted break is not proof of "
+                 "safety; run the relevant tests after the change.")
+    lines.extend(_coverage_lines(data))
+    return "\n".join(lines)
+
+
+MAX_INLINE_REPAIR_PATCH_CHARS = 6000
+
+
+def format_drift_banner(alerts: list[dict[str, Any]], repair_patch: dict[str, Any] | None = None) -> str:
+    """Render concise `[Locus Signature Drift Alert]` block appended to file-edit tool results.
+
+    *repair_patch* is an optional caller patch for mechanical keyword renames.
+    It is offered for review; Locus never applies it.
+    """
     if not alerts:
         return ""
     lines: list[str] = [
@@ -269,6 +336,15 @@ def format_drift_banner(alerts: list[dict[str, Any]]) -> str:
     if len(alerts) > 5:
         lines.append(f"{len(alerts) - 5} additional alert(s) omitted here; inspect `locus_hotspots`.")
     lines.append("Inspect and update the affected call sites above before concluding your task.")
+    patch = (repair_patch or {}).get("patch") or ""
+    if patch and len(patch) <= MAX_INLINE_REPAIR_PATCH_CHARS:
+        lines.append(f"Ready caller patch for the renamed keyword ({repair_patch['calls']} call(s) in "
+                     f"{len(repair_patch['files'])} file(s)). Review it, then apply it with the patch tool; "
+                     "other listed call sites still need their own fix:")
+        lines.append(patch)
+    elif patch:
+        lines.append("A caller patch for the renamed keyword is too large to include here; "
+                     "apply the listed replacements file by file.")
     return "\n".join(lines)
 
 

@@ -155,7 +155,7 @@ class TestDriftAndHooks(unittest.TestCase):
 
                 self.assertEqual(
                     set(ctx.tools.keys()),
-                    {"locus_map", "locus_symbol", "locus_impact", "locus_hotspots"},
+                    {"locus_map", "locus_symbol", "locus_impact", "locus_hotspots", "locus_rehearse"},
                 )
                 self.assertEqual(
                     set(ctx.hooks.keys()),

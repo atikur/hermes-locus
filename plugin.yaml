@@ -1,11 +1,12 @@
 manifest_version: 2
 api_version: 1
 name: locus-codegraph
-version: 0.1.5
+version: 0.2.0
 description: >-
-  Catch supported Python caller breakage in Hermes edit results, with exact
-  locations, binding errors and repair context. Local code navigation and
-  caller inboxes for Web Dashboard and Hermes Desktop.
+  Rehearse a Python signature change before editing and catch caller breakage
+  in Hermes edit results, with exact locations, binding errors and a caller
+  patch for renamed keywords. Local code navigation and caller inboxes for
+  Web Dashboard and Hermes Desktop.
 author: Atikur Rahman
 license: MIT
 homepage: https://github.com/atikur/hermes-locus
@@ -38,6 +39,7 @@ config_schema:
     description: Upper bound on source files indexed per workspace.
 provides_tools:
   - locus_map
+  - locus_rehearse
   - locus_symbol
   - locus_impact
   - locus_hotspots
