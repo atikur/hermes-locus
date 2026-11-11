@@ -1,0 +1,50 @@
+[
+ {
+  "label": "start",
+  "wall": 1794414113.475245
+ },
+ {
+  "label": "type whatif",
+  "wall": 1794414113.4769988
+ },
+ {
+  "label": "whatif shown",
+  "wall": 1794414117.107661
+ },
+ {
+  "label": "type prompt",
+  "wall": 1794414125.3317719
+ },
+ {
+  "label": "prompt sent",
+  "wall": 1794414135.130155
+ },
+ {
+  "label": "alert visible",
+  "wall": 1794414135.131129
+ },
+ {
+  "label": "callers fixed",
+  "wall": 1794414166.68798
+ },
+ {
+  "label": "agent idle",
+  "wall": 1794414175.329406
+ },
+ {
+  "label": "type status",
+  "wall": 1794414179.3402429
+ },
+ {
+  "label": "status shown",
+  "wall": 1794414181.070421
+ },
+ {
+  "label": "open dashboard",
+  "wall": 1794414188.086713
+ },
+ {
+  "label": "end",
+  "wall": 1794414197.1089
+ }
+]

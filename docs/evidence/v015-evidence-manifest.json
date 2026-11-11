@@ -500,6 +500,57 @@
       "packaged_sha256": "7afa9a88e0765c20f58f504df5ed1c8bdb6b2fe9e7b587deb16913c64f9dc381",
       "redactions": [],
       "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2"
+    },
+    {
+      "file": "v020-install-replay.json",
+      "source_file": "evidence/install-replay-v020.json",
+      "original_sha256": "68efdef531424c84d2574657da207e2c26ebb1eb7fcfe3a4a2a68015217acfcc",
+      "packaged_sha256": "2e843192e19d404830dddb937a678bc11a6a2f82411812e188cae3bcae0104a7",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2",
+      "plugin_commit": "43324066fccdb14a261d3b3964db2319a12ae005"
+    },
+    {
+      "file": "v020-admission.json",
+      "source_file": "evidence/admission-v020.json",
+      "original_sha256": "7c88503b82e050abf317e2f698d20e3688487179fd658b9a75f6b0a1626200d2",
+      "packaged_sha256": "7c88503b82e050abf317e2f698d20e3688487179fd658b9a75f6b0a1626200d2",
+      "redactions": [],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2",
+      "plugin_commit": "43324066fccdb14a261d3b3964db2319a12ae005"
+    },
+    {
+      "file": "v020-doctor.txt",
+      "source_file": "evidence/doctor-v020.log",
+      "original_sha256": "1a61422e1fb3bae36119083ad62e9f3caafbdabf42d12899422813b5308a3b70",
+      "packaged_sha256": "ca2823c09edd3ee68443dddb4e9b2862ec08f37b70a0992dd8de3ae2ec1b81a8",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2",
+      "plugin_commit": "43324066fccdb14a261d3b3964db2319a12ae005"
+    },
+    {
+      "file": "v020-live-demo-session.json",
+      "source_file": "media-v020-live/session-evidence.json",
+      "original_sha256": "d272f4d672035f06dd251efaaf5c4f9b7df7f48198c3f2b3b3d20327dc099f61",
+      "packaged_sha256": "0cc8b146ba6a79e657b68171127afb0e67d3e3e4088cb16e35a49c4fa84dc6ef",
+      "redactions": [
+        "Local home-directory prefix replaced with <LOCAL_HOME>"
+      ],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2",
+      "plugin_commit": "43324066fccdb14a261d3b3964db2319a12ae005"
+    },
+    {
+      "file": "v020-live-demo-marks.json",
+      "source_file": "media-v020-live/marks.json",
+      "original_sha256": "581e4b0b15a1f4fc8db499fb6655bfce8f290a6e7226aaaf81cc763a6901b20d",
+      "packaged_sha256": "581e4b0b15a1f4fc8db499fb6655bfce8f290a6e7226aaaf81cc763a6901b20d",
+      "redactions": [],
+      "engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2",
+      "plugin_commit": "43324066fccdb14a261d3b3964db2319a12ae005"
     }
   ],
   "frozen_corpus_engine_sha256": "efbf401befb73fe11e1a9c5985ef3783935090db8a38ebe6c26f7c06611553ac",
@@ -513,5 +564,5 @@
   "class_calls_base_commit": "d72752365b3256ea5bd3e02a1d4ec2306f7aeedb",
   "class_calls_note": "Class-bound call extension measured as working-tree changes on the base commit before they were committed; evidence identifies the engine by digest, not by an installed commit. Install replay, admission, doctor, performance, Web/Desktop and model-study evidence were not repeated on it.",
   "v020_engine_sha256": "2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2",
-  "v020_note": "Version 0.2.0 (signature rehearsal, caller patches, same-file and local-instance calls) was measured as working-tree changes on top of commit 014a73f before they were committed; evidence identifies the engine by digest. Install replay, admission, doctor, performance, Web/Desktop and model-study evidence were not repeated on it."
+  "v020_note": "Version 0.2.0 was first committed as ae64d62; 4332406 adds only CI fixes and has the same engine digest. On 4332406: hosted CI passed all 8 jobs; a fresh install from Git into pinned Hermes with an edit replay passed; admission and doctor passed; and a live demo was recorded in the Hermes web chat. The performance trial, the Desktop interaction checklist and the paired model study were not repeated."
 }

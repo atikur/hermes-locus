@@ -1,0 +1,6 @@
+Plugin Doctor: 
+<SCRATCH>
+4a1f-8ead-00dc937155f4/scratchpad/pin/locus-codegraph
+  manifest: locus-codegraph 0.2.0 (standalone)
+  OK: runtime discovery, manifest parsing, import, and registration passed
+  registrations: 5 tool(s), 3 hook(s)

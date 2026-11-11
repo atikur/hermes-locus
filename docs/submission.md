@@ -2,11 +2,11 @@
 
 **Locus Codegraph puts precise caller feedback inside Hermes's edit results.**
 
-[60-second recorded-study replay](../assets/locus-v015-proof.mp4) · [Current evidence](verification.md#version-015-candidate) · [Actual final-engine Desktop/Web checks](evidence/v015-native-stale-verification.md) · [Installation](../README.md#install)
+[70-second live demo](../assets/locus-v020-demo.mp4) · [Current evidence](verification.md#version-020-rehearsal-same-file-and-instance-calls) · [Earlier 0.1.5 replay](../assets/locus-v015-proof.mp4) · [0.1.5 evidence](verification.md#version-015-candidate) · [Actual final-engine Desktop/Web checks](evidence/v015-native-stale-verification.md) · [Installation](../README.md#install)
 
 The replay shows one selected controlled `efbf401` study session with a pre-applied helper edit and independently run tests; it is not a live UI capture, final-engine run, or typical-success estimate. [Media provenance](evidence/v015-demo-selected-evidence.json).
 
-**Private v0.1.5 draft; not submitted.** Final-engine corpus reruns and the paired model study are complete; their snapshots and limits are distinguished below.
+**This runbook was written for version 0.1.5.** The current version is 0.2.0; see [its verification section](verification.md#version-020-rehearsal-same-file-and-instance-calls) and [how its demo was recorded](demo.md). The 0.1.5 snapshots and limits below remain as recorded.
 
 A Python keyword rename can break a caller without changing the number of
 arguments. Locus checks supported cross-file bindings after an edit and puts
@@ -185,14 +185,13 @@ rehearsal; it is not the recorded LLM-driven demonstration.
 
 ## Entry links and status
 
-- [Source repository — private during preparation](https://github.com/atikur/hermes-locus)
+- [Source repository](https://github.com/atikur/hermes-locus)
 - [Release CI](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
 - [Catalog PR search](https://github.com/NousResearch/hermes-agent/pulls?q=is%3Apr+author%3Aatikur+locus-codegraph)
 - [Official entry form](https://form.typeform.com/to/FwJLvOln)
 - [Organizer announcement](https://x.com/NousResearch/status/2118094256438936062)
 - [Catalog admission rules](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins/catalog-submission)
 
-The repository must remain private until its owner authorizes publication.
 Links above do not establish public availability, catalog acceptance, or entry
 form completion. The catalog entry must pin the published plugin's exact
 40-character commit SHA.

@@ -1,18 +1,32 @@
-# Locus Codegraph — Catch cross-file breakage while Hermes edits
+# Locus Codegraph — Rehearse refactors and catch broken callers in Hermes
 
 ![Locus banner](assets/locus-banner.svg)
 
-**Locus Codegraph puts precise caller feedback inside Hermes's edit results.** When a supported Python signature change breaks an indexed caller, the agent receives the caller's file and line, the binding error, and a repair suggestion where one can be checked. A local repository graph also powers agent tools, `@` context references, the Web Dashboard, and Hermes Desktop.
+**Locus lets Hermes check a Python signature change before and after making it.** Ask `@whatif:verify_token(token,*,scope=None)` and Locus binds every statically proven caller against the proposed signature, before any file changes, and lists the call sites that would break and why. When Hermes then edits the code, the same check runs inside the editing tool's own result: broken callers arrive with file, line and the binding error, and for a renamed keyword, a ready caller patch.
 
-[Watch the 60-second study replay](assets/locus-v015-proof.mp4) · [Captions](assets/locus-v015-proof.srt) · [Current native UI proof](docs/evidence/v015-native-stale-verification.md) · [Verification](docs/verification.md#version-015-candidate)
+[![The 70-second live demo: rehearsal in the Hermes terminal](assets/locus-v020-demo-poster.jpg)](assets/locus-v020-demo.mp4)
 
-The video replays one recorded controlled `efbf401` study session: a pre-applied helper edit, model-requested caller repairs, then independent evaluator tests. It is an evidence replay, not a live UI recording or a typical-success claim. [Trace and media provenance](docs/evidence/v015-demo-selected-evidence.json).
+[Watch the 70-second demo](assets/locus-v020-demo.mp4): one real Hermes web-chat session with gpt-5.4-mini and Locus installed from this repository. Typing and the agent's work are sped up 2x and marked on screen. [How it was recorded](docs/demo.md).
 
-**New in 0.2.0: rehearse a refactor before making it.** `@whatif:verify_token(token,*,scope=None)`, or the `locus_rehearse` tool, binds every proven caller against a proposed signature before any file changes and lists what would break and why. For a renamed keyword it returns a caller patch to review, and the same patch now arrives inside the post-edit alert. Checks also reach calls inside the edited file and methods on locally constructed instances. Version 0.2.0 has [its own corpus and host evidence](docs/verification.md#version-020-rehearsal-same-file-and-instance-calls); the install replay, admission, Web/Desktop and model-study records below belong to the 0.1.5 pin.
+The engine uses only Python's standard library (`ast`, `sqlite3`). It needs no API key, hosted index or extra model call, and it never edits your code.
 
-Version **0.1.5 was the previous private release candidate**. It extends Python resolution to supported module imports, import aliases, and static re-exports; makes the caller inbox actionable; and exposes incomplete scans throughout reports. Current deterministic results are below; video and model-study evidence use the earlier frozen engine. A later local extension also checks class constructors and static/class methods called through an imported class; it has its own corpus evidence and has not been through the install replay, admission, or Web/Desktop checks. The completed paired model study, final-engine corpus reruns, and native Desktop checks have separate provenance.
+## What it checks
 
-The analysis engine uses Python's standard library (`ast`, `sqlite3`, and structural parsers). It needs no API key, hosted index, or extra model call. Hermes supplies the web and desktop integration libraries.
+Python calls Locus can prove statically: functions, class constructors, static and class methods, methods on locally constructed instances (`client = Client(...)` then `client.send(...)`), and calls inside the edited file. Calls may go through direct or module-qualified imports, aliases, relative imports and static re-exports. Receivers whose type is not in view (`self`, parameters, attributes), decorated callables and dynamic bindings are not checked, and Locus never guesses a target from a matching name. [Full limits](#analysis-depth-and-limits).
+
+## Evidence at a glance
+
+For version 0.2.0. [Full record, method and raw files](docs/verification.md#version-020-rehearsal-same-file-and-instance-calls).
+
+- **CI:** all 8 jobs pass on GitHub: Python 3.10 to 3.14 on Linux, macOS and Windows; the shipped UI contracts; and a job that installs this exact commit into a pinned Hermes and replays a real edit through its hooks.
+- **Tests:** 146 pass in the Hermes runtime.
+- **Admission:** `hermes plugins validate --install-deps` passes with zero warnings; `plugins doctor --ci` registers 5 tools and 3 hooks.
+- **Pinned real source:** 45 of 45 and 24 of 24 incompatible call instances named across Hermes, HTTPX and Requests edits, and none of 65 compatible ones.
+- **Classes:** 25 of 26 on pinned Hermes classes and 18 of 21 in executable fixtures, none of 51 compatible named; the misses are documented gaps.
+- **False positives:** of 230,467 statically proven calls in an unmodified 17,025-file Hermes checkout, the only incompatible one is a test that expects `TypeError`.
+- **With a model:** in an earlier paired study (11 pairs, version 0.1.5), warnings cut searches from 67 to 32; it did not show a clear success-rate gain (11/11 against 10/11).
+
+These are selected cases and one large repository, not an estimate of accuracy everywhere.
 
 ## One refactor, a complete feedback loop
 
@@ -20,6 +34,9 @@ Suppose checkout code calls `verify_token(token, audience="checkout")`, and an A
 
 1. **See the impact.** `@impact:auth/tokens.py` identifies direct and indirect dependents and suggests related tests.
 2. **Rehearse it.** `@whatif:verify_token(token,*,scope=None)` reports, before anything is edited, that the checkout call would break with `unexpected keyword argument 'audience'`, and offers a caller patch for the rename.
+
+   ![The rehearsal in the Hermes terminal](assets/locus-v020-whatif.jpg)
+
 3. **Make the change.** Hermes renames the `audience` parameter to `scope`. The total number of parameters stays the same.
 4. **Catch a missed caller.** Locus appends a warning to the editing tool's result.
 
@@ -34,17 +51,9 @@ Suppose checkout code calls `verify_token(token, audience="checkout")`, and an A
 
 Locus supplies the evidence and the agent performs the repair. The warning above is abbreviated for illustration.
 
-In a recorded v0.1.4 refactor on Hermes Agent's own code, Locus named all five affected call sites in the result of the first edit, before Hermes searched for callers. Hermes confirmed the locations, repaired the calls, and passed all 26 upstream display tests. [Historical live evidence and replay](docs/verification.md#live-keyword-refactor-on-hermes-agent)
-
-Across 19 selected edits from Hermes Agent, HTTPX, and Requests, the final v0.1.5 engine named **42 of 42 incompatible call instances**, including the module-qualified Requests case, and none of 34 compatible instances. A separate 12-case real-source corpus named **22 of 24** incompatible instances: all 22 cross-file calls, with two same-file misses. It named none of 28 compatible instances. With class-bound calls added, the extended engine named **25 of 26** incompatible instances on four pinned Hermes classes, missing one same-file call, and **16 of 20** in authored class fixtures. The four misses there are documented gaps: two calls through an instance, a dataclass constructor, and a class with an imported base. It named none of 51 compatible instances; the previous engine named none of the 46 breaks. [Class-bound results and limits](docs/verification.md#class-bound-calls-on-the-extended-engine). On version 0.2.0, with calls inside the edited file now labelled, the same corpora read **45 of 45**, **24 of 24** and **16 of 16** incompatible instances named and none of 78 compatible ones. The class groups read **25 of 26** and **18 of 21**; the four misses are a call through `self`, a parameter-typed receiver, a dataclass constructor and a class with an imported base. In an unmodified 17,025-file Hermes checkout, 228,354 of 230,467 statically proven calls bind to their current signatures, 2,112 are uncertain because of argument unpacking, and one is incompatible: a test that expects `TypeError`. [Version 0.2.0 results](docs/verification.md#version-020-rehearsal-same-file-and-instance-calls). These targeted checks measure call binding, not repository-wide accuracy or improved agent success. [Current results and raw evidence](docs/verification.md#version-015-candidate); [preserved v0.1.4 comparison](docs/verification.md#signature-changes-across-three-repositories).
-
-Across **11 complete pairs on four selected refactor tasks**, warning feedback used **32 searches versus 67**; independent checks passed **11/11 with warnings and 10/11 without**. This study used frozen engine `efbf401`; one privacy interruption was excluded from the paired comparison. [All 24 attempts, protocol, and limits](docs/verification.md#paired-model-study-on-the-frozen-engine).
-
 ## Install
 
 The plugin requires **Hermes Agent >=0.22.0** and uses Hermes's Python runtime. The standalone engine needs Python 3.10 or later.
-
-The repository remains private during preparation. The Git URL below requires repository access; it is not a public installation or catalog-acceptance claim.
 
 ```bash
 hermes plugins install https://github.com/atikur/hermes-locus --enable
@@ -52,7 +61,7 @@ hermes plugins install https://github.com/atikur/hermes-locus --enable
 
 From the root of a Python project, run `hermes locus map` to check the installation without a configured model. Start a fresh Hermes session in that project to use Locus during edits. `/locus reindex` refreshes its graph.
 
-After catalog acceptance, the short form is `hermes plugins install locus-codegraph --enable`. In Hermes Desktop, use the plugin installer or this deep link:
+Once the catalog entry is accepted, the short form is `hermes plugins install locus-codegraph --enable`. In Hermes Desktop, use the plugin installer or this deep link:
 
 ```text
 hermes://plugin/install?repo=atikur/hermes-locus&enable=1
@@ -123,9 +132,9 @@ The `locus-codegraph` toolset exposes five tools, plus a bundled `locus-navigati
 
 ## Web and desktop
 
-![Locus running in the Hermes Web Dashboard](assets/locus-live-dashboard.jpg)
+![The Locus tab in the Hermes Web Dashboard after the demo session](assets/locus-v020-dashboard.jpg)
 
-*Historical capture from the real Hermes Web Dashboard using the disposable checkout fixture. It predates the v0.1.5 caller inbox.*
+*The Locus tab in the Hermes Web Dashboard at the end of the recorded demo: no open alerts, one closed after the repair, and the dependency map of the demo project.*
 
 - **Web Dashboard:** `/locus-codegraph` opens with caller alerts: every stored location in each displayed alert, binding reasons, available repair suggestions, and copyable repair context. A keyboard-accessible graph, file list, symbol search, and workspace selection provide navigation. The page and `sessions:top` drift banner refresh every five seconds.
 - **Hermes Desktop:** the **Locus Codegraph** pane shares the caller inbox and coverage warnings, provides status and command-palette actions, and refreshes through polling and plugin events. It inserts repair context or `@impact:<file>` into a draft for review; it does not send the message. [Actual Desktop 0.22 interaction checks](docs/evidence/v015-native-verification.md) covered eight callers, the complete unsent draft, keyboard navigation, repair, parsing errors, and dismissal.
@@ -212,11 +221,11 @@ In one final-engine v0.1.5 trial, a full 17,025-file index took 65.50 seconds fr
 
 ## Verified behavior
 
-The pinned 0.1.5 candidate recorded **123 passing Python checks in Hermes, 10 UI contract checks, and 7 evaluator-validity checks**. Minimum-version Python 3.10.22 passed 120 checks with 3 Hermes-runtime-only skips. The class-bound extension adds seven checks: 130 pass in Hermes, and Python 3.10.22 passes 127 with the same 3 skips. Version 0.2.0 has 146 checks: all pass in Hermes, and Python 3.10.22 passes 143 with the same 3 skips. Actual Web and native Desktop workflows passed on a synthetic fixture, including a [final-engine stale-source follow-up](docs/evidence/v015-native-stale-verification.md).
+Version 0.2.0 is summarised in [Evidence at a glance](#evidence-at-a-glance) and recorded in full in [the verification record](docs/verification.md#version-020-rehearsal-same-file-and-instance-calls). Earlier versions keep their own sections there:
 
-The [verification record](docs/verification.md#version-015-candidate) separates current confidence-preservation and stale-source fixes from the frozen corpus/model snapshot. Previously indexed files that can no longer be scanned retain explicit stale coverage and affected caller evidence marked **Needs verification**. Final-engine corpus reruns are complete. In the earlier frozen-engine model study, 11 complete pairs produced 10 both-pass outcomes and one warning-on-only pass. Across those pairs, warning-on used 112 file-tool calls versus 169 without the warning. All 24 attempts are preserved, including one privacy interruption excluded from comparison. This four-task study does not establish a general success-rate improvement. [Paired results and limits](docs/verification.md#paired-model-study-on-the-frozen-engine).
-
-[Watch the earlier 77-second model session](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4) · [Download its captions](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.srt)
+- **0.1.5:** actual Web and native Desktop 0.22 interaction checks on a synthetic fixture, including a [stale-source follow-up](docs/evidence/v015-native-stale-verification.md); a [performance trial](docs/performance.md); and the [paired model study](docs/verification.md#paired-model-study-on-the-frozen-engine), with all 24 attempts preserved.
+- **0.1.4:** a [recorded refactor on Hermes Agent's own code](docs/verification.md#live-keyword-refactor-on-hermes-agent) in which Locus named all five affected call sites in the first edit's result, before Hermes searched for callers.
+- **Earlier demos:** the [60-second study replay](assets/locus-v015-proof.mp4) for 0.1.5 and the [77-second model session](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4) for 0.1.2.
 
 ## Architecture
 

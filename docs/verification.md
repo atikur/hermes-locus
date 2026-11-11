@@ -2,9 +2,9 @@
 
 Verified on 11 November 2026 on macOS (Darwin 25.4.0, arm64).
 
-The current version is **0.2.0**, measured as local changes on top of the private
-**0.1.5** candidate. Each is reported in its own section below, separately from
-the preserved **0.1.4** evidence. The
+The current version is **0.2.0**, pinned at commit
+`43324066fccdb14a261d3b3964db2319a12ae005`. The previous **0.1.5** candidate and
+the preserved **0.1.4** evidence each keep their own sections below. The
 [GitHub workflow](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml)
 defines standalone jobs on Linux and macOS, a portable Windows smoke test,
 and a fresh plugin install and edit replay on pinned Hermes. The model
@@ -126,7 +126,8 @@ calling an imported class, which binds to its constructor, and
 classes with no decorator, metaclass, or `__new__`, whose bases are absent,
 `object`, `ABC`, built-in exceptions, or such classes in the same module.
 Instance-method calls, decorated classes including dataclasses, and classes
-with an imported base remain unchecked.
+with an imported base remain unchecked here; version 0.2.0 later added methods on
+locally constructed instances.
 
 This engine is
 `fb368374ff8975569b5dcb83aa1aaca2c92d0c458aa3664f61ef8f02a8250363`, measured
@@ -134,8 +135,8 @@ as working-tree changes on top of commit
 `d72752365b3256ea5bd3e02a1d4ec2306f7aeedb` before they were committed. The
 evidence identifies it by this digest, not by an installed commit. The
 install replay, catalog admission, runtime doctor, performance trial, and
-Web/Desktop checks above were not repeated on it; hosted CI has not run; and
-the model study did not use it.
+Web/Desktop checks above were not repeated on it at the time, and the model study
+did not use it. Hosted CI later passed on the 0.2.0 commit, which includes it.
 
 | Check on the extended engine | Result |
 | --- | --- |
@@ -202,9 +203,12 @@ Version 0.2.0 adds four things on top of the class-bound extension above.
 
 The engine is
 `2be47ade0bd2a2657ac75a9d62bb9bc22f3040e30d4e72f0c24be7d527b232e2`, measured
-as working-tree changes on top of commit `014a73f` before they were committed.
-The install replay, catalog admission, runtime doctor, performance trial,
-Web/Desktop checks and model study were not repeated on it, and hosted CI has not run.
+first as working-tree changes on top of commit `014a73f`, then committed as
+`ae64d62`. Commit `4332406` adds only CI fixes and has the same engine digest;
+it is the pinned version. On that commit, hosted CI passed all eight jobs, and
+the fresh-install replay, admission and doctor checks below passed. The
+performance trial, the Desktop interaction checklist and the paired model study
+were not repeated for 0.2.0.
 
 | Check on version 0.2.0 | Result |
 | --- | --- |
@@ -212,6 +216,10 @@ Web/Desktop checks and model study were not repeated on it, and hosted CI has no
 | Minimum supported Python 3.10.22, standalone | [143 passed and 3 Hermes-runtime-only checks skipped](evidence/v020-tests-python310.txt), out of 146 discovered tests |
 | Rehearsal through a real Hermes host | [Passed](evidence/v020-rehearsal-host.txt) with zero model calls: the plugin loads with five tools; the tool reports the two breaking callers; Hermes's reference parser accepts `@whatif:` unspaced and quoted and expands it; Hermes's patch tool applies the returned caller patch and the rehearsed definition change then raises no alert; a definition-first edit raises an alert carrying the patch, and applying it leaves zero open alerts. [Script](../tests/integration/verify_rehearsal_host.py) |
 | Prediction against the edit guard | For four proposals, the call sites a rehearsal predicts would break equal the sites the edit guard reports after the change is made ([test](../tests/test_rehearsal.py)) |
+| Hosted CI on `4332406` | [All 8 jobs passed](https://github.com/atikur/hermes-locus/actions/workflows/tests.yml): Python 3.10, 3.11, 3.12 and 3.14 on Ubuntu, 3.14 on macOS and Windows (Windows runs a three-module smoke subset), shipped UI contracts and evaluator checks, and the pinned-Hermes install-and-replay job with both corpora. The first run, on `ae64d62`, failed two jobs, a stale tool count in the replay script and an unclosed database handle in a Windows test; `4332406` fixes both |
+| Fresh install of the exact commit and edit replay | [Passed locally](evidence/v020-install-replay.json): Hermes installed `4332406` from Git into a fresh profile; the edit named all five callers, 3 upstream tests failed and 23 passed, and after repair 26 passed with zero alerts |
+| Catalog admission and runtime doctor | [`plugins validate --install-deps`](evidence/v020-admission.json) passed 16 checks with zero warnings on a clean export of the pin; [`plugins doctor --ci`](evidence/v020-doctor.txt) registered five tools and three hooks |
+| Live demo | [One recorded session](demo.md) in the Hermes web chat with gpt-5.4-mini and Locus installed from GitHub at the pin: rehearsal, the edit whose [patch result carried the Locus alert](evidence/v020-live-demo-session.json), repair, passing tests, zero open alerts and the dashboard tab |
 
 Both corpora ran through real Hermes editing hooks with zero model calls and
 passed their strict checks. The signature harness now labels calls inside the
