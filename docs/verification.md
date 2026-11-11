@@ -147,7 +147,7 @@ against its Git hash. External Python files are fetched from GitHub unless
 ```bash
 /path/to/hermes/python tests/integration/verify_signature_corpus.py \
   --source /path/to/hermes-agent --runtime /path/to/hermes-runtime \
-  --candidate-ref HEAD --output signature-corpus.json
+  --candidate-ref HEAD --check-supported --output signature-corpus.json
 ```
 
 ## Fewer SQLite writes during an edit
@@ -171,6 +171,73 @@ sessions on this Mac hit Hermes's hook timeout while using the raised
 
 [Raw timings and graph digests](evidence/relink-benchmark.json) ·
 [Benchmark runner](../tests/integration/benchmark_relink.py)
+
+## Matched Hermes model trials
+
+We ran GPT-5.4 mini on three keyword renames in fresh copies of the same
+pinned Hermes source. Each task ran twice with the same prompt and file tools.
+Both arms loaded Locus and computed drift. The `drift_guard` setting only
+controlled whether Hermes saw the warning in the edit result.
+
+The prompt asked for the helper edit first and provided no caller locations.
+An evaluator ran the upstream tests after each session and checked the final
+source against the requested rename, including that all test assertions stayed
+intact. The model did not run tests during these sessions. This measures what
+the model returned after a staged edit without a test loop. Run order was
+warning on, then warning off.
+
+One initial accounting label missed a real caller in the image generation
+plugin. The warning identified it. An independent check of the pinned source
+and actual edit diffs added it to the caller list for both arms and retained
+the original results alongside that correction.
+
+| Rename | First warning named | Warning on | Warning off |
+| --- | ---: | --- | --- |
+| Display preview | 5 / 5 | 5 calls repaired, 26 tests passed | 3 of 5 calls repaired, 23 passed and 3 failed |
+| Replay history | 5 / 5 | 5 calls repaired, 6 tests passed | 5 calls repaired, 6 tests passed |
+| Auxiliary accounting | 2 / 3 | 3 calls repaired, 11 tests passed | 3 calls repaired, 11 tests passed |
+
+All **12 named locations** were correct and arrived before the model looked
+outside the helper. The missing accounting call uses a repeated local import
+that the resolver treats as ambiguous. Hermes found it during its search.
+The display warning-off run also rewrote unrelated helper logic in its initial
+patch, before a warning could have appeared. These three pairs show observed
+outcomes, with variation in the model's first edit and no estimate of general
+repair success.
+
+We also supplied the exact display patch in a separate pair. The warning-on
+model applied only the signature line, repaired five callers, and left the
+helper body broken. The warning-off model applied the intended helper edit
+but left two callers stale. Both runs failed tests. The tool traces retain
+this deviation from the supplied patch.
+
+For the final control, we dispatched the identical display edit through the
+real Hermes patch tool before each model session. Both tool results matched
+after local path normalization and removal of the warning field. Each repair
+prompt included its actual patch result. With the warning enabled, Hermes
+received five exact locations before its first lookup. With the warning
+disabled, it received none. Both arms repaired all five callers and passed
+all 26 tests. The control verifies the difference in feedback, with the same
+repair outcome in this pair.
+
+[Six staged runs and independent diff audit](evidence/refactor-pairs/staged) ·
+[Supplied-patch pair](evidence/refactor-pairs/supplied-patch) ·
+[Identical pre-applied patch and control](evidence/refactor-pairs/replayed-helper) ·
+[Evaluation runner](../tests/integration/evaluate_refactor_feedback.py)
+
+With `OPENAI_API_KEY` configured, the following command repeats the six staged
+sessions. Each gets a fresh profile and workspace and makes its own model
+API requests.
+
+```bash
+/path/to/hermes/python tests/integration/evaluate_refactor_feedback.py \
+  --source /path/to/hermes-agent --runtime /path/to/hermes-runtime \
+  --pytest-deps /path/to/test-deps --scratch /path/to/scratch \
+  --output paired-results
+```
+
+Add `--task display --replay-helper-edit` to repeat the final two-session
+control with a pre-applied edit.
 
 ## Real model-assisted refactor
 

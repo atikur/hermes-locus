@@ -1,0 +1,17 @@
+{
+  "same_runtime_engine_as_staged_trials": true,
+  "identical_normalized_hermes_patch_result_except_locus_drift_alert": true,
+  "identical_prompt_outside_patch_result": true,
+  "patch_result_sha256_without_warning": "1ddebd8543ee4108ac133214896a94554d4c464a0d57cecf8e76380d8a035d36",
+  "warning_sites": [
+    "gateway/platforms/base.py:2014",
+    "gateway/run_turn_progress.py:375",
+    "tests/agent/test_display.py:142",
+    "tests/agent/test_display.py:155",
+    "tests/agent/test_display.py:164"
+  ],
+  "test_outcomes": {
+    "warning_on": "26 passed in 0.21s",
+    "warning_off": "26 passed in 0.21s"
+  }
+}

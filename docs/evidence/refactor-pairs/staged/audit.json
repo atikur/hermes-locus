@@ -1,0 +1,393 @@
+{
+  "source_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+  "label_correction": "Added accounting caller plugins/image_gen/_common.py:270 after checking tracked Python source including plugins; original runner outputs are preserved.",
+  "pinned_source_callers": {
+    "display": {
+      "explicit_old_keyword_sites": [
+        "gateway/platforms/base.py:2014",
+        "gateway/run_turn_progress.py:375",
+        "tests/agent/test_display.py:142",
+        "tests/agent/test_display.py:155",
+        "tests/agent/test_display.py:164"
+      ],
+      "other_calls": [],
+      "matches_corrected_labels": true
+    },
+    "replay": {
+      "explicit_old_keyword_sites": [
+        "agent/turn_context.py:1454",
+        "tests/agent/test_replay_cleanup.py:159",
+        "tests/agent/test_replay_cleanup.py:200",
+        "tests/agent/test_replay_cleanup.py:215",
+        "tests/agent/test_replay_cleanup.py:217"
+      ],
+      "other_calls": [
+        "gateway/run.py:1313",
+        "gateway/run_turn_runner.py:895",
+        "tests/agent/transports/test_codex_event_projector.py:131",
+        "tests/agent/transports/test_codex_event_projector.py:144",
+        "tests/tui_gateway/test_deferred_model_history.py:29",
+        "tui_gateway/methods_session.py:661",
+        "tui_gateway/prompt_turn.py:554",
+        "tui_gateway/prompt_turn.py:591",
+        "tui_gateway/prompt_turn.py:603",
+        "tui_gateway/session_registry.py:596"
+      ],
+      "matches_corrected_labels": true
+    },
+    "accounting": {
+      "explicit_old_keyword_sites": [
+        "agent/auxiliary_client.py:6647",
+        "plugins/image_gen/_common.py:270",
+        "tests/hermes_state/test_aux_usage_accounting.py:199"
+      ],
+      "other_calls": [
+        "tests/hermes_state/test_aux_usage_accounting.py:222",
+        "tests/hermes_state/test_aux_usage_accounting.py:223"
+      ],
+      "matches_corrected_labels": true
+    }
+  },
+  "trials": {
+    "display-1-warning-on": {
+      "status": "completed",
+      "cli_exit": 0,
+      "terminal_exits": [
+        0
+      ],
+      "trace_matches_runner_digest": true,
+      "runner_pass": true,
+      "tests": "26 passed in 0.22s",
+      "unparsed_edit_results": [],
+      "first_successful_edit": {
+        "request_line": 6,
+        "result_line": 7,
+        "helper_only": true,
+        "warning_sites": [
+          "gateway/platforms/base.py:2014",
+          "gateway/run_turn_progress.py:375",
+          "tests/agent/test_display.py:142",
+          "tests/agent/test_display.py:155",
+          "tests/agent/test_display.py:164"
+        ],
+        "expected_warning_sites": [
+          "gateway/platforms/base.py:2014",
+          "gateway/run_turn_progress.py:375",
+          "tests/agent/test_display.py:142",
+          "tests/agent/test_display.py:155",
+          "tests/agent/test_display.py:164"
+        ],
+        "missing_warning_sites": [],
+        "unexpected_warning_sites": [],
+        "warning_matches_condition": true,
+        "prior_possible_caller_lookups": [],
+        "helper_diff": {
+          "only_expected_ast_rename": true,
+          "docstring_changed": false
+        }
+      },
+      "final_helper_diff": {
+        "only_expected_ast_rename": true,
+        "docstring_changed": false
+      },
+      "final_caller_diffs": {
+        "verified_sites": [
+          "gateway/platforms/base.py:2014",
+          "gateway/run_turn_progress.py:375",
+          "tests/agent/test_display.py:142",
+          "tests/agent/test_display.py:155",
+          "tests/agent/test_display.py:164"
+        ],
+        "stale_sites": [],
+        "unverified_sites": [],
+        "extra_caller_ast_changes": [],
+        "unrelated_changed_files": [],
+        "reconstructed_changed_files": [
+          "agent/display.py",
+          "gateway/platforms/base.py",
+          "gateway/run_turn_progress.py",
+          "tests/agent/test_display.py"
+        ],
+        "changed_files_match_runner_fingerprint": true,
+        "reconstruction_errors": []
+      },
+      "verified_repair_with_corrected_labels": true
+    },
+    "display-1-warning-off": {
+      "status": "completed",
+      "cli_exit": 0,
+      "terminal_exits": [
+        0
+      ],
+      "trace_matches_runner_digest": true,
+      "runner_pass": false,
+      "tests": "3 failed, 23 passed in 0.24s",
+      "unparsed_edit_results": [],
+      "first_successful_edit": {
+        "request_line": 6,
+        "result_line": 7,
+        "helper_only": true,
+        "warning_sites": [],
+        "expected_warning_sites": [],
+        "missing_warning_sites": [],
+        "unexpected_warning_sites": [],
+        "warning_matches_condition": true,
+        "prior_possible_caller_lookups": [],
+        "helper_diff": {
+          "only_expected_ast_rename": false,
+          "docstring_changed": false
+        }
+      },
+      "final_helper_diff": {
+        "only_expected_ast_rename": false,
+        "docstring_changed": false
+      },
+      "final_caller_diffs": {
+        "verified_sites": [
+          "gateway/platforms/base.py:2014",
+          "gateway/run_turn_progress.py:375",
+          "tests/agent/test_display.py:142"
+        ],
+        "stale_sites": [
+          "tests/agent/test_display.py:155",
+          "tests/agent/test_display.py:164"
+        ],
+        "unverified_sites": [],
+        "extra_caller_ast_changes": [],
+        "unrelated_changed_files": [],
+        "reconstructed_changed_files": [
+          "agent/display.py",
+          "gateway/platforms/base.py",
+          "gateway/run_turn_progress.py",
+          "tests/agent/test_display.py"
+        ],
+        "changed_files_match_runner_fingerprint": true,
+        "reconstruction_errors": []
+      },
+      "verified_repair_with_corrected_labels": false
+    },
+    "replay-1-warning-on": {
+      "status": "completed",
+      "cli_exit": 0,
+      "terminal_exits": [
+        0
+      ],
+      "trace_matches_runner_digest": true,
+      "runner_pass": true,
+      "tests": "6 passed in 0.93s",
+      "unparsed_edit_results": [],
+      "first_successful_edit": {
+        "request_line": 4,
+        "result_line": 5,
+        "helper_only": true,
+        "warning_sites": [
+          "agent/turn_context.py:1454",
+          "tests/agent/test_replay_cleanup.py:159",
+          "tests/agent/test_replay_cleanup.py:200",
+          "tests/agent/test_replay_cleanup.py:215",
+          "tests/agent/test_replay_cleanup.py:217"
+        ],
+        "expected_warning_sites": [
+          "agent/turn_context.py:1454",
+          "tests/agent/test_replay_cleanup.py:159",
+          "tests/agent/test_replay_cleanup.py:200",
+          "tests/agent/test_replay_cleanup.py:215",
+          "tests/agent/test_replay_cleanup.py:217"
+        ],
+        "missing_warning_sites": [],
+        "unexpected_warning_sites": [],
+        "warning_matches_condition": true,
+        "prior_possible_caller_lookups": [],
+        "helper_diff": {
+          "only_expected_ast_rename": true,
+          "docstring_changed": true
+        }
+      },
+      "final_helper_diff": {
+        "only_expected_ast_rename": true,
+        "docstring_changed": true
+      },
+      "final_caller_diffs": {
+        "verified_sites": [
+          "agent/turn_context.py:1454",
+          "tests/agent/test_replay_cleanup.py:159",
+          "tests/agent/test_replay_cleanup.py:200",
+          "tests/agent/test_replay_cleanup.py:215",
+          "tests/agent/test_replay_cleanup.py:217"
+        ],
+        "stale_sites": [],
+        "unverified_sites": [],
+        "extra_caller_ast_changes": [],
+        "unrelated_changed_files": [],
+        "reconstructed_changed_files": [
+          "agent/replay_cleanup.py",
+          "agent/turn_context.py",
+          "tests/agent/test_replay_cleanup.py"
+        ],
+        "changed_files_match_runner_fingerprint": true,
+        "reconstruction_errors": []
+      },
+      "verified_repair_with_corrected_labels": true
+    },
+    "replay-1-warning-off": {
+      "status": "completed",
+      "cli_exit": 0,
+      "terminal_exits": [
+        0
+      ],
+      "trace_matches_runner_digest": true,
+      "runner_pass": true,
+      "tests": "6 passed in 0.95s",
+      "unparsed_edit_results": [],
+      "first_successful_edit": {
+        "request_line": 4,
+        "result_line": 5,
+        "helper_only": true,
+        "warning_sites": [],
+        "expected_warning_sites": [],
+        "missing_warning_sites": [],
+        "unexpected_warning_sites": [],
+        "warning_matches_condition": true,
+        "prior_possible_caller_lookups": [],
+        "helper_diff": {
+          "only_expected_ast_rename": true,
+          "docstring_changed": true
+        }
+      },
+      "final_helper_diff": {
+        "only_expected_ast_rename": true,
+        "docstring_changed": true
+      },
+      "final_caller_diffs": {
+        "verified_sites": [
+          "agent/turn_context.py:1454",
+          "tests/agent/test_replay_cleanup.py:159",
+          "tests/agent/test_replay_cleanup.py:200",
+          "tests/agent/test_replay_cleanup.py:215",
+          "tests/agent/test_replay_cleanup.py:217"
+        ],
+        "stale_sites": [],
+        "unverified_sites": [],
+        "extra_caller_ast_changes": [],
+        "unrelated_changed_files": [],
+        "reconstructed_changed_files": [
+          "agent/replay_cleanup.py",
+          "agent/turn_context.py",
+          "tests/agent/test_replay_cleanup.py"
+        ],
+        "changed_files_match_runner_fingerprint": true,
+        "reconstruction_errors": []
+      },
+      "verified_repair_with_corrected_labels": true
+    },
+    "accounting-1-warning-on": {
+      "status": "completed",
+      "cli_exit": 0,
+      "terminal_exits": [
+        0
+      ],
+      "trace_matches_runner_digest": true,
+      "runner_pass": false,
+      "tests": "11 passed in 2.22s",
+      "unparsed_edit_results": [],
+      "first_successful_edit": {
+        "request_line": 4,
+        "result_line": 5,
+        "helper_only": true,
+        "warning_sites": [
+          "agent/auxiliary_client.py:6647",
+          "plugins/image_gen/_common.py:270"
+        ],
+        "expected_warning_sites": [
+          "agent/auxiliary_client.py:6647",
+          "plugins/image_gen/_common.py:270",
+          "tests/hermes_state/test_aux_usage_accounting.py:199"
+        ],
+        "missing_warning_sites": [
+          "tests/hermes_state/test_aux_usage_accounting.py:199"
+        ],
+        "unexpected_warning_sites": [],
+        "warning_matches_condition": false,
+        "prior_possible_caller_lookups": [],
+        "helper_diff": {
+          "only_expected_ast_rename": true,
+          "docstring_changed": true
+        }
+      },
+      "final_helper_diff": {
+        "only_expected_ast_rename": true,
+        "docstring_changed": true
+      },
+      "final_caller_diffs": {
+        "verified_sites": [
+          "agent/auxiliary_client.py:6647",
+          "plugins/image_gen/_common.py:270",
+          "tests/hermes_state/test_aux_usage_accounting.py:199"
+        ],
+        "stale_sites": [],
+        "unverified_sites": [],
+        "extra_caller_ast_changes": [],
+        "unrelated_changed_files": [],
+        "reconstructed_changed_files": [
+          "agent/aux_accounting.py",
+          "agent/auxiliary_client.py",
+          "plugins/image_gen/_common.py",
+          "tests/hermes_state/test_aux_usage_accounting.py"
+        ],
+        "changed_files_match_runner_fingerprint": true,
+        "reconstruction_errors": []
+      },
+      "verified_repair_with_corrected_labels": true
+    },
+    "accounting-1-warning-off": {
+      "status": "completed",
+      "cli_exit": 0,
+      "terminal_exits": [
+        0
+      ],
+      "trace_matches_runner_digest": true,
+      "runner_pass": false,
+      "tests": "11 passed in 2.13s",
+      "unparsed_edit_results": [],
+      "first_successful_edit": {
+        "request_line": 4,
+        "result_line": 5,
+        "helper_only": true,
+        "warning_sites": [],
+        "expected_warning_sites": [],
+        "missing_warning_sites": [],
+        "unexpected_warning_sites": [],
+        "warning_matches_condition": true,
+        "prior_possible_caller_lookups": [],
+        "helper_diff": {
+          "only_expected_ast_rename": true,
+          "docstring_changed": true
+        }
+      },
+      "final_helper_diff": {
+        "only_expected_ast_rename": true,
+        "docstring_changed": true
+      },
+      "final_caller_diffs": {
+        "verified_sites": [
+          "agent/auxiliary_client.py:6647",
+          "plugins/image_gen/_common.py:270",
+          "tests/hermes_state/test_aux_usage_accounting.py:199"
+        ],
+        "stale_sites": [],
+        "unverified_sites": [],
+        "extra_caller_ast_changes": [],
+        "unrelated_changed_files": [],
+        "reconstructed_changed_files": [
+          "agent/aux_accounting.py",
+          "agent/auxiliary_client.py",
+          "plugins/image_gen/_common.py",
+          "tests/hermes_state/test_aux_usage_accounting.py"
+        ],
+        "changed_files_match_runner_fingerprint": true,
+        "reconstruction_errors": []
+      },
+      "verified_repair_with_corrected_labels": true
+    }
+  }
+}

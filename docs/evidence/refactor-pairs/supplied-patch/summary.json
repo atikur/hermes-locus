@@ -1,0 +1,133 @@
+{
+  "model": "gpt-5.4-mini",
+  "reasoning": "low",
+  "toolsets": [
+    "file"
+  ],
+  "max_turns": 20,
+  "workspace_commit": "78abaafcccec20a546c94e8734a70e38c08a6a69",
+  "hermes_host_commit": "01672831e48c1224bc003f834dd9b8c1cfc96a57",
+  "plugin_commit": "a2506e0d8a12426fccad4c85f52d48a98ce4255c",
+  "plugin_engine_sha256": "1de4899e879ad1079c4eb3d39406c9b141d1892ab21b03d2eb66448f19795ae4",
+  "indexed_file_cap": 20000,
+  "hook_timeout_seconds": 120,
+  "parallel_sessions": 1,
+  "preflight": {
+    "display": "26 passed in 0.21s"
+  },
+  "fixed_helper_edit": true,
+  "prompts": {
+    "display": "Rename the keyword-only parameter `max_len` to `limit` in `prepare_tool_preview`. Start by invoking `patch` with `mode: patch` and this exact payload. Wait for the result before looking for callers.\n\n```text\n*** Begin Patch\n*** Update File: agent/display.py\n@@\n-def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, max_len: int) -> ToolPreview:\n+def prepare_tool_preview(tool_name: str, args: dict | None, *, fallback: str, limit: int) -> ToolPreview:\n@@\n-    text = _tail_trunc(full_text, max_len)\n+    text = _tail_trunc(full_text, limit)\n*** End Patch\n```\n\nThen update every affected call. Preserve all existing test assertions. Use file tools within the current disposable checkout. A separate evaluator will run the tests. Summarize the changes."
+  },
+  "reports": [
+    {
+      "task": "display",
+      "repeat": 1,
+      "warning_enabled": true,
+      "pass": false,
+      "cli_exit": 0,
+      "model_exit": 0,
+      "tokens": {
+        "input": 67515,
+        "output": 1115,
+        "total": 68630,
+        "cache_read": 57472,
+        "cache_write": 0
+      },
+      "model_duration_ms": 80785,
+      "first_patch_ok": true,
+      "first_patch_files": [
+        "<workspace>/agent/display.py"
+      ],
+      "first_patch_helper_only": true,
+      "first_patch_alert_sites": [
+        "gateway/platforms/base.py:2014",
+        "gateway/run_turn_progress.py:375",
+        "tests/agent/test_display.py:142",
+        "tests/agent/test_display.py:155",
+        "tests/agent/test_display.py:164"
+      ],
+      "outside_helper_lookups_before_first_patch": 0,
+      "tool_calls": 12,
+      "search_calls": 3,
+      "read_calls": 3,
+      "edit_calls": 6,
+      "changed_files": [
+        "agent/display.py",
+        "gateway/platforms/base.py",
+        "gateway/run_turn_progress.py",
+        "tests/agent/test_display.py"
+      ],
+      "expected_files_only": true,
+      "helper_signature_ok": true,
+      "helper_rename_ok": false,
+      "verified_caller_sites": [
+        "gateway/platforms/base.py:2014",
+        "gateway/run_turn_progress.py:375",
+        "tests/agent/test_display.py:142",
+        "tests/agent/test_display.py:155",
+        "tests/agent/test_display.py:164"
+      ],
+      "expected_caller_sites": [
+        "gateway/platforms/base.py:2014",
+        "gateway/run_turn_progress.py:375",
+        "tests/agent/test_display.py:142",
+        "tests/agent/test_display.py:155",
+        "tests/agent/test_display.py:164"
+      ],
+      "test_exit": 1,
+      "test_summary": "3 failed, 23 passed in 0.26s",
+      "trace_sha256": "c5f7d84b01a8a039c229890fb742598dad54f499e652964ad0d17a6a5228b07b"
+    },
+    {
+      "task": "display",
+      "repeat": 1,
+      "warning_enabled": false,
+      "pass": false,
+      "cli_exit": 0,
+      "model_exit": 0,
+      "tokens": {
+        "input": 50902,
+        "output": 981,
+        "total": 51883,
+        "cache_read": 44544,
+        "cache_write": 0
+      },
+      "model_duration_ms": 77880,
+      "first_patch_ok": false,
+      "first_patch_files": [
+        null
+      ],
+      "first_patch_helper_only": false,
+      "first_patch_alert_sites": [],
+      "outside_helper_lookups_before_first_patch": 0,
+      "tool_calls": 8,
+      "search_calls": 2,
+      "read_calls": 1,
+      "edit_calls": 5,
+      "changed_files": [
+        "agent/display.py",
+        "gateway/platforms/base.py",
+        "gateway/run_turn_progress.py",
+        "tests/agent/test_display.py"
+      ],
+      "expected_files_only": true,
+      "helper_signature_ok": true,
+      "helper_rename_ok": true,
+      "verified_caller_sites": [
+        "gateway/platforms/base.py:2014",
+        "gateway/run_turn_progress.py:375"
+      ],
+      "expected_caller_sites": [
+        "gateway/platforms/base.py:2014",
+        "gateway/run_turn_progress.py:375",
+        "tests/agent/test_display.py:142",
+        "tests/agent/test_display.py:155",
+        "tests/agent/test_display.py:164"
+      ],
+      "test_exit": 1,
+      "test_summary": "2 failed, 24 passed in 0.23s",
+      "trace_sha256": "0e06832aca435d2f41024876df786983bd588030cadf7008c7c209519993f696"
+    }
+  ]
+}

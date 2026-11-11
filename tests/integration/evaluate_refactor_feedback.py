@@ -21,7 +21,7 @@ import subprocess
 import sys
 import tempfile
 
-from verify_hermes_refactor import WORKSPACE_COMMIT, engine_digest, extract_commit, git_head
+from verify_hermes_refactor import RENAME, WORKSPACE_COMMIT, engine_digest, extract_commit, git_head
 
 
 MODEL = "gpt-5.4-mini"
@@ -42,15 +42,35 @@ TASKS = {
     },
     "accounting": {
         "helper": "agent/aux_accounting.py", "symbol": "record_aux_usage", "old": "provider", "new": "provider_id",
-        "sites": ["agent/auxiliary_client.py:6647", "tests/hermes_state/test_aux_usage_accounting.py:199"],
+        "sites": ["agent/auxiliary_client.py:6647", "plugins/image_gen/_common.py:270",
+                  "tests/hermes_state/test_aux_usage_accounting.py:199"],
         "test": "tests/hermes_state/test_aux_usage_accounting.py",
     },
 }
 SITE_PATTERN = re.compile(r"Update caller `([^`]+:\d+)`")
 KEY_PATTERN = re.compile(r"\b(?:sk-(?:proj-)?[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})")
+REPLAY_PROMPT = (
+    "The keyword-only parameter `max_len` was renamed to `limit` in "
+    "`prepare_tool_preview` in `agent/display.py`, with its body updated to match. "
+    "Here is the actual Hermes patch result.\n\n"
+    "```json\n{patch_result}\n```\n\n"
+    "Update every affected call while preserving behavior and the existing test "
+    "assertions. Use file tools inside the current disposable checkout. A separate "
+    "evaluator will run the tests. Summarize the changes."
+)
 
 
-def prompt_for(task):
+def prompt_for(task, fixed_helper_edit=False):
+    if fixed_helper_edit:
+        return (
+            "Rename the keyword-only parameter `max_len` to `limit` in "
+            "`prepare_tool_preview`. Start by invoking `patch` with `mode: patch` "
+            "and this exact payload. Wait for the result before looking for callers.\n\n"
+            f"```text\n{RENAME}\n```\n\n"
+            "Then update every affected call. Preserve all existing test assertions. "
+            "Use file tools within the current disposable checkout. A separate evaluator "
+            "will run the tests. Summarize the changes."
+        )
     return (
         f"Rename the keyword-only parameter `{task['old']}` to `{task['new']}` in "
         f"`{task['symbol']}` in `{task['helper']}`. Update the parameter's use in the "
@@ -115,6 +135,27 @@ def remove_docstring(function):
         function.body.pop(0)
 
 
+def helper_matches(task, baseline, workspace):
+    helper = task["helper"]
+    original = trees(baseline, helper)
+    revised = trees(workspace, helper)
+    function = next(node for node in revised.body
+                    if isinstance(node, ast.FunctionDef) and node.name == task["symbol"])
+    args = {arg.arg for arg in function.args.kwonlyargs}
+    signature_ok = task["old"] not in args and task["new"] in args
+    before = next(node for node in original.body
+                  if isinstance(node, ast.FunctionDef) and node.name == task["symbol"])
+    # Compare the entire helper file, allowing formatting and the helper's
+    # docstring to change. Runtime statements can only rename the parameter.
+    remove_docstring(before)
+    remove_docstring(function)
+    next(arg for arg in before.args.kwonlyargs if arg.arg == task["old"]).arg = task["new"]
+    for node in ast.walk(before):
+        if isinstance(node, ast.Name) and node.id == task["old"]:
+            node.id = task["new"]
+    return signature_ok, ast.dump(original) == ast.dump(revised)
+
+
 def verify_source(task, baseline, workspace, baseline_files):
     current_files = fingerprint(workspace)
     changed = sorted(name for name in baseline_files.keys() | current_files.keys()
@@ -139,23 +180,7 @@ def verify_source(task, baseline, workspace, baseline_files):
                 raise ValueError(f"Source pin no longer matches expected caller lines in {path}")
             if ast.dump(expected) == ast.dump(trees(workspace, path)):
                 verified.extend(f"{path}:{line}" for line in sorted(found))
-        original = trees(baseline, helper)
-        revised = trees(workspace, helper)
-        function = next(node for node in revised.body
-                        if isinstance(node, ast.FunctionDef) and node.name == task["symbol"])
-        args = {arg.arg for arg in function.args.kwonlyargs}
-        signature_ok = task["old"] not in args and task["new"] in args
-        before = next(node for node in original.body
-                      if isinstance(node, ast.FunctionDef) and node.name == task["symbol"])
-        # Compare the entire helper file, allowing formatting and the helper's
-        # docstring to change. Runtime statements can only rename the parameter.
-        remove_docstring(before)
-        remove_docstring(function)
-        next(arg for arg in before.args.kwonlyargs if arg.arg == task["old"]).arg = task["new"]
-        for node in ast.walk(before):
-            if isinstance(node, ast.Name) and node.id == task["old"]:
-                node.id = task["new"]
-        helper_rename_ok = ast.dump(original) == ast.dump(revised)
+        signature_ok, helper_rename_ok = helper_matches(task, baseline, workspace)
     except (FileNotFoundError, SyntaxError, StopIteration):
         signature_ok = helper_rename_ok = False
     return {"changed_files": changed, "expected_files_only": set(changed) == expected_files,
@@ -207,6 +232,38 @@ def analyze_events(raw, task):
     }
 
 
+def replay_helper_patch(workspace, args, env):
+    # A separate no-credential process runs the real patch tool before the
+    # model starts. Only the actual result is placed in the repair prompt.
+    code = """import json
+import sys
+from pathlib import Path
+from agent.runtime_cwd import set_session_cwd
+from hermes_cli import lifecycle, plugins
+from model_tools import handle_function_call
+from verify_hermes_refactor import RENAME
+
+set_session_cwd(str(Path.cwd()))
+plugins.discover_plugins()
+session = "paired-replay"
+lifecycle.invoke_hook("on_session_start", session_id=session)
+result = handle_function_call(
+    "patch", {"mode": "patch", "patch": RENAME},
+    task_id=session, session_id=session, turn_id="helper-edit",
+    api_request_id="helper-edit", tool_call_id="helper-edit",
+)
+Path(sys.argv[1]).write_text(result if isinstance(result, str) else json.dumps(result))
+"""
+    pythonpath = os.pathsep.join((str(args.source), str(Path(__file__).resolve().parent)))
+    output = workspace.parent / "replayed-edit.json"
+    result = subprocess.run([sys.executable, "-c", code, str(output)], cwd=workspace,
+                            env={**env, "PYTHONPATH": pythonpath},
+                            capture_output=True, text=True, timeout=220)
+    if result.returncode or not output.is_file():
+        raise RuntimeError(f"Helper patch did not return a result (exit {result.returncode}): {result.stderr}")
+    return json.loads(output.read_text())
+
+
 def evaluate(job, args, baseline, baseline_files, plugin, key):
     name, repeat, enabled = job
     task = TASKS[name]
@@ -218,7 +275,8 @@ def evaluate(job, args, baseline, baseline_files, plugin, key):
         workspace, home = root / "workspace", root / "hermes-home"
         shutil.copytree(baseline, workspace, symlinks=True)
         shutil.copytree(plugin, home / "plugins/locus-codegraph", symlinks=True)
-        (home / "config.yaml").write_text(
+        config = home / "config.yaml"
+        config.write_text(
             "plugins:\n  enabled: [locus-codegraph]\n  hook_callback_timeout: 120\n"
             "  entries:\n    locus-codegraph:\n      settings:\n"
             "        auto_index_on_start: true\n        max_files: 20000\n"
@@ -227,10 +285,9 @@ def evaluate(job, args, baseline, baseline_files, plugin, key):
             "agent:\n  run_budget_seconds: 420\n  max_turns: 20\n", encoding="utf-8"
         )
         query = root / "prompt.txt"
-        query.write_text(prompt_for(task) + "\n", encoding="utf-8")
         env = {**shell_env(), "HERMES_HOME": str(home), "HERMES_RUNTIME_DIR": str(args.runtime),
                "LOCUS_WORKSPACE": str(workspace), "TERMINAL_CWD": str(workspace),
-               "TERMINAL_ENV": "local", "OPENAI_API_KEY": key}
+               "TERMINAL_ENV": "local"}
         command = [sys.executable, "-m", "hermes_cli.main", "chat", "--query-file", str(query),
                    "--oneshot", "--format", "stream-json", "--in", str(workspace),
                    "--provider", "openai-api", "--model", MODEL, "--reasoning", "low",
@@ -242,8 +299,24 @@ def evaluate(job, args, baseline, baseline_files, plugin, key):
                 value = value.replace(old, new)
             return KEY_PATTERN.sub("<redacted>", value)
 
+        replayed_result = None
+        if args.replay_helper_edit:
+            initial = replay_helper_patch(workspace, args, env)
+            assert initial.get("success"), initial
+            assert all(helper_matches(task, baseline, workspace))
+            assert len(initial.get("files_modified", [])) == 1
+            assert (workspace / initial["files_modified"][0]).resolve() == workspace / task["helper"]
+            replayed_result = json.loads(redact(json.dumps(initial)))
+            formatted = json.dumps(replayed_result, ensure_ascii=False, sort_keys=True)
+            (reports / "helper-edit-result.json").write_text(formatted + "\n", encoding="utf-8")
+            prompt = REPLAY_PROMPT.format(patch_result=formatted)
+            config.write_text(config.read_text().replace("auto_index_on_start: true", "auto_index_on_start: false"))
+            print(f"{label}: applied identical helper edit before model session", flush=True)
+        else:
+            prompt = prompt_for(task, args.fixed_helper_edit)
+        query.write_text(prompt + "\n", encoding="utf-8")
         try:
-            chat = subprocess.run(command, cwd=args.source, env=env, stdin=subprocess.DEVNULL,
+            chat = subprocess.run(command, cwd=args.source, env={**env, "OPENAI_API_KEY": key}, stdin=subprocess.DEVNULL,
                                   capture_output=True, text=True, timeout=465)
             raw, stderr, exit_code = chat.stdout, chat.stderr, chat.returncode
         except subprocess.TimeoutExpired as exc:
@@ -258,6 +331,15 @@ def evaluate(job, args, baseline, baseline_files, plugin, key):
             observed = analyze_events(raw, task)
         except (ValueError, TypeError, KeyError) as exc:
             observed = {"trace_error": type(exc).__name__}
+        if replayed_result is not None:
+            observed.update({
+                "helper_edit_replayed_before_model": True,
+                "first_patch_ok": True,
+                "first_patch_files": replayed_result["files_modified"],
+                "first_patch_helper_only": True,
+                "outside_helper_lookups_before_first_patch": 0,
+                "first_patch_alert_sites": sorted(SITE_PATTERN.findall(replayed_result.get("locus_drift_alert") or "")),
+            })
         verify = verify_source(task, baseline, workspace, baseline_files)
         test_exit, stdout, test_stderr = run_tests(task, workspace, root / "test-home", args)
         passed = (exit_code == 0 and observed.get("model_exit") == 0 and test_exit == 0
@@ -281,10 +363,17 @@ def main():
     parser.add_argument("--credentials-file", type=Path)
     parser.add_argument("--task", choices=TASKS, action="append")
     parser.add_argument("--repeats", type=int, default=1)
+    helper_mode = parser.add_mutually_exclusive_group()
+    helper_mode.add_argument("--fixed-helper-edit", action="store_true",
+                             help="Supply an exact initial patch in the display prompt.")
+    helper_mode.add_argument("--replay-helper-edit", action="store_true",
+                             help="Dispatch the exact display patch before the model session.")
     args = parser.parse_args()
     tasks = args.task or list(TASKS)
     if args.repeats < 1:
         parser.error("Repeats must be positive.")
+    if (args.fixed_helper_edit or args.replay_helper_edit) and tasks != ["display"]:
+        parser.error("The fixed and replayed helper modes require --task display.")
     args.output.mkdir(parents=True)
     args.scratch.mkdir(parents=True, exist_ok=True)
     plugin_repo = Path(__file__).resolve().parents[2]
@@ -310,7 +399,10 @@ def main():
                    "workspace_commit": WORKSPACE_COMMIT, "hermes_host_commit": git_head(args.source),
                    "plugin_commit": plugin_revision, "plugin_engine_sha256": engine_digest(plugin),
                    "indexed_file_cap": 20000, "hook_timeout_seconds": 120, "parallel_sessions": 1,
-                   "preflight": preflight, "prompts": {name: prompt_for(TASKS[name]) for name in tasks},
+                   "preflight": preflight, "fixed_helper_edit": args.fixed_helper_edit,
+                   "replay_helper_edit": args.replay_helper_edit,
+                   "prompts": {name: (REPLAY_PROMPT if args.replay_helper_edit else
+                                       prompt_for(TASKS[name], args.fixed_helper_edit)) for name in tasks},
                    "reports": reports}
         (args.output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 
