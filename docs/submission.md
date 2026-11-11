@@ -2,6 +2,8 @@
 
 **Locus Codegraph shows Hermes what a change could break, then flags incompatible callers while it works.**
 
+[58-second replay](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-keyword-replay.mp4) · [Installation](../README.md#install) · [Replay evidence](verification.md#keyword-rename-on-hermes-agent)
+
 It adds a local structural code graph to Hermes Agent. Before a refactor, `@sym:`
 and `@impact:` expose definitions, callers, dependent modules, and suggested tests.
 After supported edits, its signature-drift guard puts actionable caller warnings

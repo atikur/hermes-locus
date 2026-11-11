@@ -4,6 +4,8 @@
 
 **Locus Codegraph shows Hermes what a change could break, then flags incompatible callers while it works.** It builds a local structural graph of your repository and connects it to agent tools, `@` context references, the Web Dashboard, and Hermes Desktop.
 
+[Watch the 58-second keyword rename replay](https://github.com/atikur/hermes-locus/releases/download/v0.1.4/locus-keyword-replay.mp4) · [Review the tool results and test output](docs/verification.md#keyword-rename-on-hermes-agent)
+
 The analysis engine uses Python's standard library (`ast`, `sqlite3`, and structural parsers). It needs no API key, hosted index, or extra model call. Hermes supplies the web and desktop integration libraries.
 
 ## One refactor, a complete feedback loop
@@ -29,19 +31,19 @@ In a replay on Hermes Agent's own code, the same keyword rename passed through t
 
 ## Install
 
-Requires **Hermes Agent >=0.22.0** and **Python >=3.10**. Python 3.11 is a convenient choice for standalone development.
+The plugin requires **Hermes Agent >=0.22.0** and uses Hermes's Python runtime. The standalone engine needs Python 3.10 or later.
 
 ```bash
-hermes plugins install https://github.com/atikur/hermes-locus
+hermes plugins install https://github.com/atikur/hermes-locus --enable
 ```
 
-After catalog acceptance, the short form is `hermes plugins install locus-codegraph`. In Hermes Desktop, use the plugin installer or this deep link:
+From the root of a Python project, run `hermes locus map` to check the installation without a configured model. Start a fresh Hermes session in that project to use Locus during edits. `/locus reindex` refreshes its graph.
+
+After catalog acceptance, the short form is `hermes plugins install locus-codegraph --enable`. In Hermes Desktop, use the plugin installer or this deep link:
 
 ```text
 hermes://plugin/install?repo=atikur/hermes-locus&enable=1
 ```
-
-Start Hermes in the repository you want to analyze. Session startup indexes that workspace by default; `/locus reindex` refreshes it explicitly.
 
 ## Try it
 
@@ -180,7 +182,7 @@ For a reproducible larger-workspace trial, see [performance observations and the
 
 The release passes 77 tests in the Hermes environment. A recorded v0.1.1 session with GPT-5.4 mini also shows the model responding to an arity warning, repairing both callers, and passing the fixture tests. [Verification evidence and full transcript](docs/verification.md)
 
-[Watch the 77-second working demo](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4) · [Download captions](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.srt)
+[Watch the earlier 77-second model session](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.mp4) · [Download its captions](https://github.com/atikur/hermes-locus/releases/download/v0.1.2/locus-submission-demo.srt)
 
 ## Architecture
 

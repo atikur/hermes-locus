@@ -19,6 +19,7 @@ by the identity update.
 | Installed Hermes, Python 3.14.7 | 77 tests passed, no skips |
 | `hermes plugins validate . --install-deps` | Passed; security scan safe; declarations match registrations |
 | `hermes plugins doctor . --ci` | Passed; 4 tools and 3 hooks registered |
+| Clean install from local Git with `--ref` and `--enable` | A fresh profile ran `hermes locus impact` and returned the expected callers and test. The installed plugin then emitted a keyword rename warning in a real `patch` result. |
 | Hermes payload scanner | Passed |
 | `python scripts/run_demo.py` | Scripted engine example completed |
 | Web Dashboard | Built the real Hermes UI; verified graph focus, impact, symbol search and signature detail in a browser |
